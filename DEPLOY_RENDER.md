@@ -73,37 +73,42 @@ Ab GitHub pe naya repo banao:
 ## PART 3 — Environment Variables daalo
 
 Render dashboard → tumhari service → **Environment** tab → **Add Environment Variable**
-(ya "Add from .env" — bulk paste). Ye saare daalo:
+(ya "Add from .env" — bulk paste). Ye saare daalo — values apni `.env` file se
+copy karo (ye file mein REAL secrets kabhi mat likho, wo git mein chali jaati hai):
 
 ```
 NODE_ENV=production
 
-DATABASE_URL=postgresql://postgres.yiewljdpfbnsbufjepsq:Prabhat9801@aws-1-ap-south-1.pooler.supabase.com:6543/postgres?pgbouncer=true
-DIRECT_URL=postgresql://postgres.yiewljdpfbnsbufjepsq:Prabhat9801@aws-1-ap-south-1.pooler.supabase.com:5432/postgres
+DATABASE_URL=<apni-supabase-pooled-url-port-6543-with-?pgbouncer=true>
+DIRECT_URL=<apni-supabase-direct-url-port-5432>
 
-MANUFACTURER_SECRET=64dee5e66ad45df08fc0ed7c451f64c17ee8eccbfb32d024207d0cae221195c6
-STORE_SECRET=cea5239f4265f1c5f0a521c74a838a7b4067f56e875425fcc8b7bd0676c72186
-MANAGER_SECRET=6a0a1583c5a547cf420f1859f9a8f2e5d706b2086826307bf624d7f90d18ccec
+MANUFACTURER_SECRET=<32-byte-hex>
+STORE_SECRET=<32-byte-hex>
+MANAGER_SECRET=<32-byte-hex>
 COOKIE_TTL_SECONDS=28800
 
-CLOUDINARY_CLOUD_NAME=dxt9zyoi
-CLOUDINARY_API_KEY=832888799957632
-CLOUDINARY_API_SECRET=fXT9Mfa8UJwgWa7Ltl-BY1nQDYc
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=dxt9zyoi
+CLOUDINARY_CLOUD_NAME=<cloud-name>
+CLOUDINARY_API_KEY=<api-key>
+CLOUDINARY_API_SECRET=<api-secret>
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=<cloud-name>
 
 EMBEDDER_URL=https://botivate2026-embedder.hf.space
 EMBEDDER_API_KEY=
-QDRANT_URL=https://d512c592-0743-4bd0-aecb-80f2ac389a58.eu-west-1-0.aws.cloud.qdrant.io:6333
-QDRANT_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIiwic3ViamVjdCI6ImFwaS1rZXk6MDFkZjUwYzMtNDkwOS00NDU1LTk4ZWEtZTM4YzliNTk1ZmEzIn0.hPk-yz7ongwkePYrq2WmLCENsKilW34wWJJ-uiFyKb0
+QDRANT_URL=<qdrant-url-with-:6333>
+QDRANT_API_KEY=<qdrant-api-key>
 QDRANT_MANUFACTURER_COLLECTION=jewelfactory_manufacturer_products
 
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=prabhatkumarsictc7070@gmail.com
-SMTP_PASS=tlijjhhnpbahwobz
-FROM_EMAIL=prabhatkumarsictc7070@gmail.com
+SMTP_USER=<your-gmail>
+SMTP_PASS=<gmail-app-password>
+FROM_EMAIL=<your-gmail>
 FROM_NAME=Jewel Factory
 ```
+
+> **Values kahan se:** ye sab tumhari local `.env` file mein already hain — wahan
+> se copy karke Render dashboard mein paste karo. Docs/git mein real values kabhi
+> mat likho.
 
 ### ⚠️ 2 env vars deploy ke BAAD update karne padenge:
 Pehle deploy karo, Render tumhe ek URL dega (e.g. `https://jewel-factory.onrender.com`).

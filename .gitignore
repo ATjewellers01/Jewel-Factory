@@ -12,9 +12,11 @@ next-env.d.ts
 /build
 /dist
 
-# env
+# env / secrets
 .env
 .env*.local
+credentials
+*.secret
 
 # prisma
 /prisma/*.db

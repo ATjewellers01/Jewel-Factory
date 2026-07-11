@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env*.local
+*.log
+npm-debug.log*
+.DS_Store
+README.md
+DEPLOY_RENDER.md
+SETUP_GUIDE.md
+USER_FLOWS_AND_GUIDE.txt
+*.tsbuildinfo
+.vscode
+.idea
