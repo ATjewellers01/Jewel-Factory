@@ -1,6 +1,6 @@
-# ── Jewel Factory — production Dockerfile (multi-stage) ──────────────────────
-# Next.js 15 + Prisma + pnpm. Runs `prisma migrate deploy` on container start,
-# then `next start`.
+# ── Jewel Factory — production Dockerfile (multi-stage, standalone output) ────
+# Next.js 15 (output:'standalone') + Prisma + pnpm. Runs `prisma migrate deploy`
+# on container start, then the standalone Next server.
 
 FROM node:20-slim AS base
 ENV PNPM_HOME="/pnpm"
@@ -16,29 +16,36 @@ COPY package.json pnpm-lock.yaml* ./
 COPY prisma ./prisma
 RUN pnpm install --frozen-lockfile
 
-# 2. Build (prisma generate + next build)
+# 2. Build (prisma generate + next build in STANDALONE mode)
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# DOCKER_BUILD=1 turns on output:'standalone' in next.config.ts.
+ENV DOCKER_BUILD=1
+ENV NEXT_TELEMETRY_DISABLED=1
 # Dummy DB URLs so Prisma/Next don't fail at build time; real values at runtime.
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public"
 ENV DIRECT_URL="postgresql://build:build@localhost:5432/build?schema=public"
-ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build
 
-# 3. Runtime image — copy built app + prod deps
+# 3. Runtime image — only the standalone server + static + public + prisma
 FROM base AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
-# App + built output + deps (node_modules already contains the generated Prisma client)
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/.next ./.next
+# Standalone bundles the minimal server + traced node_modules into .next/standalone.
+COPY --from=build /app/.next/standalone ./
+# Static assets + public are NOT included in standalone — copy them alongside.
+COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
+
+# Prisma CLI + engines + schema for `migrate deploy` at container start.
+COPY --from=build /app/node_modules/prisma ./node_modules/prisma
+COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=build /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 COPY --from=build /app/prisma ./prisma
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/next.config.ts ./next.config.ts
 
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh

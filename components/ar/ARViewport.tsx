@@ -82,7 +82,7 @@ const ARViewport = forwardRef<ARViewportHandle, Props>(function ARViewport(
 
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl bg-black ${className}`}
+      className={`relative aspect-[3/4] w-full overflow-hidden rounded-2xl bg-black sm:aspect-[4/3] ${className}`}
       data-testid="ar-viewport"
     >
       {/* Video: CSS-mirrored so the user's left looks like their left.

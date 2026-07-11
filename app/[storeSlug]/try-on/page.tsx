@@ -65,18 +65,18 @@ function TryOnInner() {
   }, [preselect, products]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8">
+    <main className="mx-auto max-w-5xl px-3 py-6 sm:px-4 sm:py-8">
       <div className="mb-4 flex items-center gap-2 text-primary"><Sparkles className="h-5 w-5" /><span className="text-xs font-semibold uppercase tracking-widest">Virtual Try-On</span></div>
-      <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
-        <ARViewport ref={viewportRef} className="w-full" />
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-[2fr_1fr]">
+        <ARViewport ref={viewportRef} />
         <div>
           <p className="mb-3 text-sm font-medium">Choose a piece</p>
           {!products && <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
           {products && products.length === 0 && <p className="text-sm text-muted-foreground">No try-on pieces available yet.</p>}
           {products && products.length > 0 && (
-            <div className="grid grid-cols-3 gap-2 md:grid-cols-2">
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-2 lg:max-h-[420px] lg:overflow-y-auto lg:pr-1">
               {products.map((p) => (
-                <button key={p.id} onClick={() => select(p)} className={`overflow-hidden rounded-lg border-2 ${activeId === p.id ? 'border-primary' : 'border-transparent'}`}>
+                <button key={p.id} onClick={() => select(p)} className={`overflow-hidden rounded-lg border-2 transition-colors ${activeId === p.id ? 'border-primary' : 'border-transparent hover:border-primary/40'}`}>
                   <div className="aspect-square bg-[#ece5da]">
                     {p.primaryImageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
