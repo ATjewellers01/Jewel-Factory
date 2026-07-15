@@ -29,10 +29,14 @@ export async function sendEmail(opts: {
     port,
     secure: port === 465, // 465 = implicit TLS; 587 = STARTTLS (secure:false)
     auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
+    // Force IPv4 — Render's network can't reach Gmail over IPv6 (ENETUNREACH on
+    // the 2607:... address). family:4 makes DNS resolve to an IPv4 host.
+    // (Cast: `family` is a valid runtime socket option not in nodemailer's TS type.)
+    family: 4,
     connectionTimeout: 15000,
     greetingTimeout: 15000,
     socketTimeout: 20000,
-  });
+  } as nodemailer.TransportOptions);
 
   try {
     const info = await transporter.sendMail({
