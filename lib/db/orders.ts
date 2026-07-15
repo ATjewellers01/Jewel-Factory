@@ -87,6 +87,7 @@ export async function getKioskOrdersByStore(storeId: string, pendingOnly = false
   return prisma.kioskOrder.findMany({
     where: { storeId, ...(pendingOnly ? { pendingStoreApproval: true, status: { not: 'CANCELLED' } } : {}) },
     orderBy: { createdAt: 'desc' },
+    include: { items: true },
   });
 }
 
@@ -191,6 +192,7 @@ export async function getB2bOrdersByStore(storeId: string, pendingOnly = false) 
   return prisma.b2bOrder.findMany({
     where: { storeId, ...(pendingOnly ? { pendingManagerApproval: true, status: { not: 'CANCELLED' } } : {}) },
     orderBy: { createdAt: 'desc' },
+    include: { items: true },
   });
 }
 
