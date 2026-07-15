@@ -11,7 +11,7 @@ export function useApi<T>(path: string, loginPath?: string) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(path, { cache: 'no-store' });
+      const res = await fetch(path, { cache: 'no-store', credentials: 'same-origin' });
       if (res.status === 401 && loginPath) {
         window.location.assign(loginPath);
         return;
@@ -38,6 +38,7 @@ export function useApi<T>(path: string, loginPath?: string) {
 export async function apiPost(path: string, body?: unknown) {
   const res = await fetch(path, {
     method: 'POST',
+    credentials: 'same-origin',
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -51,6 +52,7 @@ export async function apiPost(path: string, body?: unknown) {
 export async function apiSend(method: 'PATCH' | 'PUT' | 'DELETE', path: string, body?: unknown) {
   const res = await fetch(path, {
     method,
+    credentials: 'same-origin',
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });

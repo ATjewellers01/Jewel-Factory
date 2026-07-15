@@ -34,8 +34,8 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/manager/me', { cache: 'no-store' });
-        if (res.status === 401) { router.push('/store/login'); return; }
+        const res = await fetch('/api/manager/me', { cache: 'no-store', credentials: 'same-origin' });
+        if (res.status === 401) { router.push('/store/manager/login'); return; }
         const json = (await res.json()) as { data?: { role: string; storeName?: string; name?: string } };
         if (json.data) {
           setIsOwner(json.data.role === 'owner');
