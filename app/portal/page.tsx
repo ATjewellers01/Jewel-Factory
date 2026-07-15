@@ -63,7 +63,7 @@ export default function PortalPage() {
         </p>
       </Link>
 
-      <p className="mt-6 text-[10px] text-[#2a2318] tracking-wider">Powered by AT Jewellers</p>
+      <p className="mt-6 text-[10px] text-[#2a2318] tracking-wider">Powered by Jewel Factory</p>
     </div>
   );
 }

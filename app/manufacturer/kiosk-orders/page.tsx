@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useApi, apiSend } from '@/hooks/use-api';
 
 // Manufacturer view: NO customer PII, NO amount. Ships to store address.
-type Item = { id: string; productNameSnapshot: string; quantity: number };
+type Item = { id: string; productNameSnapshot: string; productImageSnapshot: string | null; categorySnapshot: string | null; quantity: number };
 type Order = {
   id: string; orderNumber: string; status: string; totalItems: number;
   storeNameSnapshot: string; storeCitySnapshot: string | null;
@@ -75,8 +75,19 @@ export default function ManufacturerKioskOrdersPage() {
                   </div>
                   {detail?.items && (
                     <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Items</p>
-                      {detail.items.map((it) => <p key={it.id} className="text-sm">{it.productNameSnapshot} × {it.quantity}</p>)}
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Items</p>
+                      <div className="space-y-2">
+                        {detail.items.map((it) => (
+                          <div key={it.id} className="flex items-center gap-3">
+                            {it.productImageSnapshot ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={it.productImageSnapshot} alt={it.productNameSnapshot} className="h-10 w-10 flex-shrink-0 rounded-lg border object-cover" />
+                            ) : <div className="h-10 w-10 flex-shrink-0 rounded-lg border bg-muted" />}
+                            <span className="flex-1 text-sm">{it.productNameSnapshot}</span>
+                            <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                   {NEXT[o.status] && (

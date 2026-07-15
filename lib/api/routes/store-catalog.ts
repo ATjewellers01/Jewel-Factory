@@ -57,10 +57,14 @@ storeCatalogRoutes.post('/orders', storeGuard, zValidator('json', OrderBody), as
 
   const body = c.req.valid('json');
 
-  // Resolve product names server-side (never trust client), validate active.
+  // Resolve product details server-side (never trust client), validate active,
+  // and snapshot name + design number + primary image for the order views.
   const products = await prisma.manufacturerProduct.findMany({
     where: { id: { in: body.items.map((i) => i.manufacturerProductId) }, status: 'ACTIVE' },
-    select: { id: true, name: true },
+    select: {
+      id: true, name: true, designNumber: true,
+      images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], take: 1, select: { secureUrl: true } },
+    },
   });
   const byId = new Map(products.map((p) => [p.id, p]));
   for (const item of body.items) {
@@ -74,11 +78,16 @@ storeCatalogRoutes.post('/orders', storeGuard, zValidator('json', OrderBody), as
     manufacturerId: store.manufacturerId,
     deliveryAddress: formatStoreAddress(store),
     notes: body.notes,
-    items: body.items.map((i) => ({
-      manufacturerProductId: i.manufacturerProductId,
-      quantity: i.quantity,
-      productNameSnapshot: byId.get(i.manufacturerProductId)!.name,
-    })),
+    items: body.items.map((i) => {
+      const p = byId.get(i.manufacturerProductId)!;
+      return {
+        manufacturerProductId: i.manufacturerProductId,
+        quantity: i.quantity,
+        productNameSnapshot: p.name,
+        productDesignSnapshot: p.designNumber,
+        productImageSnapshot: p.images[0]?.secureUrl,
+      };
+    }),
   });
   return sendData(c, order, 201);
 });

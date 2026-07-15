@@ -161,7 +161,7 @@ export async function placeB2bOrder(input: {
   manufacturerId: string;
   deliveryAddress: string;
   notes?: string;
-  items: { manufacturerProductId: string; quantity: number; productNameSnapshot?: string }[];
+  items: { manufacturerProductId: string; quantity: number; productNameSnapshot?: string; productImageSnapshot?: string; productDesignSnapshot?: string }[];
 }) {
   const totalItems = input.items.reduce((s, i) => s + i.quantity, 0);
   return prisma.b2bOrder.create({
@@ -177,6 +177,8 @@ export async function placeB2bOrder(input: {
           manufacturerProductId: i.manufacturerProductId,
           quantity: i.quantity,
           productNameSnapshot: i.productNameSnapshot ?? null,
+          productImageSnapshot: i.productImageSnapshot ?? null,
+          productDesignSnapshot: i.productDesignSnapshot ?? null,
         })),
       },
       history: { create: { status: 'PENDING', note: 'Order placed' } },

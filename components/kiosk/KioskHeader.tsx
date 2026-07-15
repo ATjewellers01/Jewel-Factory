@@ -38,7 +38,7 @@ export function KioskHeader() {
           <span className="truncate font-semibold text-[#f8e7af]">{store.name}</span>
           {store.city && <span className="hidden text-[#c9b98b] sm:inline">· {store.city}</span>}
         </div>
-        <span className="flex-shrink-0 text-[#5a4f38]">Powered by AT Jewellers</span>
+        <span className="flex-shrink-0 text-[#5a4f38]">Powered by Jewel Factory</span>
       </div>
 
       {/* Nav bar */}

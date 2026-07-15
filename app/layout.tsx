@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     template: '%s \\ Jewel Factory',
   },
   description:
-    'Premium jewellery with AI-powered visual search and virtual try-on. Powered by AT Jewellers.',
+    'Premium jewellery with AI-powered visual search and virtual try-on. Powered by Jewel Factory.',
   icons: {
     icon: '/logo-icon.png',
     shortcut: '/logo-icon.png',

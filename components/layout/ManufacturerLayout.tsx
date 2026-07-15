@@ -54,7 +54,7 @@ export default function ManufacturerLayout({ children }: { children: ReactNode }
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                 Manufacturer Portal
               </p>
-              <p className="truncate text-sm font-semibold">AT Jewellers</p>
+              <p className="truncate text-sm font-semibold">Jewel Factory</p>
             </div>
           </div>
 
@@ -97,17 +97,20 @@ export default function ManufacturerLayout({ children }: { children: ReactNode }
       )}
 
       {/* Main */}
-      <div className="lg:ml-60">
+      <div className="flex min-h-screen flex-col lg:ml-60">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-white/90 px-4 backdrop-blur">
           <button type="button" className="lg:hidden" onClick={() => setOpen(true)}>
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
           <span className="text-sm font-medium">Manufacturer Portal</span>
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-            AT Jewellers
+            Jewel Factory
           </span>
         </header>
-        <main className="p-3 sm:p-4 md:p-6">{children}</main>
+        <main className="flex-1 p-3 sm:p-4 md:p-6">{children}</main>
+        <footer className="mt-auto border-t px-4 py-4 text-center text-xs text-muted-foreground">
+          Powered by Jewel Factory
+        </footer>
       </div>
     </div>
   );

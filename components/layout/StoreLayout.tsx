@@ -92,7 +92,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
 
       {open && <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setOpen(false)} />}
 
-      <div className="lg:ml-60">
+      <div className="flex min-h-screen flex-col lg:ml-60">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-white/90 px-4 backdrop-blur">
           <button type="button" className="lg:hidden" onClick={() => setOpen(true)}>
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -102,7 +102,10 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
             {isOwner === false ? 'Manager' : 'Store Portal'}
           </span>
         </header>
-        <main className="p-3 sm:p-4 md:p-6">{children}</main>
+        <main className="flex-1 p-3 sm:p-4 md:p-6">{children}</main>
+        <footer className="mt-auto border-t px-4 py-4 text-center text-xs text-muted-foreground">
+          Powered by Jewel Factory
+        </footer>
       </div>
     </div>
   );

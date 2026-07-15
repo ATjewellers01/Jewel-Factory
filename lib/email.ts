@@ -23,22 +23,31 @@ export async function sendEmail(opts: {
     return;
   }
 
+  const port = Number(env.SMTP_PORT);
   const transporter = nodemailer.createTransport({
     host: env.SMTP_HOST,
-    port: env.SMTP_PORT,
-    secure: env.SMTP_PORT === 465,
+    port,
+    secure: port === 465, // 465 = implicit TLS; 587 = STARTTLS (secure:false)
     auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 20000,
   });
 
-  await transporter.sendMail({
-    from: env.FROM_EMAIL
-      ? `"${env.FROM_NAME}" <${env.FROM_EMAIL}>`
-      : env.SMTP_USER,
-    to: opts.to,
-    subject: opts.subject,
-    text: opts.text ?? opts.html.replace(/<[^>]+>/g, ''),
-    html: opts.html,
-  });
+  try {
+    const info = await transporter.sendMail({
+      from: env.FROM_EMAIL ? `"${env.FROM_NAME}" <${env.FROM_EMAIL}>` : env.SMTP_USER,
+      to: opts.to,
+      subject: opts.subject,
+      text: opts.text ?? opts.html.replace(/<[^>]+>/g, ''),
+      html: opts.html,
+    });
+    console.log(`[email] sent to ${opts.to} — messageId=${info.messageId}`);
+  } catch (err) {
+    // Surface the real reason in logs (Render "Logs" tab) instead of failing silently.
+    console.error('[email] send FAILED:', err instanceof Error ? err.message : err);
+    throw err;
+  }
 }
 
 /** Build the standard password-reset email HTML. */
@@ -53,7 +62,7 @@ export function passwordResetEmail(resetUrl: string): { subject: string; html: s
           <a href="${resetUrl}" style="background:#C29A33;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Reset password</a>
         </p>
         <p style="color:#8a8a8a;font-size:12px;">If you didn't request this, you can safely ignore this email.</p>
-        <p style="color:#b0b0b0;font-size:11px;">Powered by AT Jewellers</p>
+        <p style="color:#b0b0b0;font-size:11px;">Powered by Jewel Factory</p>
       </div>
     `,
   };
@@ -117,7 +126,7 @@ export function storeApprovedEmail(opts: {
           <a href="${appUrl}/store/forgot-password" style="color:#C29A33;">Owner reset</a> ·
           <a href="${appUrl}/store/manager/forgot-password" style="color:#C29A33;">Manager reset</a>
         </p>
-        <p style="color:#b0b0b0;font-size:11px;margin-top:20px;">Powered by AT Jewellers</p>
+        <p style="color:#b0b0b0;font-size:11px;margin-top:20px;">Powered by Jewel Factory</p>
       </div>
     `,
   };

@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Plus, Trash2, UserCog } from 'lucide-react';
+import { Loader2, Plus, Trash2, UserCog, KeyRound } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ export default function ManagersPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
   const [adding, setAdding] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [pwManager, setPwManager] = useState<Manager | null>(null);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -76,12 +77,56 @@ export default function ManagersPage() {
                 <button onClick={() => toggle(m)} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${m.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
                   {m.isActive ? 'Active' : 'Inactive'}
                 </button>
-                <button onClick={() => remove(m.id)} className="text-muted-foreground hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                <button onClick={() => setPwManager(m)} title="Reset password" className="text-muted-foreground hover:text-primary"><KeyRound className="h-4 w-4" /></button>
+                <button onClick={() => remove(m.id)} title="Remove" className="text-muted-foreground hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {pwManager && <ResetPasswordModal manager={pwManager} onClose={() => setPwManager(null)} />}
+    </div>
+  );
+}
+
+function ResetPasswordModal({ manager, onClose }: { manager: Manager; onClose: () => void }) {
+  const [pw, setPw] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function save() {
+    if (pw.length < 6) { setErr('Password must be at least 6 characters.'); return; }
+    setBusy(true); setErr(null);
+    try {
+      await apiSend('PUT', `/api/store/managers/${manager.id}/password`, { password: pw });
+      setDone(true);
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Could not reset password.'); } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="w-full max-w-sm space-y-3 rounded-xl border bg-card p-5 shadow-lg" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold">Reset password — {manager.name}</h3>
+        {done ? (
+          <>
+            <p className="text-sm text-green-700">Password reset. Share the new password with {manager.name}.</p>
+            <Button onClick={onClose} className="w-full">Done</Button>
+          </>
+        ) : (
+          <>
+            <Input type="password" placeholder="New password (min 6)" value={pw} onChange={(e) => setPw(e.target.value)} />
+            {err && <p className="text-sm text-red-600">{err}</p>}
+            <div className="flex gap-2">
+              <Button onClick={save} disabled={busy} className="metal-sheen flex-1 text-[#17120b] font-semibold">
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reset password'}
+              </Button>
+              <Button onClick={onClose} variant="outline">Cancel</Button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

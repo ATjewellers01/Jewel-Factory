@@ -361,6 +361,8 @@ model B2bOrderItem {
   manufacturerProduct   ManufacturerProduct @relation(fields: [manufacturerProductId], references: [id])
   quantity              Int
   productNameSnapshot   String?             @map("product_name_snapshot")
+  productImageSnapshot  String?             @map("product_image_snapshot")
+  productDesignSnapshot String?             @map("product_design_snapshot")
   createdAt             DateTime            @default(now()) @map("created_at")
 
   @@index([orderId])
