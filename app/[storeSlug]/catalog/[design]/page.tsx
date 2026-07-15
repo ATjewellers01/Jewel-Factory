@@ -60,9 +60,9 @@ export default function KioskProductDetailPage() {
             ) : null}
           </div>
           {imgs.length > 1 && (
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
               {imgs.map((im, i) => (
-                <button key={i} onClick={() => setActiveImg(i)} className={`h-16 w-16 overflow-hidden rounded-lg border-2 ${i === activeImg ? 'border-primary' : 'border-transparent'}`}>
+                <button key={i} onClick={() => setActiveImg(i)} className={`h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border-2 ${i === activeImg ? 'border-primary' : 'border-transparent'}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={im.secureUrl} alt="" className="h-full w-full object-cover" />
                 </button>
