@@ -39,6 +39,7 @@ export function StaffLoginForm({
     try {
       const res = await fetch(loginPath, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });

@@ -11,10 +11,11 @@ import { storeGuard, type AppEnv } from '../guards';
 
 // Store-owner-only: browse manufacturer catalog + place B2B (restock) orders.
 export const storeCatalogRoutes = new Hono<AppEnv>();
-storeCatalogRoutes.use('*', storeGuard);
+// NOTE: guard applied PER-ROUTE (not .use('*')) so it can't leak to other
+// sub-apps mounted on the same /store base (that bug 401'd managers on /dashboard).
 
 // Browse the manufacturer catalog (global active products).
-storeCatalogRoutes.get('/catalog', async (c) => {
+storeCatalogRoutes.get('/catalog', storeGuard, async (c) => {
   const category = c.req.query('category') || undefined;
   const search = c.req.query('search') || undefined;
   const hasTryon = c.req.query('hasTryon');
@@ -28,7 +29,7 @@ storeCatalogRoutes.get('/catalog', async (c) => {
   );
 });
 
-storeCatalogRoutes.get('/catalog/:id', async (c) => {
+storeCatalogRoutes.get('/catalog/:id', storeGuard, async (c) => {
   const product = await getActiveProductByDesignOrId(c.req.param('id'));
   if (!product) return sendError(c, 'not_found', 'Product not found', 404);
   return sendData(c, product);
@@ -42,7 +43,7 @@ const OrderBody = z.object({
     .min(1),
 });
 
-storeCatalogRoutes.post('/orders', zValidator('json', OrderBody), async (c) => {
+storeCatalogRoutes.post('/orders', storeGuard, zValidator('json', OrderBody), async (c) => {
   const storeId = c.get('storeId');
   const store = await prisma.store.findUnique({
     where: { id: storeId },
