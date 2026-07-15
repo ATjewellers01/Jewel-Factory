@@ -66,8 +66,8 @@ export default function ManufacturerOrderDetailPage() {
             <div key={i.id} className="flex items-center gap-3 px-4 py-3">
               {i.productImageSnapshot ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={i.productImageSnapshot} alt={i.productNameSnapshot ?? ''} className="h-12 w-12 flex-shrink-0 rounded-lg border object-cover" />
-              ) : <div className="h-12 w-12 flex-shrink-0 rounded-lg border bg-muted" />}
+                <img src={i.productImageSnapshot} alt={i.productNameSnapshot ?? ''} className="h-20 w-20 flex-shrink-0 rounded-lg border bg-white object-contain p-1" />
+              ) : <div className="h-20 w-20 flex-shrink-0 rounded-lg border bg-muted" />}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{i.productNameSnapshot ?? 'Product'}</p>
                 {i.productDesignSnapshot && <p className="text-xs text-muted-foreground">{i.productDesignSnapshot}</p>}

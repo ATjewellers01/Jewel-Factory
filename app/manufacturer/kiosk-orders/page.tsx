@@ -81,9 +81,9 @@ export default function ManufacturerKioskOrdersPage() {
                           <div key={it.id} className="flex items-center gap-3">
                             {it.productImageSnapshot ? (
                               // eslint-disable-next-line @next/next/no-img-element
-                              <img src={it.productImageSnapshot} alt={it.productNameSnapshot} className="h-10 w-10 flex-shrink-0 rounded-lg border object-cover" />
-                            ) : <div className="h-10 w-10 flex-shrink-0 rounded-lg border bg-muted" />}
-                            <span className="flex-1 text-sm">{it.productNameSnapshot}</span>
+                              <img src={it.productImageSnapshot} alt={it.productNameSnapshot} className="h-20 w-20 flex-shrink-0 rounded-lg border bg-white object-contain p-1" />
+                            ) : <div className="h-20 w-20 flex-shrink-0 rounded-lg border bg-muted" />}
+                            <span className="flex-1 text-sm font-medium">{it.productNameSnapshot}</span>
                             <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
                           </div>
                         ))}

@@ -90,9 +90,9 @@ function Row({ title, sub, items, busy, onApprove, onReject }: { title: string; 
             <div key={it.id} className="flex items-center gap-2">
               {it.productImageSnapshot ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={it.productImageSnapshot} alt={it.productNameSnapshot ?? ''} className="h-10 w-10 rounded-lg border object-cover" />
-              ) : <div className="h-10 w-10 rounded-lg border bg-muted" />}
-              <span className="text-xs">{it.productNameSnapshot ?? 'Product'} × {it.quantity}</span>
+                <img src={it.productImageSnapshot} alt={it.productNameSnapshot ?? ''} className="h-16 w-16 rounded-lg border bg-white object-contain p-1" />
+              ) : <div className="h-16 w-16 rounded-lg border bg-muted" />}
+              <span className="text-sm">{it.productNameSnapshot ?? 'Product'} × {it.quantity}</span>
             </div>
           ))}
         </div>
