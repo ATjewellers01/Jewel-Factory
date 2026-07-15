@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Loader2, MapPin, ShoppingBag, Store, Trash2 } from 'lucide-react';
+import { CheckCircle2, Loader2, MapPin, Minus, Plus, ShoppingBag, Store, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -86,10 +86,22 @@ export default function KioskCheckoutPage() {
               <div key={i.productId} className="flex items-center gap-3 px-4 py-3">
                 {i.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={i.imageUrl} alt={i.name} className="h-12 w-12 rounded-lg border object-cover" />
-                ) : <div className="h-12 w-12 rounded-lg border bg-muted" />}
-                <div className="flex-1 min-w-0"><p className="truncate text-sm font-medium">{i.name}</p><p className="text-xs text-muted-foreground">Qty: {i.quantity}</p></div>
-                <button type="button" onClick={() => cart.remove(i.productId)} className="text-muted-foreground hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                  <img src={i.imageUrl} alt={i.name} className="h-12 w-12 flex-shrink-0 rounded-lg border object-cover" />
+                ) : <div className="h-12 w-12 flex-shrink-0 rounded-lg border bg-muted" />}
+                <div className="flex-1 min-w-0"><p className="truncate text-sm font-medium">{i.name}</p></div>
+                {/* Quantity stepper */}
+                <div className="flex flex-shrink-0 items-center gap-1">
+                  <button type="button" onClick={() => cart.setQty(i.productId, i.quantity - 1)} disabled={i.quantity <= 1}
+                    className="flex h-7 w-7 items-center justify-center rounded-md border text-muted-foreground hover:bg-muted disabled:opacity-40" aria-label="Decrease">
+                    <Minus className="h-3.5 w-3.5" />
+                  </button>
+                  <span className="w-7 text-center text-sm font-medium tabular-nums">{i.quantity}</span>
+                  <button type="button" onClick={() => cart.setQty(i.productId, i.quantity + 1)}
+                    className="flex h-7 w-7 items-center justify-center rounded-md border text-muted-foreground hover:bg-muted" aria-label="Increase">
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <button type="button" onClick={() => cart.remove(i.productId)} className="flex-shrink-0 text-muted-foreground hover:text-red-600" aria-label="Remove"><Trash2 className="h-3.5 w-3.5" /></button>
               </div>
             ))}
           </div>

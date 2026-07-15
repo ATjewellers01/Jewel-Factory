@@ -12,12 +12,13 @@ import crypto from 'node:crypto';
 
 import { getServerEnv } from '@/lib/env';
 
-export type Bucket = 'catalog' | 'tryon' | 'logo';
+export type Bucket = 'catalog' | 'tryon' | 'logo' | 'custom';
 
 const FORMATS: Record<Bucket, string[]> = {
   catalog: ['jpg', 'jpeg', 'png', 'webp', 'avif'],
   tryon: ['png', 'webp', 'avif'], // needs transparency — no jpg
   logo: ['jpg', 'jpeg', 'png', 'webp', 'avif'],
+  custom: ['jpg', 'jpeg', 'png', 'webp', 'avif'], // customer reference photos
 };
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -26,7 +27,7 @@ export function manufacturerFolder(manufacturerId: string, bucket: 'catalog' | '
   return `jewelfactory/manufacturer/${manufacturerId}/${bucket}`;
 }
 
-export function storeFolder(storeId: string, bucket: 'logo'): string {
+export function storeFolder(storeId: string, bucket: 'logo' | 'custom'): string {
   return `jewelfactory/store/${storeId}/${bucket}`;
 }
 

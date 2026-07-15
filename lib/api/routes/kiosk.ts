@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerEnv } from '@/lib/env';
 import { verifyPassword } from '@/lib/password';
 import { KIOSK_COOKIE, issueKioskCookie, verifyKioskCookie, cookieOptions } from '@/lib/auth';
+import { signUpload, storeFolder } from '@/lib/cloudinary';
 import { listActiveProducts, getActiveProductByDesignOrId } from '@/lib/db/manufacturer-catalog';
 import { placeKioskOrder, getKioskOrderPublic } from '@/lib/db/orders';
 import { placeCustomRequest } from '@/lib/db/custom-design';
@@ -218,6 +219,20 @@ kioskRoutes.get('/orders/:id', async (c) => {
   const o = await getKioskOrderPublic(c.req.param('id'));
   if (!o) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, o);
+});
+
+// ── Custom design reference image upload (public, per-store folder) ────────────
+// Signed Cloudinary upload for the customer's reference photo. Scoped to the
+// store's custom folder; only signs folder+timestamp so it can't be abused.
+kioskRoutes.post('/custom-design/upload-sign', zValidator('json', z.object({ storeSlug: z.string().min(1) })), async (c) => {
+  const store = await resolveStore(c.req.valid('json').storeSlug);
+  if (!store) return sendError(c, 'not_found', 'Store not found or not active.', 404);
+  try {
+    const signed = signUpload({ folder: storeFolder(store.id, 'custom'), bucket: 'custom' });
+    return sendData(c, signed);
+  } catch (err) {
+    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Cloudinary not configured', 503);
+  }
 });
 
 // ── Custom design request ─────────────────────────────────────────────────────

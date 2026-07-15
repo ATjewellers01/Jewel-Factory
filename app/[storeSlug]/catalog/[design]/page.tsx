@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Sparkles, ShoppingBag, Award, ArrowLeft } from 'lucide-react';
+import { Loader2, Sparkles, ShoppingBag, Award, ArrowLeft, Minus, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -25,6 +25,7 @@ export default function KioskProductDetailPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeImg, setActiveImg] = useState(0);
+  const [qty, setQty] = useState(1);
 
   useEffect(() => {
     (async () => {
@@ -44,7 +45,7 @@ export default function KioskProductDetailPage() {
   const imgs = product.images.length ? product.images : [];
 
   function addToCart() {
-    cart.add({ productId: product!.id, name: product!.name, imageUrl: imgs[0]?.secureUrl });
+    cart.add({ productId: product!.id, name: product!.name, imageUrl: imgs[0]?.secureUrl }, qty);
   }
 
   return (
@@ -84,6 +85,22 @@ export default function KioskProductDetailPage() {
             <Badge>BIS Hallmarked</Badge>
             <Badge>Certified</Badge>
             {product.hasTryon && <Badge>Virtual Try-On</Badge>}
+          </div>
+
+          {/* Quantity */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">Quantity</span>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} disabled={qty <= 1}
+                className="flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground hover:bg-muted disabled:opacity-40" aria-label="Decrease">
+                <Minus className="h-4 w-4" />
+              </button>
+              <span className="w-9 text-center text-sm font-medium tabular-nums">{qty}</span>
+              <button type="button" onClick={() => setQty((q) => q + 1)}
+                className="flex h-8 w-8 items-center justify-center rounded-md border text-muted-foreground hover:bg-muted" aria-label="Increase">
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           {/* CTAs — no price */}
