@@ -80,6 +80,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
   async function handleImageUpload(file: File) {
     setError(null);
+    if (!form.name.trim()) { setError('Enter a design name before uploading photos.'); return; }
     const id = await ensureProductId();
     if (!id) return;
     setUploadingImage(true);
@@ -107,6 +108,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
   async function handleTryonUpload(file: File) {
     setError(null);
+    if (!form.name.trim()) { setError('Enter a design name before uploading a try-on asset.'); return; }
     if (file.type !== 'image/png' && !file.name.toLowerCase().endsWith('.png')) {
       setError('Try-on asset must be a transparent PNG.');
       return;
@@ -173,32 +175,6 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         {form.designNumber && <p className="mt-0.5 text-sm text-muted-foreground">Design number: <span className="font-mono">{form.designNumber}</span></p>}
       </div>
 
-      {/* Images */}
-      <section className="space-y-2">
-        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Photos</label>
-        <div className="flex flex-wrap gap-3">
-          {images.map((img) => (
-            <div key={img.id} className="relative h-24 w-24 overflow-hidden rounded-lg border">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img.secureUrl} alt="" className="h-full w-full object-cover" />
-              <button type="button" onClick={() => removeImage(img.id)} className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80">
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => imageInput.current?.click()}
-            disabled={uploadingImage}
-            className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-muted-foreground hover:border-primary/50 hover:text-primary"
-          >
-            {uploadingImage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
-            <span className="text-[10px]">Upload</span>
-          </button>
-          <input ref={imageInput} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} />
-        </div>
-      </section>
-
       {/* Fields */}
       <section className="space-y-3">
         <div>
@@ -248,9 +224,43 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         </div>
       </section>
 
+      {/* Photos — placed AFTER the details so the design name exists before the
+          first upload creates the product (empty name → 400 on create). */}
+      <section className="space-y-2">
+        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Catalog Photos</label>
+        {!form.name.trim() && (
+          <p className="text-xs text-muted-foreground">Enter a design name above to upload photos.</p>
+        )}
+        <div className="flex flex-wrap gap-3">
+          {images.map((img) => (
+            <div key={img.id} className="relative h-24 w-24 overflow-hidden rounded-lg border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={img.secureUrl} alt="" className="h-full w-full object-cover" />
+              <button type="button" onClick={() => removeImage(img.id)} className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => imageInput.current?.click()}
+            disabled={uploadingImage || !form.name.trim()}
+            title={!form.name.trim() ? 'Enter a design name first' : undefined}
+            className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-muted-foreground hover:border-primary/50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-input disabled:hover:text-muted-foreground"
+          >
+            {uploadingImage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+            <span className="text-[10px]">Upload</span>
+          </button>
+          <input ref={imageInput} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0])} />
+        </div>
+      </section>
+
       {/* AR Try-On */}
       <section className="space-y-2 rounded-xl border p-4">
         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">AR Try-On (transparent PNG)</label>
+        {!form.name.trim() && !tryon && (
+          <p className="text-xs text-muted-foreground">Enter a design name above to upload a try-on asset.</p>
+        )}
         {tryon ? (
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -270,7 +280,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
                 {JEWELLERY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
-            <Button type="button" variant="outline" size="sm" disabled={uploadingTryon} onClick={() => tryonInput.current?.click()}>
+            <Button type="button" variant="outline" size="sm" disabled={uploadingTryon || !form.name.trim()} title={!form.name.trim() ? 'Enter a design name first' : undefined} onClick={() => tryonInput.current?.click()}>
               {uploadingTryon ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />}
               Upload PNG
             </Button>
