@@ -1,0 +1,164 @@
+================================================================================
+ JEWEL FACTORY — COMPLETE SYSTEM FLOW  (multi-store / retailer hierarchy)
+================================================================================
+ This document explains the WHOLE system in plain language: who the actors are,
+ who creates whom, how an order travels, approvals, shipping, and the PIN.
+ Read this first before touching the code. UI names vs code names are noted.
+================================================================================
+
+--------------------------------------------------------------------------------
+ 1. THE FOUR (+1) ACTORS
+--------------------------------------------------------------------------------
+
+  MANUFACTURER  (global admin)
+     - Owns the design catalog (Gold only, no price, auto design number JF-XXXX).
+     - Approves RETAILER registrations.
+     - Receives orders (B2B restock, kiosk, custom design).
+     - Keeps each RETAILER's fixed Head-Office (HO) address.
+     - NEVER sees customer personal data.
+     - Portal: /manufacturer/*
+
+  RETAILER   (code: the `stores` table / "Store Owner" login)
+     - A business that deals with the manufacturer (B2B).
+     - Self-registers -> manufacturer approves -> gets access.
+     - Has ONE fixed HO address (manufacturer ships here).
+     - Creates: its HO Manager, its Stores (branches), and each store's managers.
+     - Portal: /store/*   (login: /store/login)
+
+  HO MANAGER   (code: `store_managers` table / "Manager" login)
+     - The retailer's Head-Office manager.
+     - Does ALL approvals for the whole retailer (every branch's orders).
+     - Sees which branch an order came from; can EDIT the requirement note.
+     - Keeps each branch's fixed address (for internal distribution).
+     - Portal: /store/*   (login: /store/manager/login)   [same portal, fewer rights]
+
+  STORE  (branch)   (code: `branches` table / UI "Store")
+     - One physical shop of the retailer. A retailer can have MANY.
+     - Created/edited by the RETAILER or HO MANAGER.
+     - Has its own fixed address + its own restock PIN + its own store managers.
+
+  STORE MANAGER   (code: `branch_managers` table / UI "Store Manager")
+     - Runs ONE branch. Logs in with email + password.
+     - Login -> gets access to THAT branch's Kiosk + Restock.
+     - Portal: /store-manager/*   (login: /store-manager/login)
+
+  CUSTOMER  (walk-in, NO login, NO data stored)
+     - Comes to a store. The Store Manager helps them on the kiosk.
+     - Customer personal details are NOT stored in this system — the store
+       manager keeps them outside (their own notebook / CRM).
+
+--------------------------------------------------------------------------------
+ 2. WHO CREATES WHOM
+--------------------------------------------------------------------------------
+
+  Manufacturer  --approves-->  Retailer (registration)
+  Retailer      --creates-->   HO Manager   (its own head-office manager)
+  Retailer/HO   --creates-->   Stores (branches)          [/store/branches]
+  Retailer/HO   --creates-->   Store Managers (per branch) [/store/branches -> expand]
+  (Store + managers are NOT hardcoded; created via the portal or the demo seed.)
+
+--------------------------------------------------------------------------------
+ 3. THE STORE MANAGER'S DEVICE  (Kiosk vs Restock)
+--------------------------------------------------------------------------------
+
+  Store Manager logs in on a device (phone/tablet/PC):
+
+     KIOSK  (/store-manager/kiosk)          -> browse catalog + place customer order
+     CUSTOM (/store-manager/custom-design)  -> capture a custom requirement
+        * No customer PII. Only products + quantity + an editable REQUIREMENT NOTE.
+        * Safe to hand the device to the customer.
+
+     RESTOCK (/store-manager/restock)       -> order stock for THIS store
+        * PIN-PROTECTED. If a branch restock PIN is set, opening restock asks for
+          the PIN. A customer holding the device cannot open it.
+        * PIN is set/reset by: Store Manager, HO Manager, or Retailer.
+
+--------------------------------------------------------------------------------
+ 4. ORDER FLOWS  (all end at the manufacturer, via HO approval)
+--------------------------------------------------------------------------------
+
+  A) KIOSK CUSTOMER ORDER
+     Store Manager (kiosk) -> creates order (products + qty + requirement note)
+        -> HO MANAGER sees "Store X raised this", can EDIT the note, then APPROVES
+        -> MANUFACTURER receives it (note + branch shown; NO customer data)
+        -> Manufacturer ships to the RETAILER HO address
+        -> HO distributes to the branch that raised it.
+
+  B) RESTOCK (B2B) ORDER
+     Store Manager (restock, after PIN) -> order from manufacturer catalog
+        -> HO MANAGER approves (can edit note)
+        -> MANUFACTURER -> ships to RETAILER HO address
+        -> on DELIVERED, stock materializes into the retailer's Product table.
+
+  C) CUSTOM DESIGN
+     Store Manager (custom-design) -> requirement (specs + note + reference image)
+        -> HO MANAGER approves/forwards
+        -> MANUFACTURER receives a sanitized custom-design order (no customer data)
+        -> ships to RETAILER HO address.
+
+  THE REQUIREMENT NOTE:
+     - Written by the Store Manager, EDITABLE by the Store Manager AND HO Manager.
+     - Travels all the way to the manufacturer.
+     - Contains the customer's ASK (size, engraving, timeline) — never personal data.
+
+--------------------------------------------------------------------------------
+ 5. SHIPPING & ADDRESSES
+--------------------------------------------------------------------------------
+
+  Manufacturer knows only:  the RETAILER's fixed HO address  -> ships there.
+  HO Manager knows:         every branch's fixed address     -> distributes.
+  Every order carries:      the branch name (branchNameSnapshot) so HO/manufacturer
+                            can see which store it is for.
+
+--------------------------------------------------------------------------------
+ 6. LOGINS (4) + COOKIES
+--------------------------------------------------------------------------------
+
+  Role           Login page                 Cookie              Payload
+  Manufacturer   /manufacturer/login        jf_manufacturer     manufacturerId
+  Retailer       /store/login               jf_store            storeId (=retailerId)
+  HO Manager     /store/manager/login       jf_manager          managerId.storeId
+  Store Manager  /store-manager/login       jf_branch_manager   bmId.branchId.retailerId
+
+  PIN cookies (device unlock, not logins):
+    jf_kiosk    - legacy per-store kiosk unlock (kept)
+    jf_restock  - per-branch restock unlock (STORE_SECRET:restock)
+
+  Secrets (lib/env.ts): MANUFACTURER_SECRET, STORE_SECRET, MANAGER_SECRET,
+    BRANCH_MANAGER_SECRET (optional; falls back to MANAGER_SECRET).
+
+--------------------------------------------------------------------------------
+ 7. PRIVACY RULE (never break)
+--------------------------------------------------------------------------------
+
+  Customer personal data (name / phone / email / address) is NOT stored and NEVER
+  reaches the manufacturer. Kiosk + custom orders carry only products, quantity,
+  and the requirement note. The manufacturer sees: retailer name, branch name,
+  requirement note, and the retailer HO ship-to address — nothing personal.
+
+--------------------------------------------------------------------------------
+ 8. KEY DB TABLES (see prisma/schema.prisma)
+--------------------------------------------------------------------------------
+
+  stores            = RETAILER   (+ HO fixed address, kioskPinHash [legacy])
+  store_managers    = HO MANAGER
+  branches          = STORE      (+ fixed address, restock_pin_hash)
+  branch_managers   = STORE MANAGER
+  kiosk_orders      + branch_id, branch_name_snapshot, requirement_note; customer PII now OPTIONAL
+  b2b_orders        + branch_id, branch_name_snapshot, requirement_note
+  custom_design_requests + branch_id; customer PII now OPTIONAL
+
+--------------------------------------------------------------------------------
+ 9. MIGRATING AN EXISTING DEPLOYMENT (Option A — keep old data)
+--------------------------------------------------------------------------------
+
+  1. Apply migration:            prisma/migrations/20260717000000_branch_hierarchy
+     (or `prisma migrate deploy`)
+  2. Back-fill branches:         pnpm migrate:branches
+       -> for every existing retailer, creates a default "Main Store" branch and
+          links old kiosk/B2B/custom records to it. Safe to re-run.
+  3. Create real branches + store managers via /store/branches.
+
+================================================================================
+ END
+================================================================================

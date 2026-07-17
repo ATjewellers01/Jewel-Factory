@@ -334,6 +334,28 @@ Ye ek approved demo store bhi banayega:
 > $env:SEED_MANUFACTURER_PASSWORD="MeraStrongPassword"; pnpm db:seed
 > ```
 
+> **Note:** `pnpm db:migrate` (STEP 8) me saari migrations aa jaati hain — including
+> `20260717000000_branch_hierarchy` (multi-store: Retailer → Stores/branches →
+> Store Managers). Fresh DB pe kuch extra nahi karna.
+
+---
+
+## STEP 9b — Purani DB upgrade kar rahe ho? (Branch migration) 🔁
+
+Sirf tab jab **pehle se data wali DB** ko naye multi-store structure me la rahe ho
+(fresh DB pe skip karo). Migration apply hone ke baad ye ek baar chalao:
+
+```bash
+pnpm migrate:branches
+```
+
+Ye har purane Retailer ke andar ek default **"Main Store"** branch bana deta hai
+aur purane kiosk/B2B/custom orders usse link kar deta hai. Dobara chalana safe hai.
+
+> Roles ka mapping (Option A): purana **Store Owner → Retailer**, purana
+> **Manager → HO Manager**, + har retailer ka ek default **Store (branch)**.
+> Naye real branches + store managers `/store/branches` se banao.
+
 ---
 
 ## STEP 10 — App Chalao 🚀
@@ -348,10 +370,19 @@ Browser mein khol ke test karo:
 | --------------------------------------------- | ---------------------------------------------------------- |
 | `http://localhost:3000`                     | Landing → Staff Portal                                    |
 | `http://localhost:3000/portal`              | 3 login cards                                              |
-| `http://localhost:3000/manufacturer/login`  | `admin@atjewellers.com` / `manufacturer123`            |
-| `http://localhost:3000/store/login`         | `store@demo.com` / `store123` (agar demo store banaya) |
-| `http://localhost:3000/store/manager/login` | `manager@demo.com` / `manager123`                      |
-| `http://localhost:3000/demo`                | Customer kiosk (agar demo store banaya)                    |
+| `http://localhost:3000/manufacturer/login`  | `admin@atjewellers.com` / `manufacturer123` (Manufacturer) |
+| `http://localhost:3000/store/login`         | `store@demo.com` / `store123` — **Retailer** (owner)   |
+| `http://localhost:3000/store/manager/login` | `manager@demo.com` / `manager123` — **HO Manager**     |
+| `http://localhost:3000/store/branches`      | Retailer: manage **Stores (branches)** + store managers + restock PIN |
+| `http://localhost:3000/store-manager/login` | **Store Manager** (create one in /store/branches first) |
+| `http://localhost:3000/demo`                | Legacy public kiosk (branch kiosk is inside /store-manager) |
+
+**Roles (4):** Manufacturer · Retailer (`/store`) · HO Manager (`/store/manager`) ·
+Store Manager (`/store-manager`). See `SYSTEM_FLOW.txt` for the full flow.
+
+**Store Manager first login:** Retailer/HO must first create a Store (branch) and a
+Store Manager under it at `/store/branches`. Then that store manager logs in at
+`/store-manager/login` → gets their branch's Kiosk + Restock.
 
 ---
 
