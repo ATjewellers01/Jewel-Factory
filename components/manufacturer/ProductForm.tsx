@@ -1,8 +1,8 @@
 'use client';
 
-import { Loader2, Upload, X, Trash2 } from 'lucide-react';
+import { Loader2, Upload, X, Trash2, Sparkles, RefreshCw, Wand2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +47,108 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingTryon, setUploadingTryon] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ── AI generate (raw image -> name/description + catalog + transparent) ──────
+  const aiInput = useRef<HTMLInputElement>(null);
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiRaw, setAiRaw] = useState<File | null>(null);      // temp raw image (not saved)
+  const [aiRawPreview, setAiRawPreview] = useState<string | null>(null);
+  const [aiInstr, setAiInstr] = useState('');                 // regenerate custom instruction
+  const [aiBusy, setAiBusy] = useState<string | null>(null);  // 'all' | 'describe' | 'catalog' | 'transparent'
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/manufacturer/ai/status', { cache: 'no-store', credentials: 'same-origin' });
+        const json = (await res.json()) as { data?: { enabled: boolean } };
+        setAiEnabled(!!json.data?.enabled);
+      } catch { setAiEnabled(false); }
+    })();
+  }, []);
+
+  function pickRaw(file: File) {
+    setAiError(null);
+    setAiRaw(file);
+    setAiRawPreview(URL.createObjectURL(file));
+  }
+
+  function aiForm(extra?: boolean): FormData {
+    const fd = new FormData();
+    fd.append('image', aiRaw!, aiRaw!.name || 'raw.jpg');
+    if (extra && aiInstr.trim()) fd.append('extraInstructions', aiInstr.trim());
+    return fd;
+  }
+
+  async function b64ToFile(b64: string, name: string): Promise<File> {
+    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    return new File([bytes], name, { type: 'image/png' });
+  }
+
+  // Describe: fill name + description (editable). Returns the new name (so the
+  // "generate all" flow can pass it to catalog/transparent without waiting for
+  // React state to update).
+  async function aiDescribe(withInstr = false): Promise<string | null> {
+    if (!aiRaw) { setAiError('Choose a raw photo first.'); return null; }
+    setAiBusy('describe'); setAiError(null);
+    try {
+      const fd = aiForm(withInstr);
+      fd.append('category', form.category); fd.append('subCategory', form.subCategory);
+      fd.append('weight', form.weightGrams); fd.append('purity', form.purity);
+      const res = await fetch('/api/manufacturer/ai/describe', { method: 'POST', credentials: 'same-origin', body: fd });
+      const json = (await res.json()) as { data?: { designName: string; description: string }; error?: { message: string } };
+      if (!res.ok || !json.data) throw new Error(json.error?.message ?? 'Describe failed');
+      setForm((p) => ({ ...p, name: json.data!.designName || p.name, description: json.data!.description || p.description }));
+      return json.data.designName || null;
+    } catch (e) { setAiError(e instanceof Error ? e.message : 'Describe failed'); return null; } finally { setAiBusy(null); }
+  }
+
+  // Catalog: generate an attractive image and add it as a product photo.
+  async function aiCatalog(withInstr = false) {
+    if (!aiRaw) { setAiError('Choose a raw photo first.'); return; }
+    if (!form.name.trim()) { setAiError('Generate/enter a design name first (photos attach to the product).'); return; }
+    setAiBusy('catalog'); setAiError(null);
+    try {
+      const res = await fetch('/api/manufacturer/ai/catalog', { method: 'POST', credentials: 'same-origin', body: aiForm(withInstr) });
+      const json = (await res.json()) as { data?: { imageBase64: string }; error?: { message: string } };
+      if (!res.ok || !json.data) throw new Error(json.error?.message ?? 'Catalog generation failed');
+      const file = await b64ToFile(json.data.imageBase64, 'ai-catalog.png');
+      await handleImageUpload(file);
+    } catch (e) { setAiError(e instanceof Error ? e.message : 'Catalog generation failed'); } finally { setAiBusy(null); }
+  }
+
+  // Transparent: generate a background-free PNG and set it as the try-on asset.
+  async function aiTransparent(withInstr = false) {
+    if (!aiRaw) { setAiError('Choose a raw photo first.'); return; }
+    if (!form.name.trim()) { setAiError('Generate/enter a design name first.'); return; }
+    setAiBusy('transparent'); setAiError(null);
+    try {
+      const fd = aiForm(withInstr);
+      fd.append('jewelleryType', tryonType);
+      const res = await fetch('/api/manufacturer/ai/transparent', { method: 'POST', credentials: 'same-origin', body: fd });
+      const json = (await res.json()) as { data?: { imageBase64: string }; error?: { message: string } };
+      if (!res.ok || !json.data) throw new Error(json.error?.message ?? 'Transparent generation failed');
+      const file = await b64ToFile(json.data.imageBase64, 'ai-tryon.png');
+      await handleTryonUpload(file);
+    } catch (e) { setAiError(e instanceof Error ? e.message : 'Transparent generation failed'); } finally { setAiBusy(null); }
+  }
+
+  // Generate everything at once (name/desc, then catalog + transparent).
+  // aiDescribe returns the name so we can set it synchronously before the image
+  // steps run (React state hasn't flushed yet in the same tick).
+  async function aiGenerateAll() {
+    if (!aiRaw) { setAiError('Choose a raw photo first.'); return; }
+    setAiBusy('all'); setAiError(null);
+    const newName = await aiDescribe(false);
+    if (newName && !form.name.trim()) {
+      // Ensure the name is committed before the image steps' name-gate.
+      setForm((p) => ({ ...p, name: p.name.trim() || newName }));
+      await new Promise((r) => setTimeout(r, 0)); // let the state flush
+    }
+    await aiCatalog(false);
+    await aiTransparent(false);
+    setAiBusy(null);
+  }
 
   const set = (k: keyof ProductFormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((p) => ({ ...p, [k]: e.target.value }));
@@ -194,6 +296,70 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         <h1 className="text-2xl font-medium tracking-tight">{isEdit ? 'Edit Design' : 'Add Design'}</h1>
         {form.designNumber && <p className="mt-0.5 text-sm text-muted-foreground">Design number: <span className="font-mono">{form.designNumber}</span></p>}
       </div>
+
+      {/* ── Generate with AI (optional) ─────────────────────────────────────
+          Upload a raw photo → AI fills name + description, and makes an
+          attractive catalog image + a transparent try-on PNG. Everything stays
+          editable. If AI isn't configured, this whole block is hidden and manual
+          add works exactly as before. */}
+      {aiEnabled && (
+        <section className="space-y-3 rounded-xl border border-primary/30 bg-primary/[0.03] p-4">
+          <div className="flex items-center gap-2">
+            <Wand2 className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold">Generate with AI</span>
+            <span className="text-xs text-muted-foreground">(optional — from a raw photo)</span>
+          </div>
+
+          <div className="flex flex-wrap items-start gap-3">
+            {aiRawPreview ? (
+              <div className="relative h-24 w-24 overflow-hidden rounded-lg border">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={aiRawPreview} alt="raw" className="h-full w-full object-cover" />
+                <button type="button" onClick={() => { setAiRaw(null); setAiRawPreview(null); }} className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"><X className="h-3 w-3" /></button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => aiInput.current?.click()} className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-muted-foreground hover:border-primary/50 hover:text-primary">
+                <Upload className="h-5 w-5" /><span className="text-[10px]">Raw photo</span>
+              </button>
+            )}
+            <input ref={aiInput} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && pickRaw(e.target.files[0])} />
+
+            <div className="flex-1 space-y-2">
+              <p className="text-xs text-muted-foreground">Set category / weight / purity first for a better description. Then:</p>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" disabled={!aiRaw || !!aiBusy} onClick={() => aiDescribe(false)} className="metal-sheen text-[#17120b] font-semibold">
+                  {aiBusy === 'describe' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Name + Description</>}
+                </Button>
+                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy} onClick={() => aiCatalog(false)}>
+                  {aiBusy === 'catalog' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Catalog image</>}
+                </Button>
+                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy} onClick={() => aiTransparent(false)}>
+                  {aiBusy === 'transparent' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Try-on PNG ({tryonType})</>}
+                </Button>
+                <Button type="button" size="sm" disabled={!aiRaw || !!aiBusy} onClick={aiGenerateAll} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                  {aiBusy === 'all' ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Generating…</> : <><Wand2 className="mr-1 h-3.5 w-3.5" />Generate all</>}
+                </Button>
+              </div>
+
+              {/* Regenerate with a custom instruction */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <Input value={aiInstr} onChange={(e) => setAiInstr(e.target.value)} placeholder="Regenerate note, e.g. simpler background, warmer light" className="h-8 max-w-xs text-xs" />
+                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiCatalog(true)} title="Regenerate catalog with this instruction">
+                  <RefreshCw className="mr-1 h-3.5 w-3.5" />Catalog
+                </Button>
+                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiTransparent(true)} title="Regenerate try-on with this instruction">
+                  <RefreshCw className="mr-1 h-3.5 w-3.5" />Try-on
+                </Button>
+                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiDescribe(true)} title="Rewrite name/description with this instruction">
+                  <RefreshCw className="mr-1 h-3.5 w-3.5" />Text
+                </Button>
+              </div>
+            </div>
+          </div>
+          {aiError && <p className="text-sm text-red-600">{aiError}</p>}
+          <p className="text-[11px] text-muted-foreground">AI fills the fields + photos below — review and edit anything, then Save. The raw photo above is only used for generation (not saved).</p>
+        </section>
+      )}
 
       {/* Fields */}
       <section className="space-y-3">

@@ -23,6 +23,11 @@ const ServerEnvSchema = z.object({
 
   EMBEDDER_URL: z.string().optional(),
   EMBEDDER_API_KEY: z.string().optional(),
+  // AI-Features service (catalog image + transparent PNG + name/description).
+  // Same deployment can also serve /embed/* — see EMBEDDER_URL. Optional: if unset,
+  // the "Generate with AI" button is hidden and manual add works as before.
+  AI_FEATURES_URL: z.string().optional(),
+  AI_FEATURES_API_KEY: z.string().optional(),
   QDRANT_URL: z.string().optional(),
   QDRANT_API_KEY: z.string().optional(),
   QDRANT_MANUFACTURER_COLLECTION: z

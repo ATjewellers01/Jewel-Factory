@@ -8,6 +8,7 @@ import { manufacturerAuthRoutes } from './routes/manufacturer-auth';
 import { manufacturerCatalogRoutes } from './routes/manufacturer-catalog';
 import { manufacturerStoreRoutes } from './routes/manufacturer-stores';
 import { manufacturerOrderRoutes } from './routes/manufacturer-orders';
+import { manufacturerAiRoutes } from './routes/manufacturer-ai';
 import { storeAuthRoutes } from './routes/store-auth';
 import { storePortalRoutes } from './routes/store-portal';
 import { storeCatalogRoutes } from './routes/store-catalog';
@@ -40,6 +41,7 @@ app.route('/manufacturer', manufacturerAuthRoutes);
 app.route('/manufacturer', manufacturerCatalogRoutes);
 app.route('/manufacturer', manufacturerStoreRoutes);
 app.route('/manufacturer', manufacturerOrderRoutes);
+app.route('/manufacturer', manufacturerAiRoutes);
 
 // Store: auth (public) + portal (owner-only) + catalog/B2B (owner) + ops (owner|manager)
 app.route('/store', storeAuthRoutes);
