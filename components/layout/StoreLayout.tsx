@@ -66,7 +66,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                {isOwner === false ? 'Manager Portal' : 'Store Portal'}
+                {isOwner === false ? 'HO Manager' : 'Retailer Portal'}
               </p>
               <p className="truncate text-sm font-semibold">{storeName}</p>
             </div>
@@ -100,7 +100,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
           </button>
           <span className="text-sm font-medium">{storeName}</span>
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-            {isOwner === false ? 'Manager' : 'Store Portal'}
+            {isOwner === false ? 'HO Manager' : 'Retailer'}
           </span>
         </header>
         <main className="flex-1 p-3 sm:p-4 md:p-6">{children}</main>

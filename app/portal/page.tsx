@@ -2,26 +2,32 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Store, Factory, ArrowRight, Users } from 'lucide-react';
+import { Store, Factory, ArrowRight, Users, Gem } from 'lucide-react';
 
 const CARDS = [
   {
     href: '/store/login',
     icon: Store,
-    title: 'Store Owner Login',
-    subtitle: 'Access your store portal & dashboard',
+    title: 'Retailer Login',
+    subtitle: 'Manage stores, HO managers & branding',
   },
   {
     href: '/store/manager/login',
     icon: Users,
-    title: 'Store Manager Login',
+    title: 'HO Manager Login',
     subtitle: 'Approve orders & custom design requests',
+  },
+  {
+    href: '/store-manager/login',
+    icon: Gem,
+    title: 'Store Manager Login',
+    subtitle: 'Run your store — kiosk, try-on & restock',
   },
   {
     href: '/manufacturer/login',
     icon: Factory,
     title: 'Manufacturer Login',
-    subtitle: 'Admin panel — catalog, stores & orders',
+    subtitle: 'Admin panel — catalog, retailers & orders',
   },
 ];
 
