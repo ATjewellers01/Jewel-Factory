@@ -18,6 +18,7 @@ import { listActiveProducts, getActiveProductByDesignOrId } from '@/lib/db/manuf
 import { placeKioskOrder, placeB2bOrder } from '@/lib/db/orders';
 import { placeCustomRequest } from '@/lib/db/custom-design';
 import { formatStoreAddress } from '@/lib/db/stores';
+import { signUpload, storeFolder } from '@/lib/cloudinary';
 import { embedImageBase64, searchByVector } from '@/lib/search';
 import { sendData, sendError } from '../envelope';
 import { branchManagerGuard, type AppEnv } from '../guards';
@@ -194,6 +195,16 @@ const CustomBody = z.object({
   purity: z.string().optional(),
   designNotes: z.string().max(2000).optional(),
   referenceImageUrl: z.string().url().optional(),
+});
+
+// Signed Cloudinary upload for the customer's reference photo (branch-scoped).
+branchManagerRoutes.post('/custom-designs/upload-sign', branchManagerGuard, async (c) => {
+  try {
+    const signed = signUpload({ folder: storeFolder(c.get('storeId'), 'custom'), bucket: 'custom' });
+    return sendData(c, signed);
+  } catch (err) {
+    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Cloudinary not configured', 503);
+  }
 });
 
 branchManagerRoutes.post('/custom-designs', branchManagerGuard, zValidator('json', CustomBody), async (c) => {

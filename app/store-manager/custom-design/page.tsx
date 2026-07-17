@@ -1,7 +1,7 @@
 'use client';
 
-import { CheckCircle2, Loader2, PencilLine } from 'lucide-react';
-import { useState } from 'react';
+import { CheckCircle2, Loader2, PencilLine, Upload, X } from 'lucide-react';
+import { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,9 +16,36 @@ export default function StoreManagerCustomDesignPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload');
+  const [uploading, setUploading] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   function set(k: string, v: string) { setForm((p) => ({ ...p, [k]: v })); }
   const subOptions = subCategoriesFor(form.category);
+
+  async function handleUpload(file: File) {
+    setError(null); setUploading(true);
+    try {
+      const signRes = await fetch('/api/branch-manager/custom-designs/upload-sign', { method: 'POST', credentials: 'same-origin' });
+      if (signRes.status === 401) { window.location.assign('/store-manager/login'); return; }
+      const signJson = (await signRes.json()) as { data?: { apiKey: string; timestamp: number; folder: string; signature: string; uploadUrl: string; maxBytes: number }; error?: { message: string } };
+      if (!signRes.ok || !signJson.data) { setError(signJson.error?.message ?? 'Upload unavailable.'); return; }
+      const s = signJson.data;
+      if (file.size > s.maxBytes) { setError(`Image too large (max ${Math.round(s.maxBytes / 1024 / 1024)}MB).`); return; }
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('api_key', s.apiKey);
+      fd.append('timestamp', String(s.timestamp));
+      fd.append('signature', s.signature);
+      fd.append('folder', s.folder);
+      const upRes = await fetch(s.uploadUrl, { method: 'POST', body: fd });
+      const upJson = (await upRes.json()) as { secure_url?: string; error?: { message: string } };
+      if (!upRes.ok || !upJson.secure_url) { setError(upJson.error?.message ?? 'Upload failed.'); return; }
+      set('imageUrl', upJson.secure_url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Upload failed.');
+    } finally { setUploading(false); }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -88,7 +115,36 @@ export default function StoreManagerCustomDesignPage() {
             </select>
           </div>
         </div>
-        <div><label className="text-xs font-medium text-muted-foreground">Reference image URL <span className="font-normal">(optional)</span></label><Input className="mt-1" placeholder="https://…" value={form.imageUrl} onChange={(e) => set('imageUrl', e.target.value)} /></div>
+        {/* Reference image — upload OR URL */}
+        <div>
+          <div className="mb-1 flex items-center justify-between">
+            <label className="text-xs font-medium text-muted-foreground">Reference image <span className="font-normal">(optional)</span></label>
+            <div className="flex gap-1 text-xs">
+              <button type="button" onClick={() => setImageMode('upload')} className={`rounded px-2 py-0.5 ${imageMode === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>Upload</button>
+              <button type="button" onClick={() => setImageMode('url')} className={`rounded px-2 py-0.5 ${imageMode === 'url' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>URL</button>
+            </div>
+          </div>
+          {form.imageUrl ? (
+            <div className="relative inline-block">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={form.imageUrl} alt="reference" className="h-28 w-28 rounded-lg border object-cover" />
+              <button type="button" onClick={() => set('imageUrl', '')} className="absolute -right-2 -top-2 rounded-full bg-black/70 p-1 text-white hover:bg-black" aria-label="Remove">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ) : imageMode === 'upload' ? (
+            <>
+              <button type="button" onClick={() => fileInput.current?.click()} disabled={uploading}
+                className="flex h-28 w-28 flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-muted-foreground hover:border-primary/50 hover:text-primary disabled:opacity-60">
+                {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+                <span className="text-[10px]">{uploading ? 'Uploading…' : 'Choose photo'}</span>
+              </button>
+              <input ref={fileInput} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])} />
+            </>
+          ) : (
+            <Input placeholder="https://…" value={form.imageUrl} onChange={(e) => set('imageUrl', e.target.value)} />
+          )}
+        </div>
         <div><label className="text-xs font-medium text-muted-foreground">Requirement / notes</label><textarea className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[100px]" placeholder="Describe the design the customer wants…" value={form.notes} onChange={(e) => set('notes', e.target.value)} /></div>
 
         {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
