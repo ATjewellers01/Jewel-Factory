@@ -68,6 +68,19 @@ enum CustomOrderStatus {
   CANCELLED
 }
 
+// Which kind of order a chat message / thread belongs to.
+enum OrderKind {
+  KIOSK
+  B2B
+  CUSTOM
+}
+
+// Who sent a message in the HO <-> Store Manager thread.
+enum MessageSender {
+  HO
+  STORE_MANAGER
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // AUTH / IDENTITY
 // ─────────────────────────────────────────────────────────────────────────────
@@ -405,6 +418,9 @@ model B2bOrder {
   fulfilledAt         DateTime? @map("fulfilled_at")
   fulfilledProductIds String[]  @default([]) @map("fulfilled_product_ids")
 
+  // Store Manager marks Completed when stock reaches the store.
+  completedAt DateTime? @map("completed_at")
+
   totalItems Int      @default(0) @map("total_items")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
@@ -490,6 +506,9 @@ model KioskOrder {
   storeApprovedAt         DateTime? @map("store_approved_at")
   forwardedToManufacturer Boolean   @default(false) @map("forwarded_to_manufacturer")
 
+  // Store Manager marks Completed when the piece reaches the customer.
+  completedAt DateTime? @map("completed_at")
+
   totalItems Int      @default(0) @map("total_items")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
@@ -556,6 +575,7 @@ model CustomDesignRequest {
   reviewedById           String?      @map("reviewed_by_id") // null = owner reviewed
   reviewedAt             DateTime?    @map("reviewed_at")
   rejectionReason        String?      @map("rejection_reason")
+  completedAt            DateTime?    @map("completed_at") // Store Manager marks Completed
   createdAt              DateTime     @default(now()) @map("created_at")
   updatedAt              DateTime     @updatedAt @map("updated_at")
 
@@ -606,6 +626,28 @@ model Category {
   sortOrder Int    @default(0) @map("sort_order")
 
   @@map("categories")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ORDER MESSAGES — per-order chat between HO Manager and Store Manager.
+// Works across all three order types via (orderKind, orderId). No FK (polymorphic)
+// so one table serves kiosk/b2b/custom uniformly.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model OrderMessage {
+  id        String        @id @default(uuid())
+  orderKind OrderKind     @map("order_kind")
+  orderId   String        @map("order_id")
+  storeId   String        @map("store_id") // retailer id — tenancy scope
+  branchId  String?       @map("branch_id")
+  sender    MessageSender
+  senderName String?      @map("sender_name")
+  body      String
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  @@index([orderKind, orderId])
+  @@index([storeId])
+  @@map("order_messages")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

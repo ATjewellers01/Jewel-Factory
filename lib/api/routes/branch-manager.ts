@@ -15,8 +15,12 @@ import {
   cookieOptions,
 } from '@/lib/auth';
 import { listActiveProducts, getActiveProductByDesignOrId } from '@/lib/db/manufacturer-catalog';
-import { placeKioskOrder, placeB2bOrder } from '@/lib/db/orders';
-import { placeCustomRequest } from '@/lib/db/custom-design';
+import {
+  placeKioskOrder, placeB2bOrder,
+  getKioskOrdersByBranch, getB2bOrdersByBranch, markKioskCompleted, markB2bCompleted,
+} from '@/lib/db/orders';
+import { placeCustomRequest, getCustomRequestsByBranch, markCustomCompleted } from '@/lib/db/custom-design';
+import { listOrderMessages, addOrderMessage } from '@/lib/db/messages';
 import { formatStoreAddress } from '@/lib/db/stores';
 import { signUpload, storeFolder } from '@/lib/cloudinary';
 import { embedImageBase64, searchByVector } from '@/lib/search';
@@ -304,4 +308,56 @@ branchManagerRoutes.post('/restock-orders', branchManagerGuard, zValidator('json
     }),
   });
   return sendData(c, order, 201);
+});
+
+// ── My Orders (this branch's kiosk + b2b + custom orders) ─────────────────────
+
+branchManagerRoutes.get('/my-orders/kiosk', branchManagerGuard, async (c) => {
+  return sendData(c, await getKioskOrdersByBranch(c.get('branchId')));
+});
+branchManagerRoutes.get('/my-orders/b2b', branchManagerGuard, async (c) => {
+  return sendData(c, await getB2bOrdersByBranch(c.get('branchId')));
+});
+branchManagerRoutes.get('/my-orders/custom', branchManagerGuard, async (c) => {
+  return sendData(c, await getCustomRequestsByBranch(c.get('branchId')));
+});
+
+// Mark Completed (piece reached customer/store)
+branchManagerRoutes.post('/my-orders/:kind/:id/complete', branchManagerGuard, async (c) => {
+  const kind = c.req.param('kind');
+  const id = c.req.param('id');
+  const branchId = c.get('branchId');
+  let ok = false;
+  if (kind === 'kiosk') ok = await markKioskCompleted(branchId, id);
+  else if (kind === 'b2b') ok = await markB2bCompleted(branchId, id);
+  else if (kind === 'custom') ok = await markCustomCompleted(branchId, id);
+  else return sendError(c, 'bad_request', 'Invalid order kind', 400);
+  if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
+  return sendData(c, { ok: true });
+});
+
+// ── Per-order chat (Store Manager side) ───────────────────────────────────────
+
+const KIND_MAP: Record<string, 'KIOSK' | 'B2B' | 'CUSTOM'> = { kiosk: 'KIOSK', b2b: 'B2B', custom: 'CUSTOM' };
+
+branchManagerRoutes.get('/messages/:kind/:id', branchManagerGuard, async (c) => {
+  const kind = KIND_MAP[c.req.param('kind')];
+  if (!kind) return sendError(c, 'bad_request', 'Invalid order kind', 400);
+  return sendData(c, await listOrderMessages(c.get('storeId'), kind, c.req.param('id')));
+});
+
+branchManagerRoutes.post('/messages/:kind/:id', branchManagerGuard, zValidator('json', z.object({ body: z.string().min(1).max(2000) })), async (c) => {
+  const kind = KIND_MAP[c.req.param('kind')];
+  if (!kind) return sendError(c, 'bad_request', 'Invalid order kind', 400);
+  const bm = await prisma.branchManager.findUnique({ where: { id: c.get('branchManagerId') }, select: { name: true } });
+  const msg = await addOrderMessage({
+    storeId: c.get('storeId'),
+    branchId: c.get('branchId'),
+    orderKind: kind,
+    orderId: c.req.param('id'),
+    sender: 'STORE_MANAGER',
+    senderName: bm?.name ?? 'Store Manager',
+    body: c.req.valid('json').body,
+  });
+  return sendData(c, msg, 201);
 });

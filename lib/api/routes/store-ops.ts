@@ -14,6 +14,7 @@ import {
 import {
   listCustomRequests, getCustomRequestForStore, forwardCustomRequest, rejectCustomRequest,
 } from '@/lib/db/custom-design';
+import { listOrderMessages, addOrderMessage } from '@/lib/db/messages';
 import { sendData, sendError } from '../envelope';
 import { managerGuard, approverIdOrNull, type AppEnv } from '../guards';
 
@@ -130,4 +131,34 @@ storeOpsRoutes.post('/custom-designs/:id/reject', async (c) => {
   const ok = await rejectCustomRequest(c.get('storeId'), c.req.param('id'), approverIdOrNull(c));
   if (!ok) return sendError(c, 'not_found', 'Request not found', 404);
   return sendData(c, { ok: true });
+});
+
+// ── Per-order chat (HO Manager side) ──────────────────────────────────────────
+
+const OPS_KIND: Record<string, 'KIOSK' | 'B2B' | 'CUSTOM'> = { kiosk: 'KIOSK', b2b: 'B2B', custom: 'CUSTOM' };
+
+storeOpsRoutes.get('/messages/:kind/:id', async (c) => {
+  const kind = OPS_KIND[c.req.param('kind')];
+  if (!kind) return sendError(c, 'bad_request', 'Invalid order kind', 400);
+  return sendData(c, await listOrderMessages(c.get('storeId'), kind, c.req.param('id')));
+});
+
+storeOpsRoutes.post('/messages/:kind/:id', zValidator('json', z.object({ body: z.string().min(1).max(2000) })), async (c) => {
+  const kind = OPS_KIND[c.req.param('kind')];
+  if (!kind) return sendError(c, 'bad_request', 'Invalid order kind', 400);
+  // Sender name: owner = "Head Office", manager = their name.
+  let senderName = 'Head Office';
+  if (!c.get('isOwner')) {
+    const mgr = await prisma.storeManager.findUnique({ where: { id: c.get('managerId') }, select: { name: true } });
+    senderName = mgr?.name ?? 'Head Office';
+  }
+  const msg = await addOrderMessage({
+    storeId: c.get('storeId'),
+    orderKind: kind,
+    orderId: c.req.param('id'),
+    sender: 'HO',
+    senderName,
+    body: c.req.valid('json').body,
+  });
+  return sendData(c, msg, 201);
 });

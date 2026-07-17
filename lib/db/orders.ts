@@ -129,6 +129,36 @@ export async function rejectKioskOrder(storeId: string, id: string) {
   return true;
 }
 
+// Store Manager: kiosk/B2B orders for THIS branch (their own orders view).
+export async function getKioskOrdersByBranch(branchId: string) {
+  return prisma.kioskOrder.findMany({
+    where: { branchId },
+    orderBy: { createdAt: 'desc' },
+    include: { items: true },
+  });
+}
+export async function getB2bOrdersByBranch(branchId: string) {
+  return prisma.b2bOrder.findMany({
+    where: { branchId },
+    orderBy: { createdAt: 'desc' },
+    include: { items: true },
+  });
+}
+
+// Store Manager marks a kiosk/B2B order Completed (piece reached customer/store).
+export async function markKioskCompleted(branchId: string, id: string) {
+  const o = await prisma.kioskOrder.findFirst({ where: { id, branchId }, select: { id: true } });
+  if (!o) return false;
+  await prisma.kioskOrder.update({ where: { id }, data: { completedAt: new Date() } });
+  return true;
+}
+export async function markB2bCompleted(branchId: string, id: string) {
+  const o = await prisma.b2bOrder.findFirst({ where: { id, branchId }, select: { id: true } });
+  if (!o) return false;
+  await prisma.b2bOrder.update({ where: { id }, data: { completedAt: new Date() } });
+  return true;
+}
+
 // Edit the requirement note on a kiosk order (HO manager, before/around approval).
 export async function updateKioskRequirementNote(storeId: string, id: string, note: string | null) {
   const o = await prisma.kioskOrder.findFirst({ where: { id, storeId }, select: { id: true } });

@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, LogOut, Gem, PencilLine, Package, LayoutDashboard, Sparkles, Search, Shield, Award, Camera, Users } from 'lucide-react';
+import { Loader2, LogOut, Gem, PencilLine, Package, LayoutDashboard, Sparkles, Search, Shield, Award, Camera, Users, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createContext, useContext, type ReactNode } from 'react';
@@ -54,6 +54,7 @@ function Shell({ children }: { children: ReactNode }) {
     { href: '/store-manager/search', label: 'Search', icon: Search },
     { href: '/store-manager/custom-design', label: 'Custom Design', icon: PencilLine },
     { href: '/store-manager/restock', label: 'Restock', icon: Package },
+    { href: '/store-manager/my-orders', label: 'My Orders', icon: ClipboardList },
   ];
 
   return (

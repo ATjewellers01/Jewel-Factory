@@ -62,6 +62,23 @@ export async function getCustomRequestForStore(storeId: string, id: string) {
   return prisma.customDesignRequest.findFirst({ where: { id, storeId } });
 }
 
+// Store Manager: custom requests for THIS branch (their own view) + mfr status.
+export async function getCustomRequestsByBranch(branchId: string) {
+  return prisma.customDesignRequest.findMany({
+    where: { branchId },
+    orderBy: { createdAt: 'desc' },
+    include: { order: { select: { id: true, status: true, orderNumber: true, trackingNumber: true } } },
+  });
+}
+
+// Store Manager marks a custom request Completed (piece delivered to customer).
+export async function markCustomCompleted(branchId: string, id: string) {
+  const r = await prisma.customDesignRequest.findFirst({ where: { id, branchId }, select: { id: true } });
+  if (!r) return false;
+  await prisma.customDesignRequest.update({ where: { id }, data: { completedAt: new Date() } });
+  return true;
+}
+
 /**
  * Approve + forward: create a SANITIZED custom_design_order (store identity +
  * specs only, NO customer PII), then flip the request to FORWARDED. Atomic.

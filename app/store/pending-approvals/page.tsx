@@ -1,10 +1,11 @@
 'use client';
 
-import { CheckCircle2, XCircle, Loader2, ClipboardCheck, Store, Pencil, Save } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, ClipboardCheck, Store, Pencil, Save, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { useApi, apiPost, apiSend } from '@/hooks/use-api';
+import { OrderChat } from '@/components/orders/OrderChat';
 
 type Item = { id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; quantity: number };
 type KioskOrder = { id: string; orderNumber: string; customerName: string | null; branchNameSnapshot: string | null; requirementNote: string | null; totalItems: number; pickupStore: boolean; createdAt: string; items: Item[] };
@@ -76,6 +77,7 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note ?? '');
   const [saving, setSaving] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   async function saveNote() {
     setSaving(true);
@@ -103,8 +105,12 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
           <Button size="sm" variant="outline" disabled={busy} onClick={onReject} className="border-red-200 text-red-700 hover:bg-red-50">
             <XCircle className="mr-1 h-3.5 w-3.5" />Reject
           </Button>
+          <Button size="sm" variant="outline" onClick={() => setChatOpen(true)}>
+            <MessageCircle className="mr-1 h-3.5 w-3.5" />Message
+          </Button>
         </div>
       </div>
+      {chatOpen && <OrderChat basePath="/api/store/messages" kind={kind} orderId={id} orderLabel={title} viewer="HO" onClose={() => setChatOpen(false)} />}
 
       {/* Requirement note — editable by HO before approving */}
       <div className="mt-3 rounded-lg border bg-muted/20 p-2.5">
