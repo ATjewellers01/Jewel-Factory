@@ -24,13 +24,25 @@ export default function StoreManagerHome() {
         const res = await fetch('/api/branch-manager/catalog', { cache: 'no-store', credentials: 'same-origin' });
         if (res.status === 401) { window.location.assign('/store-manager/login'); return; }
         const json = (await res.json()) as { data?: Product[] };
-        setProducts((json.data ?? []).filter((p) => primary(p)));
+        const list = (json.data ?? []).filter((p) => primary(p));
+        // Shuffle once (Fisher–Yates) so sections show fresh, varied products each visit.
+        for (let i = list.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [list[i], list[j]] = [list[j]!, list[i]!];
+        }
+        setProducts(list);
       } catch { /* ignore */ }
     })();
   }, []);
 
   const floats = products.slice(0, 3);
   const featured = products[0];
+
+  // "Popular now" and "More to explore" show DIFFERENT random products when there
+  // are enough; with a small catalog they overlap so both sections stay full.
+  const enough = products.length >= 8;
+  const popular = products.slice(0, 4);
+  const more = enough ? products.slice(4, 12) : products.slice(0, 8);
 
   return (
     <div className="space-y-14 pb-4">
@@ -136,7 +148,7 @@ export default function StoreManagerHome() {
               <Link href="/store-manager/kiosk" className="luxury-link-underline hidden text-sm font-semibold text-white/65 hover:text-white sm:inline-flex">View catalogue</Link>
             </div>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
-              {products.slice(0, 4).map((p) => <MiniCard key={p.id} p={p} dark />)}
+              {popular.map((p) => <MiniCard key={p.id} p={p} dark />)}
             </div>
           </div>
         </section>
@@ -161,14 +173,14 @@ export default function StoreManagerHome() {
       </section>
 
       {/* ── More to explore ─────────────────────────────────────────────────── */}
-      {products.length > 4 && (
+      {more.length > 0 && (
         <section className="mx-auto w-full max-w-[1400px] px-6 lg:px-10">
           <div className="mb-8">
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-primary">Discover</p>
             <h2 className="font-display text-3xl font-normal md:text-5xl">More to explore</h2>
           </div>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
-            {products.slice(4, 12).map((p) => <MiniCard key={p.id} p={p} />)}
+            {more.map((p) => <MiniCard key={p.id} p={p} />)}
           </div>
         </section>
       )}
