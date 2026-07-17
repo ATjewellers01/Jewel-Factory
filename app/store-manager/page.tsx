@@ -1,6 +1,6 @@
 'use client';
 
-import { Gem, PencilLine, Package, ArrowRight, Sparkles, Search, ShieldCheck, Camera, X, Award } from 'lucide-react';
+import { ArrowRight, Sparkles, Camera, X, Award } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
@@ -125,17 +125,6 @@ export default function StoreManagerHome() {
         </motion.aside>
       )}
 
-      {/* Quick actions */}
-      <section className="mx-auto w-full max-w-[1400px] px-6 lg:px-10">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          <Card href="/store-manager/kiosk" icon={Gem} title="Catalog" desc="Browse with the customer & place their order." />
-          <Card href="/store-manager/search" icon={Search} title="Search by Photo" desc="Find a matching design from a photo." />
-          <Card href="/store-manager/try-on" icon={Sparkles} title="Virtual Try-On" desc="Let the customer try pieces on with AR." />
-          <Card href="/store-manager/custom-design" icon={PencilLine} title="Custom Design" desc="Capture a custom requirement for HO." />
-          <Card href="/store-manager/restock" icon={Package} title="Restock" desc="Order stock for this store." locked={me.branch.hasRestockPin} />
-        </div>
-      </section>
-
       {/* ── Popular now (dark section, top catalog products) ─────────────────── */}
       {products.length > 0 && (
         <section className="w-full bg-[#1b1612] py-14 text-white md:py-20">
@@ -204,20 +193,6 @@ function MiniCard({ p, dark }: { p: Product; dark?: boolean }) {
         <p className="truncate text-sm font-semibold text-[#1f1a14] group-hover:text-primary">{titleCaseName(p.name)}</p>
         <p className="truncate text-xs text-[#6f675e]">{productMetaLine({ category: p.category, subCategory: p.subCategory, purity: p.purity, weight: p.weightGrams })}</p>
       </div>
-    </Link>
-  );
-}
-
-function Card({ href, icon: Icon, title, desc, locked }: { href: string; icon: React.ComponentType<{ className?: string }>; title: string; desc: string; locked?: boolean }) {
-  return (
-    <Link href={href} className="group flex flex-col rounded-2xl border border-[#e4d8c6] bg-[#FBF9F5] p-6 transition-shadow hover:shadow-md">
-      <div className="flex items-center gap-2">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="h-5 w-5" /></div>
-        {locked && <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800"><ShieldCheck className="h-3 w-3" />PIN</span>}
-      </div>
-      <h2 className="mt-3 font-medium">{title}</h2>
-      <p className="mt-1 flex-1 text-sm text-muted-foreground">{desc}</p>
-      <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary">Open<ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" /></span>
     </Link>
   );
 }
