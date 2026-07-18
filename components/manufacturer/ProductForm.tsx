@@ -272,6 +272,22 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
     setTryon(null);
   }
 
+  async function deleteProduct() {
+    const id = form.id;
+    if (!id) return;
+    if (!confirm('Delete this design? This removes its images and try-on asset. Cannot be undone.')) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/manufacturer/products/${id}`, { method: 'DELETE' });
+      const json = (await res.json().catch(() => null)) as { error?: { message: string } } | null;
+      if (!res.ok) { setError(json?.error?.message ?? 'Could not delete'); return; }
+      router.push('/manufacturer/catalog');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not delete');
+    } finally { setBusy(false); }
+  }
+
   async function save() {
     setError(null);
     if (!form.name.trim()) { setError('Design name is required.'); return; }
@@ -524,11 +540,16 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <Button onClick={save} disabled={busy} className="metal-sheen text-[#17120b] font-semibold">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
         </Button>
         <Button variant="outline" onClick={() => router.push('/manufacturer/catalog')}>Cancel</Button>
+        {(isEdit || form.id) && (
+          <Button variant="outline" onClick={deleteProduct} disabled={busy} className="ml-auto border-red-200 text-red-700 hover:bg-red-50">
+            <Trash2 className="mr-1.5 h-4 w-4" />Delete design
+          </Button>
+        )}
       </div>
     </div>
   );
