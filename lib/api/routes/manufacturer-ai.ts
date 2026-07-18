@@ -21,7 +21,10 @@ manufacturerAiRoutes.use('/ai/*', manufacturerGuard);
 
 function aiBase(): string | null {
   const url = getServerEnv().AI_FEATURES_URL;
-  return url ? url.replace(/\/$/, '') : null;
+  if (!url) return null;
+  // HF Space hostnames are lowercase; a capital-cased URL 307-redirects and the
+  // POST body can be dropped on redirect -> upstream error. Lowercase the host.
+  return url.replace(/\/$/, '').replace(/^https?:\/\/[^/]+/i, (m) => m.toLowerCase());
 }
 
 manufacturerAiRoutes.get('/ai/status', (c) => {
@@ -40,13 +43,24 @@ async function forward(c: Context<AppEnv>, path: string) {
 
   let res: Response;
   try {
-    res = await fetch(`${base}${path}`, { method: 'POST', headers, body: form as unknown as BodyInit });
+    res = await fetch(`${base}${path}`, {
+      method: 'POST',
+      headers,
+      body: form as unknown as BodyInit,
+      redirect: 'follow',
+    });
   } catch (e) {
-    return sendError(c, 'upstream_failed', e instanceof Error ? e.message : 'AI service unreachable', 502);
+    const detail = e instanceof Error ? `${e.name}: ${e.message}` : 'AI service unreachable';
+    console.error('[ai-proxy] fetch error', path, detail);
+    return sendError(c, 'upstream_failed', `AI service unreachable — ${detail}`, 502);
   }
-  const json = await res.json().catch(() => null);
+  const text = await res.text();
+  let json: unknown = null;
+  try { json = text ? JSON.parse(text) : null; } catch { /* non-JSON upstream */ }
   if (!res.ok) {
-    const msg = (json && (json.detail || json.error?.message)) || `AI request failed (${res.status})`;
+    const j = json as { detail?: string; error?: { message?: string } } | null;
+    const msg = (j && (j.detail || j.error?.message)) || `AI upstream ${res.status}: ${text.slice(0, 200)}`;
+    console.error('[ai-proxy] upstream not ok', path, res.status, msg);
     return sendError(c, 'upstream_failed', String(msg), res.status >= 500 ? 502 : 400);
   }
   return sendData(c, json);
