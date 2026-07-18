@@ -30,7 +30,7 @@ Related docs: `HANDOVER.md` (client setup) · `DATABASE.md` (schema) ·
 - [x] `migrate:branches` run (default "Main Store" branches banaye)
 - [ ] (fresh client DB pe: `pnpm db:deploy` + `pnpm db:seed` — HANDOVER.md)
 
-## 5. Secrets rotate (handover se pehle — zaroori)
+## 5. Secrets rotate (URGENT — live secrets chat me expose ho gaye 18-Jul; handover se pehle bhi)
 - [ ] Supabase DB password
 - [ ] Cloudinary API secret
 - [ ] Qdrant API key

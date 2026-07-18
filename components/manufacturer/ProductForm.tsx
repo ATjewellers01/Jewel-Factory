@@ -174,17 +174,30 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   }
 
   // Create the product first (needed for image/tryon upload folder), then return its id.
+  // Guarded against races: concurrent callers (AI "Generate all" fires catalog +
+  // try-on uploads back-to-back before React commits form.id) share ONE create
+  // via createIdRef/creatingRef — otherwise two products (JF-0006 + JF-0007) were made.
+  const createIdRef = useRef<string | null>(initial?.id ?? null);
+  const creatingRef = useRef<Promise<string | null> | null>(null);
+
   async function ensureProductId(): Promise<string | null> {
-    if (form.id) return form.id;
-    const res = await fetch('/api/manufacturer/products', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildPayload()),
-    });
-    const json = (await res.json()) as { data?: { id: string; designNumber: string }; error?: { message: string } };
-    if (!res.ok || !json.data) { setError(json.error?.message ?? 'Could not create product'); return null; }
-    setForm((p) => ({ ...p, id: json.data!.id, designNumber: json.data!.designNumber }));
-    return json.data.id;
+    if (createIdRef.current) return createIdRef.current;
+    if (form.id) { createIdRef.current = form.id; return form.id; }
+    if (creatingRef.current) return creatingRef.current; // another call is already creating
+    creatingRef.current = (async () => {
+      const res = await fetch('/api/manufacturer/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildPayload()),
+      });
+      const json = (await res.json()) as { data?: { id: string; designNumber: string }; error?: { message: string } };
+      if (!res.ok || !json.data) { setError(json.error?.message ?? 'Could not create product'); return null; }
+      createIdRef.current = json.data.id;
+      setForm((p) => ({ ...p, id: json.data!.id, designNumber: json.data!.designNumber }));
+      return json.data.id;
+    })();
+    try { return await creatingRef.current; }
+    finally { creatingRef.current = null; }
   }
 
   function buildPayload() {
@@ -310,7 +323,14 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
             <span className="text-xs text-muted-foreground">(optional — from a raw photo)</span>
           </div>
 
+          {/* Step 1: specs first */}
+          <p className="text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground">Step 1.</span> Fill Category / Sub-category / Weight / Purity below.
+            {!form.category && <span className="text-amber-700"> — pick a Category to enable AI.</span>}
+          </p>
+
           <div className="flex flex-wrap items-start gap-3">
+            {/* Step 2: raw photo (only after a category is chosen) */}
             {aiRawPreview ? (
               <div className="relative h-24 w-24 overflow-hidden rounded-lg border">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -318,14 +338,14 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
                 <button type="button" onClick={() => { setAiRaw(null); setAiRawPreview(null); }} className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"><X className="h-3 w-3" /></button>
               </div>
             ) : (
-              <button type="button" onClick={() => aiInput.current?.click()} className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-muted-foreground hover:border-primary/50 hover:text-primary">
-                <Upload className="h-5 w-5" /><span className="text-[10px]">Raw photo</span>
+              <button type="button" disabled={!form.category} onClick={() => aiInput.current?.click()} title={!form.category ? 'Pick a category first' : undefined} className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-muted-foreground hover:border-primary/50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
+                <Upload className="h-5 w-5" /><span className="text-[10px] text-center leading-tight">Step 2<br/>Raw photo</span>
               </button>
             )}
             <input ref={aiInput} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && pickRaw(e.target.files[0])} />
 
             <div className="flex-1 space-y-2">
-              <p className="text-xs text-muted-foreground">Set category / weight / purity first for a better description. Then:</p>
+              <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">Step 3.</span> Generate (edit anything after):</p>
               <div className="flex flex-wrap gap-2">
                 <Button type="button" size="sm" disabled={!aiRaw || !!aiBusy} onClick={() => aiDescribe(false)} className="metal-sheen text-[#17120b] font-semibold">
                   {aiBusy === 'describe' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Name + Description</>}
