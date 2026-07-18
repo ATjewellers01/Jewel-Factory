@@ -37,7 +37,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   const [form, setForm] = useState<ProductFormData>(
     initial ?? {
       name: '', category: '', subCategory: '', description: '',
-      weightGrams: '', purity: '', minOrderQty: '1', status: 'DRAFT',
+      weightGrams: '', purity: '', minOrderQty: '1', status: 'ACTIVE', // new designs are visible by default
     },
   );
   const [images, setImages] = useState(initial?.images ?? []);
@@ -47,6 +47,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingTryon, setUploadingTryon] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [zoom, setZoom] = useState<{ src: string; checker?: boolean } | null>(null); // click-to-enlarge preview
 
   // ── AI generate (raw image -> name/description + catalog + transparent) ──────
   const aiInput = useRef<HTMLInputElement>(null);
@@ -326,83 +327,8 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         {form.designNumber && <p className="mt-0.5 text-sm text-muted-foreground">Design number: <span className="font-mono">{form.designNumber}</span></p>}
       </div>
 
-      {/* ── Generate with AI (optional) ─────────────────────────────────────
-          Upload a raw photo → AI fills name + description, and makes an
-          attractive catalog image + a transparent try-on PNG. Everything stays
-          editable. If AI isn't configured, this whole block is hidden and manual
-          add works exactly as before. */}
-      {aiEnabled && (
-        <section className="space-y-3 rounded-xl border border-primary/30 bg-primary/[0.03] p-4">
-          <div className="flex items-center gap-2">
-            <Wand2 className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold">Generate with AI</span>
-            <span className="text-xs text-muted-foreground">(optional — from a raw photo)</span>
-          </div>
-
-          {/* Step 1: specs first */}
-          <p className="text-xs text-muted-foreground">
-            <span className="font-semibold text-foreground">Step 1.</span> Fill Category / Sub-category / Weight / Purity below.
-            {!form.category && <span className="text-amber-700"> — pick a Category to enable AI.</span>}
-          </p>
-
-          <div className="flex flex-wrap items-start gap-3">
-            {/* Step 2: raw photo (only after a category is chosen) */}
-            {aiRawPreview ? (
-              <div className="relative h-24 w-24 overflow-hidden rounded-lg border">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={aiRawPreview} alt="raw" className="h-full w-full object-cover" />
-                <button type="button" onClick={() => { setAiRaw(null); setAiRawPreview(null); }} className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"><X className="h-3 w-3" /></button>
-              </div>
-            ) : (
-              <button type="button" disabled={!form.category} onClick={() => aiInput.current?.click()} title={!form.category ? 'Pick a category first' : undefined} className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-muted-foreground hover:border-primary/50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
-                <Upload className="h-5 w-5" /><span className="text-[10px] text-center leading-tight">Step 2<br/>Raw photo</span>
-              </button>
-            )}
-            <input ref={aiInput} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && pickRaw(e.target.files[0])} />
-
-            <div className="flex-1 space-y-2">
-              <p className="text-xs text-muted-foreground"><span className="font-semibold text-foreground">Step 3.</span> Generate (edit anything after):</p>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" size="sm" disabled={!aiRaw || !!aiBusy} onClick={() => aiDescribe(false)} className="metal-sheen text-[#17120b] font-semibold">
-                  {aiBusy === 'describe' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Name + Description</>}
-                </Button>
-                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy} onClick={() => aiCatalog(false)}>
-                  {aiBusy === 'catalog' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Catalog image</>}
-                </Button>
-                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy} onClick={() => aiTransparent(false)}>
-                  {aiBusy === 'transparent' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Try-on PNG ({tryonType})</>}
-                </Button>
-                <Button type="button" size="sm" disabled={!aiRaw || !!aiBusy} onClick={aiGenerateAll} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                  {aiBusy === 'all' ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Generating…</> : <><Wand2 className="mr-1 h-3.5 w-3.5" />Generate all</>}
-                </Button>
-              </div>
-
-              {/* Regenerate with a custom instruction */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <Input value={aiInstr} onChange={(e) => setAiInstr(e.target.value)} placeholder="Regenerate note, e.g. simpler background, warmer light" className="h-8 max-w-xs text-xs" />
-                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiCatalog(true)} title="Regenerate catalog with this instruction">
-                  <RefreshCw className="mr-1 h-3.5 w-3.5" />Catalog
-                </Button>
-                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiTransparent(true)} title="Regenerate try-on with this instruction">
-                  <RefreshCw className="mr-1 h-3.5 w-3.5" />Try-on
-                </Button>
-                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiDescribe(true)} title="Rewrite name/description with this instruction">
-                  <RefreshCw className="mr-1 h-3.5 w-3.5" />Text
-                </Button>
-              </div>
-            </div>
-          </div>
-          {aiError && <p className="text-sm text-red-600">{aiError}</p>}
-          <p className="text-[11px] text-muted-foreground">AI fills the fields + photos below — review and edit anything, then Save. The raw photo above is only used for generation (not saved).</p>
-        </section>
-      )}
-
-      {/* Fields */}
+      {/* Specs — filled FIRST (before AI generate) */}
       <section className="space-y-3">
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">Design Name *</label>
-          <Input className="mt-1" placeholder="e.g. Lotus Jhumka Set" value={form.name} onChange={set('name')} />
-        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground">Category</label>
@@ -441,7 +367,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
             )}
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground">Weight (g)</label>
             <Input className="mt-1" type="number" step="0.001" placeholder="12.5" value={form.weightGrams} onChange={set('weightGrams')} />
@@ -453,17 +379,96 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
               {PURITIES.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
+        </div>
+      </section>
+
+      {/* ── Generate with AI (optional) ─────────────────────────────────────
+          Specs are filled above → upload a raw photo → AI fills name + description,
+          and makes an attractive catalog image + a transparent try-on PNG. Everything
+          stays editable. If AI isn't configured, this whole block is hidden and manual
+          add works exactly as before. */}
+      {aiEnabled && (
+        <section className="space-y-3 rounded-xl border border-primary/30 bg-primary/[0.03] p-4">
+          <div className="flex items-center gap-2">
+            <Wand2 className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold">Generate with AI</span>
+            <span className="text-xs text-muted-foreground">(optional — from a raw photo)</span>
+          </div>
+
+          {!form.category && (
+            <p className="text-xs text-amber-700">Pick a Category above to enable AI.</p>
+          )}
+
+          <div className="flex flex-wrap items-start gap-3">
+            {/* Raw photo (only after a category is chosen) */}
+            {aiRawPreview ? (
+              <div className="relative h-24 w-24 overflow-hidden rounded-lg border">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={aiRawPreview} alt="raw" className="h-full w-full object-cover" />
+                <button type="button" onClick={() => { setAiRaw(null); setAiRawPreview(null); }} className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"><X className="h-3 w-3" /></button>
+              </div>
+            ) : (
+              <button type="button" disabled={!form.category} onClick={() => aiInput.current?.click()} title={!form.category ? 'Pick a category first' : undefined} className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-muted-foreground hover:border-primary/50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
+                <Upload className="h-5 w-5" /><span className="text-[10px] text-center leading-tight">Raw photo</span>
+              </button>
+            )}
+            <input ref={aiInput} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && pickRaw(e.target.files[0])} />
+
+            <div className="flex-1 space-y-2">
+              <p className="text-xs text-muted-foreground">Generate (edit anything after):</p>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" disabled={!aiRaw || !!aiBusy} onClick={() => aiDescribe(false)} className="metal-sheen text-[#17120b] font-semibold">
+                  {aiBusy === 'describe' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Name + Description</>}
+                </Button>
+                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy} onClick={() => aiCatalog(false)}>
+                  {aiBusy === 'catalog' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Catalog image</>}
+                </Button>
+                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy} onClick={() => aiTransparent(false)}>
+                  {aiBusy === 'transparent' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Try-on PNG ({tryonType})</>}
+                </Button>
+                <Button type="button" size="sm" disabled={!aiRaw || !!aiBusy} onClick={aiGenerateAll} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                  {aiBusy === 'all' ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Generating…</> : <><Wand2 className="mr-1 h-3.5 w-3.5" />Generate all</>}
+                </Button>
+              </div>
+
+              {/* Regenerate with a custom instruction */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <Input value={aiInstr} onChange={(e) => setAiInstr(e.target.value)} placeholder="Regenerate note, e.g. simpler background, warmer light" className="h-8 max-w-xs text-xs" />
+                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiCatalog(true)} title="Regenerate catalog with this instruction">
+                  <RefreshCw className="mr-1 h-3.5 w-3.5" />Catalog
+                </Button>
+                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiTransparent(true)} title="Regenerate try-on with this instruction">
+                  <RefreshCw className="mr-1 h-3.5 w-3.5" />Try-on
+                </Button>
+                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiDescribe(true)} title="Rewrite name/description with this instruction">
+                  <RefreshCw className="mr-1 h-3.5 w-3.5" />Text
+                </Button>
+              </div>
+            </div>
+          </div>
+          {aiError && <p className="text-sm text-red-600">{aiError}</p>}
+          <p className="text-[11px] text-muted-foreground">AI fills the name + description above and the photos below — review and edit anything, then Save. The raw photo is only used for generation (not saved).</p>
+        </section>
+      )}
+
+      {/* Name + remaining fields (after AI generate) */}
+      <section className="space-y-3">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">Design Name *</label>
+          <Input className="mt-1" placeholder="e.g. Lotus Jhumka Set" value={form.name} onChange={set('name')} />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground">Min Order Qty</label>
             <Input className="mt-1" type="number" min="1" value={form.minOrderQty} onChange={set('minOrderQty')} />
           </div>
-        </div>
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">Status</label>
-          <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm max-w-[200px]" value={form.status} onChange={set('status')}>
-            <option value="DRAFT">Draft (hidden from stores)</option>
-            <option value="ACTIVE">Active (visible)</option>
-          </select>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Status</label>
+            <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.status} onChange={set('status')}>
+              <option value="ACTIVE">Active (visible)</option>
+              <option value="DRAFT">Draft (hidden from stores)</option>
+            </select>
+          </div>
         </div>
       </section>
 
@@ -478,7 +483,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
           {images.map((img) => (
             <div key={img.id} className="relative h-24 w-24 overflow-hidden rounded-lg border">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img.secureUrl} alt="" className="h-full w-full object-cover" />
+              <img src={img.secureUrl} alt="" onClick={() => setZoom({ src: img.secureUrl })} className="h-full w-full cursor-zoom-in object-cover" title="Click to enlarge" />
               <button type="button" onClick={() => removeImage(img.id)} className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80">
                 <X className="h-3 w-3" />
               </button>
@@ -507,7 +512,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         {tryon ? (
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={tryon.assetUrl} alt="try-on" className="h-20 w-20 rounded-lg border object-contain bg-[repeating-conic-gradient(#eee_0_25%,#fff_0_50%)] bg-[length:16px_16px]" />
+            <img src={tryon.assetUrl} alt="try-on" onClick={() => setZoom({ src: tryon.assetUrl, checker: true })} title="Click to enlarge" className="h-20 w-20 cursor-zoom-in rounded-lg border object-contain bg-[repeating-conic-gradient(#eee_0_25%,#fff_0_50%)] bg-[length:16px_16px]" />
             <div className="flex-1">
               <p className="text-sm">{tryon.jewelleryType}</p>
               <button type="button" onClick={removeTryon} className="mt-1 inline-flex items-center gap-1 text-xs text-red-600 hover:underline">
@@ -551,6 +556,32 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
           </Button>
         )}
       </div>
+
+      {/* Click-to-enlarge lightbox for generated catalog + try-on images */}
+      {zoom && (
+        <div
+          onClick={() => setZoom(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
+          role="dialog"
+          aria-modal="true"
+        >
+          <button
+            type="button"
+            onClick={() => setZoom(null)}
+            className="absolute right-4 top-4 rounded-full bg-white/15 p-2 text-white hover:bg-white/25"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={zoom.src}
+            alt="preview"
+            onClick={(e) => e.stopPropagation()}
+            className={`max-h-[85vh] max-w-[85vw] rounded-lg object-contain ${zoom.checker ? 'bg-[repeating-conic-gradient(#eee_0_25%,#fff_0_50%)] bg-[length:24px_24px]' : ''}`}
+          />
+        </div>
+      )}
     </div>
   );
 }
