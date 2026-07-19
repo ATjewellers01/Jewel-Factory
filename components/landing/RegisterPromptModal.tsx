@@ -36,7 +36,7 @@ export function RegisterPromptModal() {
       aria-modal="true"
     >
       <div
-        className="relative w-full max-w-md rounded-2xl bg-card p-8 text-center shadow-xl"
+        className="relative w-full max-w-md rounded-2xl bg-card p-6 text-center shadow-xl sm:p-8"
         onClick={(e) => e.stopPropagation()}
       >
         <button

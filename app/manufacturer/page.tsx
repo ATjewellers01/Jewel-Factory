@@ -34,7 +34,7 @@ export default function ManufacturerEntryPage() {
   // Login form shown as a centered popup over the pearl background.
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-3 py-10">
-      <div className="w-full max-w-sm rounded-2xl border bg-card p-8 shadow-xl">
+      <div className="w-full max-w-sm rounded-2xl border bg-card p-6 shadow-xl sm:p-8">
         <StaffLoginForm
           bare
           title="Manufacturer Login"

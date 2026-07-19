@@ -79,7 +79,7 @@ export default function StoreManagerHome() {
             <p className="mb-5 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-[#e4cf8f]">
               <Sparkles className="h-3.5 w-3.5" /> AI jewellery showroom
             </p>
-            <h1 className="font-display max-w-2xl text-5xl font-normal leading-[0.98] text-white sm:text-6xl md:text-7xl">
+            <h1 className="font-display max-w-2xl break-words text-3xl font-normal leading-[1.05] text-white sm:text-5xl sm:leading-[0.98] md:text-7xl">
               {me.retailer.name}
             </h1>
             <p className="mt-5 max-w-md text-lg leading-7 text-white/78">

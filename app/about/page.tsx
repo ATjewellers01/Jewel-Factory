@@ -36,7 +36,7 @@ export default function AboutPage() {
       <main className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
         {/* Intro */}
         <p className="text-xs font-semibold uppercase tracking-widest text-[#a0824a]">About</p>
-        <h1 className="mt-3 font-display text-4xl font-normal tracking-tight sm:text-5xl">
+        <h1 className="mt-3 font-display text-3xl font-normal tracking-tight sm:text-5xl">
           One platform for the whole gold-jewellery chain
         </h1>
         <p className="mt-5 max-w-2xl text-base text-muted-foreground">
@@ -100,7 +100,7 @@ export default function AboutPage() {
         </section>
 
         {/* CTA */}
-        <section className="mt-16 rounded-2xl border bg-[#fbf9f5]/60 p-8 text-center">
+        <section className="mt-16 rounded-2xl border bg-[#fbf9f5]/60 p-6 text-center sm:p-8">
           <h2 className="font-display text-2xl font-normal tracking-tight">Ready to join?</h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
             Register your jewellery business to browse the full gold catalog and start ordering.

@@ -73,7 +73,7 @@ export function StaffLoginForm({
   const form = (
       <form
         onSubmit={submit}
-        className={bare ? 'w-full space-y-4' : 'w-full max-w-sm space-y-5 rounded-2xl border bg-card p-8 shadow-sm'}
+        className={bare ? 'w-full space-y-4' : 'w-full max-w-sm space-y-5 rounded-2xl border bg-card p-6 shadow-sm sm:p-8'}
       >
         {(brandWordmark || title || subtitle) && (
           <div className="text-center">

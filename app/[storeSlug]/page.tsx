@@ -15,7 +15,7 @@ export default function KioskHomePage() {
       <section className="relative flex min-h-[60vh] flex-col justify-center overflow-hidden bg-[#211711] px-5 py-16 text-white sm:min-h-[70vh] sm:px-6 sm:py-20">
         <div className="mx-auto w-full max-w-3xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-[#e4cf8f]">AI Jewellery Showroom</p>
-          <h1 className="mt-3 font-display text-4xl font-normal leading-tight break-words sm:text-5xl md:text-6xl">{store.name}</h1>
+          <h1 className="mt-3 font-display text-3xl font-normal leading-tight break-words sm:text-5xl md:text-6xl">{store.name}</h1>
           {store.tagline && <p className="mt-3 max-w-lg text-lg text-white/70">{store.tagline}</p>}
           <p className="mt-2 max-w-lg text-white/60">
             Explore our full collection, try pieces on with AR, or find a match with a photo.

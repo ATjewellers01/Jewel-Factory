@@ -41,9 +41,9 @@ export default function ManufacturerStoresPage() {
         <div className="rounded-xl border bg-card overflow-hidden divide-y">
           {data.map((s) => (
             <div key={s.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-              <div>
-                <p className="text-sm font-medium">{s.name} <span className="text-xs font-normal text-muted-foreground">/{s.slug}</span></p>
-                <p className="text-xs text-muted-foreground">{s.email}{s.city ? ` · ${s.city}` : ''}{s.phone ? ` · ${s.phone}` : ''}</p>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{s.name} <span className="text-xs font-normal text-muted-foreground">/{s.slug}</span></p>
+                <p className="truncate text-xs text-muted-foreground">{s.email}{s.city ? ` · ${s.city}` : ''}{s.phone ? ` · ${s.phone}` : ''}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => toggle(s)} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>

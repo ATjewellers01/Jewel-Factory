@@ -74,7 +74,7 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="mx-auto max-w-6xl px-4 py-20 text-center sm:px-6 sm:py-28">
+        <div className="mx-auto max-w-6xl px-4 py-16 text-center sm:px-6 sm:py-28">
           <p className="text-xs font-semibold uppercase tracking-widest text-[#a0824a]">
             Intelligent gold jewellery — made for you
           </p>
