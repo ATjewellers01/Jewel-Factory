@@ -8,6 +8,11 @@ A **clean single-app rebuild** of the old `../LuxeMatch` B2B jewellery platform.
 Same features, same UI, zero dead code. Built phase-by-phase from
 `../LuxeMatch/JEWEL_FACTORY_SYSTEM_DESIGN.txt` (the blueprint — read it for full context).
 
+**Workspace layout:** three repos sit as SIBLINGS in one parent folder — `LuxeMatch/`
+(git `B2B_Luxmatch`, reference only), `AI-Features/` (git `Jewel-Factory_AI`), and
+`Jewel Factory/` (this app). The `../LuxeMatch` and `../AI-Features` relative paths
+in the docs depend on this layout. Clone order + commands: `docs/PROJECT_HISTORY.md` §6.
+
 **Stack:** Next.js 15 (App Router) + Hono BFF + Prisma (Supabase Postgres) +
 Tailwind v4 (CSS-first, no config file) + shadcn/ui (new-york) + lucide + motion.
 **Single app** — NO monorepo, NO `packages/*`. Everything under `app/`, `components/`, `lib/`, `hooks/`.

@@ -36,9 +36,18 @@ search).
 |---|---|---|
 | **Jewel Factory** (this app) | `github.com/teamai-botivate/Jewel-Factory` | Active branch: **`retailer-multistore`** — ALL current work is here. `master` is the older pre-hierarchy state. **Before handover, merge `retailer-multistore` → `master`** and point Render at it. |
 | **AI-Features** | `github.com/teamai-botivate/Jewel-Factory_AI` (local `../AI-Features`) | Branch `main`. One Python/FastAPI service for all AI. Deployed at HF Space `Botivate2026/ai-workspace` → `https://botivate2026-ai-workspace.hf.space`. |
-| **LuxeMatch** (old) | `../LuxeMatch` | The original monorepo this was rebuilt from. Reference only — the blueprint is `../LuxeMatch/JEWEL_FACTORY_SYSTEM_DESIGN.txt`. |
+| **LuxeMatch** (old) | `github.com/teamai-botivate/B2B_Luxmatch` (local `../LuxeMatch`) | The original monorepo this was rebuilt from. **Reference only** — the blueprint is `../LuxeMatch/JEWEL_FACTORY_SYSTEM_DESIGN.txt`. Not needed to run the app. |
 
 **Deploy:** Jewel Factory is on **Render** (`jewel-factory.onrender.com`). AI on the HF Space.
+
+**Workspace layout (keep the three repos as SIBLINGS in one parent folder** — the
+`../LuxeMatch` and `../AI-Features` relative paths in the docs depend on this):
+```
+<workspace>/
+  ├── LuxeMatch/        (git: B2B_Luxmatch — reference/blueprint only)
+  ├── AI-Features/      (git: Jewel-Factory_AI — Python AI service)
+  └── Jewel Factory/    (git: Jewel-Factory — main app, active work)
+```
 
 ---
 
@@ -220,16 +229,22 @@ landing). `SYSTEM_FLOW.txt` → `docs/flow.md` (rewritten as full markdown). Sta
 
 ## 6. First things to do on a fresh clone (new laptop)
 
+Make one parent folder and clone all three repos as SIBLINGS inside it (so the
+`../LuxeMatch` / `../AI-Features` relative paths keep working):
+
 ```bash
-git clone https://github.com/teamai-botivate/Jewel-Factory.git
-cd Jewel-Factory
+mkdir jewel-workspace && cd jewel-workspace
+git clone https://github.com/teamai-botivate/B2B_Luxmatch.git "LuxeMatch"        # reference only
+git clone https://github.com/teamai-botivate/Jewel-Factory_AI.git "AI-Features"  # AI service
+git clone https://github.com/teamai-botivate/Jewel-Factory.git "Jewel Factory"   # main app
+
+cd "Jewel Factory"
 git checkout retailer-multistore     # all current work is here
 pnpm install                         # deps + prisma generate
-cp .env.example .env                 # then fill it — see docs/HANDOVER.md
+cp .env.example .env                 # then fill it — see docs/HANDOVER.md (rotate leaked secrets)
 pnpm db:deploy && pnpm db:seed       # schema + 1 manufacturer (+ demo retailer if SEED_DEMO_STORE=true)
 pnpm dev                             # http://localhost:3000
 ```
-Also clone the AI service if you'll touch AI: `github.com/teamai-botivate/Jewel-Factory_AI`.
 
 Then, as an agent: **read `../CLAUDE.md`, this file, and `flow.md`** — that's the full
 context. Demo logins after seed: Manufacturer `admin@atjewellers.com /

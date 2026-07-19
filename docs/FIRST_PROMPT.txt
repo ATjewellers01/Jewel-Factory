@@ -40,10 +40,22 @@ Kaam karne ka tarika (ye yaad rakhna, PROJECT_HISTORY me bhi likha hai):
   - 2 hard rules kabhi mat todna: (1) koi price kahin nahi dikhti, (2) customer ki
     personal detail manufacturer tak kabhi nahi jaati / store nahi hoti.
 
-Setup ke liye (agar abhi tak nahi hua): fresh clone pe `git checkout
-retailer-multistore` → `pnpm install` → `cp .env.example .env` (docs/HANDOVER.md
-follow karke bharo; leaked secrets rotate karke) → `pnpm db:deploy && pnpm db:seed`
-→ `pnpm dev`.
+WORKSPACE LAYOUT (zaroori — docs '../' relative paths isi pe depend karte hain):
+teenon repos ek hi parent folder me SIBLINGS honi chahiye —
+
+    <workspace>/
+      ├── LuxeMatch/        (purana repo, sirf reference/blueprint — B2B_Luxmatch)
+      ├── AI-Features/      (Python AI service)
+      └── Jewel Factory/    (main app — active work; folder name me space rehne do)
+
+  Clone (ek hi parent folder ke andar):
+    git clone https://github.com/teamai-botivate/B2B_Luxmatch.git "LuxeMatch"
+    git clone https://github.com/teamai-botivate/Jewel-Factory_AI.git "AI-Features"
+    git clone https://github.com/teamai-botivate/Jewel-Factory.git "Jewel Factory"
+
+Setup ke liye (Jewel Factory folder me): `git checkout retailer-multistore` →
+`pnpm install` → `cp .env.example .env` (docs/HANDOVER.md follow karke bharo;
+leaked secrets rotate karke) → `pnpm db:deploy && pnpm db:seed` → `pnpm dev`.
 
 --------------------------------------------------------------------------------
 COPY UP TO HERE  ↑↑↑
