@@ -82,6 +82,7 @@ pnpm migrate:branches   # one-off: back-fill a default branch for an existing DB
 
 ## Docs (in `docs/`)
 
+- **[docs/PROJECT_HISTORY.md](docs/PROJECT_HISTORY.md)** — full backstory, decisions & owner preferences (new machine/agent: read first)
 - **[docs/flow.md](docs/flow.md)** — complete system flow (start here)
 - **[docs/USER_MANUAL.md](docs/USER_MANUAL.md)** — non-technical staff guide + demo credentials
 - **[docs/HANDOVER.md](docs/HANDOVER.md)** — fresh client setup, zero to live
