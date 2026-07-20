@@ -102,7 +102,7 @@ export function PortalLoginScreen({
               <PortalIcon className="h-5 w-5" />
             </span>
             <p className="mt-7 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#d9b764]">{content.eyebrow}</p>
-            <h1 className="mt-4 max-w-[18ch] font-display text-[clamp(2rem,3.5vw,3.5rem)] font-medium leading-[1.05] tracking-[-0.025em]">{content.title}</h1>
+            <h1 className="mt-4 max-w-[20ch] font-display text-[clamp(1.75rem,2.8vw,2.85rem)] font-medium leading-[1.08] tracking-[-0.02em]">{content.title}</h1>
             <p className="mt-5 max-w-[42ch] text-sm leading-6 text-[#c5bdb3]">{content.description}</p>
 
             <div className="mt-9 grid gap-4">
@@ -143,7 +143,7 @@ export function PortalLoginScreen({
               <span className="inline-flex items-center gap-2 rounded-full border border-[#e4d7be] bg-[#fbf5e8] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.15em] text-[#916a24]">
                 <ShieldCheck className="h-3.5 w-3.5" /> {content.accessLabel}
               </span>
-              <h2 className="mt-5 font-display text-[clamp(2rem,5vw,2.75rem)] font-medium leading-tight tracking-[-0.02em]">{content.loginTitle}</h2>
+              <h2 className="mt-5 font-display text-[clamp(1.75rem,3.5vw,2.25rem)] font-medium leading-tight tracking-[-0.015em]">{content.loginTitle}</h2>
               <p className="mt-2 max-w-md text-sm leading-6 text-[#756c63]">{content.loginDescription}</p>
 
               <div className="mt-7 border-y border-[#e8e0d5] py-6 sm:py-7">
