@@ -18,6 +18,7 @@ export function StaffLoginForm({
   footerLinks = [],
   forgotHref,
   bare = false,
+  showLabels = false,
 }: {
   title: string;
   subtitle: string;
@@ -30,6 +31,9 @@ export function StaffLoginForm({
   // bare = render just the form (no full-screen wrapper/background) so it can be
   // embedded inside a modal (e.g. the landing-page login popup).
   bare?: boolean;
+  // Full portal pages use visible labels; the compact landing modal keeps the
+  // existing placeholder-led presentation.
+  showLabels?: boolean;
 }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -83,55 +87,62 @@ export function StaffLoginForm({
           </div>
         )}
 
-        <div className="space-y-3">
-          <Input
-            type="email"
-            autoComplete="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <div className="relative">
+        <div className="space-y-4">
+          <label className="block space-y-2">
+            {showLabels && <span className="text-xs font-semibold text-[#4f473f]">Email address</span>}
             <Input
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              type="email"
+              autoComplete="email"
+              placeholder={showLabels ? 'you@company.com' : 'Email'}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
-              className="pr-10"
+              className={showLabels ? 'h-12 rounded-xl border-[#dcd3c6] bg-white px-4 shadow-sm transition-shadow focus-visible:ring-[#b98b31]/35' : undefined}
             />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              tabIndex={-1}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-            >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
+          </label>
+          <label className="block space-y-2">
+            {showLabels && <span className="text-xs font-semibold text-[#4f473f]">Password</span>}
+            <span className="relative block">
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className={showLabels ? 'h-12 rounded-xl border-[#dcd3c6] bg-white px-4 pr-12 shadow-sm transition-shadow focus-visible:ring-[#b98b31]/35' : 'pr-10'}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-[#f5f0e8] hover:text-foreground"
+                tabIndex={-1}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </span>
+          </label>
         </div>
 
         {forgotHref && (
           <div className="text-right">
-            <Link href={forgotHref} className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2">
+            <Link href={forgotHref} className="text-xs font-medium text-[#766b60] underline decoration-[#c3a15c] underline-offset-4 transition-colors hover:text-[#8e6721]">
               Forgot password?
             </Link>
           </div>
         )}
 
-        {error && <p className="text-center text-sm text-red-600">{error}</p>}
+        {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-center text-sm text-red-700">{error}</p>}
 
-        <Button type="submit" className="h-11 w-full metal-sheen text-[#17120b] font-semibold" disabled={loading}>
+        <Button type="submit" className="h-12 w-full rounded-xl metal-sheen text-[#17120b] font-semibold shadow-[0_8px_20px_rgba(167,119,45,0.18)] transition-transform hover:-translate-y-0.5" disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign in'}
         </Button>
 
         {footerLinks.map((f) => (
           <p key={f.href} className="text-center text-sm text-muted-foreground">
             {f.prompt ? `${f.prompt} ` : ''}
-            <Link href={f.href} className="font-medium underline underline-offset-4">
+            <Link href={f.href} className="font-semibold text-[#6d6258] underline decoration-[#c3a15c] underline-offset-4 transition-colors hover:text-[#8e6721]">
               {f.label}
             </Link>
           </p>

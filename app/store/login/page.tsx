@@ -1,12 +1,11 @@
-import { StaffLoginForm } from '@/components/auth/StaffLoginForm';
+import { PortalLoginScreen } from '@/components/auth/PortalLoginScreen';
 
 export const metadata = { title: 'Retailer Login' };
 
 export default function StoreLoginPage() {
   return (
-    <StaffLoginForm
-      title="Retailer Login"
-      subtitle="Approvals, stores, staff, branding & B2B orders."
+    <PortalLoginScreen
+      portal="retailer"
       loginPath="/api/store/login"
       redirectTo="/store/dashboard"
       forgotHref="/store/forgot-password"
