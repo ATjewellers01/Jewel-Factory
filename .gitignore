@@ -16,6 +16,9 @@ next-env.d.ts
 # env / secrets
 .env
 .env*.local
+# Deploy-specific env files hold REAL secrets — never commit. Paste-source only.
+.env.render
+.env.vercel
 credentials
 *.secret
 
