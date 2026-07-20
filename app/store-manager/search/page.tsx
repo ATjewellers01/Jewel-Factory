@@ -4,6 +4,7 @@ import { Camera, Gem, Loader2, Upload, Search as SearchIcon, Sparkles, X, Plus }
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 
+import { KioskProductCard } from '@/components/kiosk/KioskProductCard';
 import { Button } from '@/components/ui/button';
 import { titleCaseName, productMetaLine, formatWeight } from '@/lib/format';
 
@@ -43,19 +44,26 @@ export default function StoreManagerSearchPage() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-6">
-      <div className="mb-6 flex items-center gap-2 text-primary"><SearchIcon className="h-5 w-5" /><span className="text-xs font-semibold uppercase tracking-widest">Visual Search</span></div>
-      <h1 className="font-display text-3xl font-normal tracking-tight">Find a match by photo</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Upload a photo and we&apos;ll find similar pieces in the catalog.</p>
+    <main className="min-h-screen">
+      <section className="bg-[#201812] text-white">
+        <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
+          <div className="mb-3 flex items-center gap-2 text-[#e4cf8f]"><SearchIcon className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-[0.24em]">Visual Search</span></div>
+          <h1 className="font-display text-4xl font-normal md:text-6xl">Find a match by photo</h1>
+          <p className="mt-4 max-w-xl text-sm leading-6 text-white/68">Upload a reference photo and discover visually similar pieces from this live catalogue.</p>
+        </div>
+      </section>
 
-      <div className="mt-6 flex flex-wrap items-center gap-4">
-        <Button onClick={() => fileInput.current?.click()} className="metal-sheen text-[#17120b] font-semibold">
+      <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className="flex min-h-44 flex-col items-center justify-center rounded-lg border border-dashed border-[#c9a84c]/45 bg-[#fffdf8] px-6 py-8 text-center">
+        <Camera className="mb-3 h-7 w-7 text-[#b68a3e]" />
+        <p className="mb-4 text-sm text-[#746b62]">Use a clear front-facing image for the closest match.</p>
+        <Button onClick={() => fileInput.current?.click()} className="metal-sheen rounded-full px-6 font-semibold text-[#17120b]">
           <Upload className="mr-1.5 h-4 w-4" />Upload Photo
         </Button>
         <input ref={fileInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
         {preview && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="query" className="h-16 w-16 rounded-lg border object-cover" />
+          <img src={preview} alt="query" className="mt-5 h-20 w-20 rounded-lg border object-cover" />
         )}
       </div>
 
@@ -71,24 +79,15 @@ export default function StoreManagerSearchPage() {
         <div className="mt-8">
           <p className="mb-4 text-sm font-medium">{results.length} similar piece{results.length !== 1 ? 's' : ''} — add to order from Catalog</p>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {results.map((p) => {
-              const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
-              return (
-                <button key={p.id} type="button" onClick={() => { setDetail(p); setDetailImg(0); }} className="group overflow-hidden rounded-lg bg-[#FBF9F5] text-left ring-1 ring-black/5 transition-shadow hover:shadow-md" title="View details">
-                  <div className="relative aspect-[3/4] bg-[#ece5da]">
-                    {img ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={img.secureUrl} alt={p.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
-                    ) : null}
-                    {p.hasTryon && <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]"><Sparkles className="mr-0.5 inline h-2.5 w-2.5" />AR</span>}
-                  </div>
-                  <div className="p-3">
-                    <p className="truncate text-sm font-semibold group-hover:text-primary">{titleCaseName(p.name)}</p>
-                    <p className="truncate text-xs text-muted-foreground">{productMetaLine({ category: p.category, subCategory: p.subCategory, purity: p.purity, weight: p.weightGrams })}</p>
-                  </div>
-                </button>
-              );
-            })}
+            {results.map((p, i) => (
+              <KioskProductCard
+                key={p.id}
+                product={p}
+                index={i}
+                onOpen={(prod) => { setDetail(prod); setDetailImg(0); }}
+                tryOnBack="/store-manager/search"
+              />
+            ))}
           </div>
           <div className="mt-6 text-center">
             <Link href="/store-manager/kiosk" className="metal-sheen inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#17120b]">Go to Catalog to order</Link>
@@ -134,9 +133,8 @@ export default function StoreManagerSearchPage() {
                   <h2 className="mt-1 font-display text-2xl font-medium">{titleCaseName(detail.name)}</h2>
                   <p className="mt-0.5 text-sm text-muted-foreground">Design {detail.designNumber}</p>
                 </div>
-                <div className="overflow-hidden rounded-xl border text-sm">
-                  <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">Metal</span><span className="font-medium">Gold</span></div>
-                  {detail.purity && <div className="flex justify-between bg-muted/40 px-4 py-2.5"><span className="text-muted-foreground">Purity</span><span className="font-medium">{detail.purity}</span></div>}
+                <div className="overflow-hidden rounded-lg border text-sm">
+                  {detail.purity && <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">Purity</span><span className="font-medium">{detail.purity}</span></div>}
                   {formatWeight(detail.weightGrams) && <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">Weight</span><span className="font-medium">{formatWeight(detail.weightGrams)}</span></div>}
                   <div className="flex justify-between bg-muted/40 px-4 py-2.5"><span className="text-muted-foreground">Category</span><span className="font-medium">{detail.category ?? '—'}{detail.subCategory ? ` › ${detail.subCategory}` : ''}</span></div>
                 </div>
@@ -192,6 +190,7 @@ export default function StoreManagerSearchPage() {
           <img src={zoom} alt="preview" onClick={(e) => e.stopPropagation()} className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain" />
         </div>
       )}
+      </div>
     </main>
   );
 }
