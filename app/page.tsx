@@ -167,25 +167,44 @@ export default function LandingPage() {
                 <h3 className="mt-1 text-xl font-medium">Upload a photo</h3>
               </div>
 
-              {/* Upload Box Animation */}
-              <motion.div className="mb-6 rounded-xl border-2 border-dashed border-primary/30 bg-white/60 p-8 text-center">
-                <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }} className="inline-block">
-                  <Search className="mx-auto h-8 w-8 text-primary" />
+              {/* Upload + Search Progress Animation */}
+              <div className="mb-6 space-y-3">
+                {/* Step 1: Upload Box */}
+                <motion.div
+                  initial={{ opacity: 1 }} animate={{ opacity: [1, 1, 0] }} transition={{ duration: 4, repeat: Infinity, times: [0, 0.6, 1] }}
+                  className="rounded-xl border-2 border-dashed border-primary/30 bg-white/60 p-8 text-center"
+                >
+                  <motion.div animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 1.5, repeat: Infinity }} className="inline-block">
+                    <Search className="mx-auto h-8 w-8 text-primary" />
+                  </motion.div>
+                  <p className="mt-3 text-sm text-muted-foreground">Upload jewelry image</p>
                 </motion.div>
-                <p className="mt-3 text-sm text-muted-foreground">Click to upload or drag & drop</p>
-              </motion.div>
+
+                {/* Step 2: Searching */}
+                <motion.div
+                  initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 1, 0] }} transition={{ duration: 4, repeat: Infinity, times: [0, 0.4, 0.7, 1] }}
+                  className="rounded-xl border-2 border-primary/20 bg-primary/5 p-6 text-center"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.8, repeat: Infinity }} className="h-2.5 w-2.5 rounded-full bg-primary" />
+                    <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.8, delay: 0.2, repeat: Infinity }} className="h-2.5 w-2.5 rounded-full bg-primary" />
+                    <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.8, delay: 0.4, repeat: Infinity }} className="h-2.5 w-2.5 rounded-full bg-primary" />
+                  </div>
+                  <p className="mt-3 text-sm text-primary font-medium">Searching similar designs…</p>
+                </motion.div>
+              </div>
 
               {/* Results Animation */}
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Similar matches</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Similar matches found</p>
                 <div className="grid grid-cols-2 gap-3">
                   {showcase && showcase.slice(0, 4).map((p, i) => {
                     const img = primaryImg(p);
                     return (
                       <motion.div
                         key={p.id}
-                        initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.1, duration: 0.4 }}
-                        className="overflow-hidden rounded-lg border bg-[#ece5da]"
+                        initial={{ opacity: 0, scale: 0.8, y: 12 }} whileInView={{ opacity: 1, scale: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 2.5 + i * 0.15, duration: 0.5 }}
+                        className="overflow-hidden rounded-lg border bg-[#ece5da] ring-2 ring-offset-2 ring-primary/30"
                       >
                         {img ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -205,39 +224,76 @@ export default function LandingPage() {
                 <h3 className="mt-1 text-xl font-medium">See it on you</h3>
               </div>
 
-              {/* Face Placeholder + Jewelry Animation */}
+              {/* Person + Animated Jewelry Try-On */}
               <div className="mb-6 flex items-center justify-center rounded-xl bg-white/60 py-12">
-                <div className="relative h-32 w-32">
-                  {/* Face Circle */}
-                  <motion.div className="absolute inset-0 rounded-full bg-gradient-to-b from-[#e8d5c4] to-[#d4a574] shadow-lg" />
+                <div className="relative w-40 h-56">
+                  {/* Person Silhouette */}
+                  <svg viewBox="0 0 100 140" className="w-full h-full">
+                    {/* Head */}
+                    <circle cx="50" cy="20" r="12" fill="#d4a574" />
+                    {/* Neck */}
+                    <rect x="46" y="32" width="8" height="6" fill="#d4a574" />
+                    {/* Shoulders + Body */}
+                    <ellipse cx="50" cy="60" rx="20" ry="25" fill="#e8d5c4" />
+                    {/* Arms */}
+                    <rect x="20" y="50" width="30" height="6" rx="3" fill="#d4a574" />
+                    <rect x="50" y="50" width="30" height="6" rx="3" fill="#d4a574" />
+                  </svg>
 
-                  {/* Animated Jewelry Items */}
-                  {showcase && showcase.filter(p => p.hasTryon).slice(0, 3).map((p, i) => (
-                    <motion.div
-                      key={p.id}
-                      animate={{ y: [-4, 4, -4], opacity: [0.6, 1, 0.6] }} transition={{ delay: i * 0.4, duration: 2, repeat: Infinity }}
-                      className="absolute inset-0 flex items-center justify-center"
-                    >
-                      <motion.div animate={{ scale: [0.8, 1, 0.8] }} transition={{ delay: i * 0.4, duration: 2, repeat: Infinity }}>
-                        <Sparkles className="h-6 w-6 text-[#c9a84c]" />
+                  {/* Animated Jewelry Overlay */}
+                  {showcase && showcase.filter(p => p.hasTryon).slice(0, 3).map((p, i) => {
+                    const img = primaryImg(p);
+                    const jewelryTypes = ['necklace', 'bracelet', 'ring'];
+                    const jewelryType = jewelryTypes[i % jewelryTypes.length];
+
+                    return (
+                      <motion.div
+                        key={p.id}
+                        initial={{ opacity: 0, scale: 0 }}
+                        animate={{ opacity: [0, 1, 1, 0], scale: [0.3, 1, 1, 0.3] }}
+                        transition={{
+                          duration: 4,
+                          repeat: Infinity,
+                          times: [0, 0.3, 0.7, 1],
+                          delay: i * 1.3,
+                        }}
+                        className={`absolute ${
+                          jewelryType === 'necklace' ? 'top-16 left-1/2 -translate-x-1/2' :
+                          jewelryType === 'bracelet' ? 'top-24 left-2' :
+                          'top-28 right-4'
+                        }`}
+                      >
+                        {img ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={img} alt="jewelry" className="h-12 w-12 object-contain drop-shadow-lg" />
+                        ) : (
+                          <Sparkles className="h-10 w-10 text-[#c9a84c]" />
+                        )}
                       </motion.div>
-                    </motion.div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Jewelry Options */}
+              {/* Jewelry Try-On Steps */}
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Available styles</p>
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {showcase && showcase.filter(p => p.hasTryon).slice(0, 4).map((p, i) => (
-                    <motion.button
-                      key={p.id}
-                      initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                      className="group flex-shrink-0 overflow-hidden rounded-lg border-2 border-transparent bg-white p-1.5 transition-all hover:border-primary"
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Try different styles</p>
+                <div className="space-y-1.5">
+                  {['Necklace', 'Bracelet', 'Ring'].map((type, i) => (
+                    <motion.div
+                      key={type}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: [0, 1, 1, 0], x: [−8, 0, 0, −8] }}
+                      transition={{
+                        duration: 4,
+                        repeat: Infinity,
+                        times: [0, 0.3, 0.7, 1],
+                        delay: i * 1.3,
+                      }}
+                      className="text-sm font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-lg"
                     >
-                      <Sparkles className="h-5 w-5 text-[#c9a84c] group-hover:scale-110 transition-transform" />
-                    </motion.button>
+                      ✓ {type} fitted
+                    </motion.div>
                   ))}
                 </div>
               </div>
