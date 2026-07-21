@@ -3,46 +3,6 @@
  * Uses raw SQL for complex date-range aggregations.
  */
 
-// Query result types for raw SQL queries
-interface BaseProductRow {
-  weight_grams: string | number | null;
-}
-
-interface RetailerProductRow extends BaseProductRow {
-  manufacturer_product_id: string;
-  product_name_snapshot: string;
-  design_number: string | null;
-  category: string | null;
-  sub_category: string | null;
-  secure_url: string | null;
-  units_last_30d: number;
-  units_previous_30d: number;
-  units_all_time: number;
-}
-
-interface BranchProductRow {
-  product_name: string;
-  category: string | null;
-  sub_category: string | null;
-  total_units: number;
-}
-
-interface CategoryRow {
-  category: string | null;
-  sub_category: string | null;
-  total_units: number;
-}
-
-interface TopProductRow {
-  id: string;
-  name: string;
-  design_number: string | null;
-  category: string | null;
-  sub_category: string | null;
-  total_units: number;
-  secure_url: string | null;
-}
-
 import { prisma } from '@/lib/prisma';
 import {
   ProductSalesData,
@@ -297,7 +257,7 @@ export async function getRetailerBranchSales(
 // MANUFACTURER: Retailer-wise breakdown
 // ────────────────────────────────────────────────────────────────────────────
 
-export async function getManufacturerRetailerSales(): Promise<any[]> {
+export async function getManufacturerRetailerSales(): Promise<Record<string, unknown>[]> {
   const { last30dStart } = getDateRanges();
 
   const results = await prisma.$queryRaw<Record<string, unknown>[]>`
@@ -328,7 +288,7 @@ export async function getManufacturerRetailerSales(): Promise<any[]> {
 // MANUFACTURER: Category + Weight breakdown (all retailers)
 // ────────────────────────────────────────────────────────────────────────────
 
-export async function getManufacturerCategoryWeightBreakdown(): Promise<any[]> {
+export async function getManufacturerCategoryWeightBreakdown(): Promise<Record<string, unknown>[]> {
   const { last30dStart } = getDateRanges();
 
   const results = await prisma.$queryRaw<Record<string, unknown>[]>`
@@ -354,7 +314,7 @@ export async function getManufacturerCategoryWeightBreakdown(): Promise<any[]> {
 // MANUFACTURER: Top 10 products (all retailers, all time)
 // ────────────────────────────────────────────────────────────────────────────
 
-export async function getManufacturerTopProducts(limit = 10): Promise<any[]> {
+export async function getManufacturerTopProducts(limit = 10): Promise<Record<string, unknown>[]> {
   const results = await prisma.$queryRaw<Record<string, unknown>[]>`
     SELECT
       mp.id,

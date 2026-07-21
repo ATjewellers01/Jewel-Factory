@@ -1,7 +1,7 @@
 'use client';
 
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 type Props = {
   isOpen: boolean;
@@ -14,8 +14,8 @@ type Props = {
 export function ImageZoomModal({ isOpen, images, productName, designNumber, onClose }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const next = () => setCurrentIndex((i) => (i + 1) % images.length);
-  const prev = () => setCurrentIndex((i) => (i - 1 + images.length) % images.length);
+  const next = useCallback(() => setCurrentIndex((i) => (i + 1) % images.length), [images.length]);
+  const prev = useCallback(() => setCurrentIndex((i) => (i - 1 + images.length) % images.length), [images.length]);
 
   useEffect(() => {
     if (!isOpen) return;
