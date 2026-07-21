@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { StoreManagerProductDetailModal, type StoreManagerProduct } from '@/components/kiosk/StoreManagerProductDetailModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { StarRating } from '@/components/ui/StarRating';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { subCategoriesFor } from '@/lib/categories';
 import { titleCaseName, formatWeight } from '@/lib/format';
@@ -14,6 +15,8 @@ import { titleCaseName, formatWeight } from '@/lib/format';
 type Img = { secureUrl: string; isPrimary: boolean };
 type Product = StoreManagerProduct & { images: Img[] };
 type CartLine = { id: string; name: string; designNumber: string; imageUrl?: string; qty: number };
+// Best-seller info for THIS branch, keyed by manufacturerProductId (restock only).
+type SalesInfo = { stars: number; unitsLast30d: number };
 
 /**
  * Shared catalog → cart → place-order panel used by the Store Manager's Kiosk and
@@ -25,18 +28,22 @@ export function CatalogOrderPanel({
   placeEndpoint,
   onPlaced,
   notePlaceholder,
+  showPopularity = false,
 }: {
   title: string;
   subtitle: string;
   placeEndpoint: string; // e.g. /api/branch-manager/kiosk-orders
   onPlaced: (order: { orderNumber?: string }) => void;
   notePlaceholder: string;
+  // Restock only: shows this branch's best-sellers (⭐ + units sold, last 30 days)
+  // and offers a "Best sellers" sort so the manager restocks what's actually moving.
+  showPopularity?: boolean;
 }) {
   const { data, loading, error } = useApi<Product[]>('/api/branch-manager/catalog', '/store-manager/login');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
-  const [sort, setSort] = useState<'relevance' | 'newest' | 'name'>('relevance');
+  const [sort, setSort] = useState<'relevance' | 'newest' | 'name' | 'popularity'>(showPopularity ? 'popularity' : 'relevance');
   const [mobileFilters, setMobileFilters] = useState(false);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [note, setNote] = useState('');
@@ -44,11 +51,26 @@ export function CatalogOrderPanel({
   const [placing, setPlacing] = useState(false);
   const [detail, setDetail] = useState<Product | null>(null);
   const [placeError, setPlaceError] = useState<string | null>(null);
+  const [salesMap, setSalesMap] = useState<Record<string, SalesInfo>>({});
 
   useEffect(() => {
     const requestedCategory = new URLSearchParams(window.location.search).get('category');
     if (requestedCategory) setCategory(requestedCategory);
   }, []);
+
+  useEffect(() => {
+    if (!showPopularity) return;
+    (async () => {
+      try {
+        const res = await fetch('/api/analytics/store-manager/products', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const json = (await res.json()) as { data?: Array<{ manufacturerProductId: string; stars: number; unitsLast30d: number }> };
+        const map: Record<string, SalesInfo> = {};
+        (json.data ?? []).forEach((p) => { map[p.manufacturerProductId] = { stars: p.stars, unitsLast30d: p.unitsLast30d }; });
+        setSalesMap(map);
+      } catch { /* non-critical — restock still works without sales data */ }
+    })();
+  }, [showPopularity]);
 
   const availableCategories = useMemo(
     () => [...new Set((data ?? []).map((product) => product.category).filter((value): value is string => Boolean(value)))].sort(),
@@ -63,8 +85,15 @@ export function CatalogOrderPanel({
     );
     if (sort === 'newest') return [...items].sort((a, b) => b.designNumber.localeCompare(a.designNumber));
     if (sort === 'name') return [...items].sort((a, b) => a.name.localeCompare(b.name));
+    if (sort === 'popularity') {
+      return [...items].sort((a, b) => {
+        const sa = salesMap[a.id];
+        const sb = salesMap[b.id];
+        return (sb?.stars ?? 0) - (sa?.stars ?? 0) || (sb?.unitsLast30d ?? 0) - (sa?.unitsLast30d ?? 0);
+      });
+    }
     return items;
-  }, [category, data, search, sort, subCategory]);
+  }, [category, data, search, sort, subCategory, salesMap]);
 
   const count = cart.reduce((s, l) => s + l.qty, 0);
 
@@ -115,7 +144,7 @@ export function CatalogOrderPanel({
             <div className="relative w-full max-w-sm"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8174]" /><Input placeholder="Search by name or design number…" value={search} onChange={(event) => setSearch(event.target.value)} className="rounded-lg border-black/15 bg-white/50 pl-9" /></div>
             <span className="hidden text-sm text-[#746b62] sm:inline">{loading ? 'Loading…' : `${filtered.length} designs`}</span>
           </div>
-          <div className="relative"><SortAsc className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8174]" /><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="h-9 rounded-lg border border-black/15 bg-white/50 pl-9 pr-8 text-sm"><option value="relevance">Relevance</option><option value="newest">Newest first</option><option value="name">Name</option></select></div>
+          <div className="relative"><SortAsc className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8174]" /><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="h-9 rounded-lg border border-black/15 bg-white/50 pl-9 pr-8 text-sm">{showPopularity && <option value="popularity">Best sellers</option>}<option value="relevance">Relevance</option><option value="newest">Newest first</option><option value="name">Name</option></select></div>
         </div>
 
         {mobileFilters ? <div className="mb-6 rounded-lg border border-black/10 bg-[#fffdf8] p-4 lg:hidden"><CatalogFilters categories={availableCategories} category={category} subCategory={subCategory} setCategory={setCategory} setSubCategory={setSubCategory} /></div> : null}
@@ -198,6 +227,12 @@ export function CatalogOrderPanel({
                     {inCart ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#15803d]" /> : null}
                   </button>
                     <p className="truncate text-xs text-muted-foreground">{p.designNumber}{p.category ? ` · ${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}{formatWeight(p.weightGrams) ? ` · ${formatWeight(p.weightGrams)}` : ''}</p>
+                    {showPopularity && salesMap[p.id] ? (
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        <StarRating count={salesMap[p.id].stars} size="sm" />
+                        <span className="text-[10px] text-muted-foreground">{salesMap[p.id].unitsLast30d} sold · 30d</span>
+                      </div>
+                    ) : null}
                 </div>
               </motion.article>
             );

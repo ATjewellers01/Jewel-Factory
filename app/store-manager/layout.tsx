@@ -14,7 +14,6 @@ import {
   ScanSearch,
   Shield,
   Sparkles,
-  TrendingUp,
   Users,
   X,
 } from 'lucide-react';
@@ -58,7 +57,6 @@ const nav = [
   { href: '/store-manager/kiosk', label: 'Catalog', icon: LayoutGrid },
   { href: '/store-manager/search', label: 'Photo Search', icon: ScanSearch },
   { href: '/store-manager/custom-design', label: 'Custom Design', icon: PencilRuler },
-  { href: '/store-manager/restock', label: 'Restock', icon: TrendingUp },
   { href: '/store-manager/my-orders', label: 'My Orders', icon: ClipboardList },
 ];
 
