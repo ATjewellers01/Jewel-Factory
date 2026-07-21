@@ -8,6 +8,7 @@ import {
   PencilLine,
   Store as StoreIcon,
   ClipboardCheck,
+  BarChart3,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -17,6 +18,7 @@ import { useDocumentIdentity } from '@/hooks/use-document-identity';
 
 const NAV = [
   { label: 'Dashboard', href: '/manufacturer/dashboard', icon: LayoutDashboard, section: 'Overview' },
+  { label: 'Intelligence', href: '/manufacturer/intelligence', icon: BarChart3, section: 'Overview' },
   { label: 'Catalog', href: '/manufacturer/catalog', icon: Package, section: 'Catalog & orders' },
   { label: 'B2B Orders', href: '/manufacturer/orders', icon: ShoppingBag, section: 'Catalog & orders' },
   { label: 'Kiosk Orders', href: '/manufacturer/kiosk-orders', icon: Users, section: 'Catalog & orders' },
