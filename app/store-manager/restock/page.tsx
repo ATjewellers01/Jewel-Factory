@@ -1,80 +1,129 @@
 'use client';
 
-import { CheckCircle2, Loader2, Lock, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { StarRating } from '@/components/ui/StarRating';
+import { TrendBadge } from '@/components/ui/TrendBadge';
+import type { ProductSalesData } from '@/lib/db/analytics';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { apiPost } from '@/hooks/use-api';
-import { CatalogOrderPanel } from '../CatalogOrderPanel';
+export default function RestockPage() {
+  const [products, setProducts] = useState<ProductSalesData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<'stars' | 'units' | 'trend'>('stars');
 
-export default function StoreManagerRestockPage() {
-  const [gate, setGate] = useState<'checking' | 'locked' | 'open'>('checking');
-  const [pin, setPin] = useState('');
-  const [pinError, setPinError] = useState<string | null>(null);
-  const [unlocking, setUnlocking] = useState(false);
-  const [placed, setPlaced] = useState<string | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/analytics/store-manager/restock', {
+          credentials: 'same-origin',
+        });
+        if (!res.ok) throw new Error('Failed to fetch');
+        const json = (await res.json()) as { data: ProductSalesData[] };
+        setProducts(json.data || []);
+      } catch (error) {
+        console.error('Error fetching restock data:', error);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
-  async function check() {
-    try {
-      const res = await fetch('/api/branch-manager/restock/lock-status', { cache: 'no-store', credentials: 'same-origin' });
-      if (res.status === 401) { window.location.assign('/store-manager/login'); return; }
-      const json = (await res.json()) as { data?: { requiresPin: boolean; unlocked: boolean } };
-      if (json.data && (!json.data.requiresPin || json.data.unlocked)) setGate('open');
-      else setGate('locked');
-    } catch { setGate('locked'); }
-  }
-  useEffect(() => { void check(); }, []);
+  const sorted = [...products].sort((a, b) => {
+    if (sortBy === 'stars') return b.stars - a.stars;
+    if (sortBy === 'units') return b.unitsLast30d - a.unitsLast30d;
+    if (sortBy === 'trend') return Math.abs(b.trendPercent) - Math.abs(a.trendPercent);
+    return 0;
+  });
 
-  async function unlock(e: React.FormEvent) {
-    e.preventDefault();
-    setPinError(null);
-    setUnlocking(true);
-    try {
-      await apiPost('/api/branch-manager/restock/unlock', { pin });
-      setGate('open');
-    } catch { setPinError('Incorrect PIN.'); } finally { setUnlocking(false); }
-  }
-
-  if (gate === 'checking') return <div className="flex items-center gap-2 py-16 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
-
-  if (gate === 'locked') {
+  if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center px-4">
-        <form onSubmit={unlock} className="w-full max-w-xs space-y-5 rounded-2xl border bg-card p-8 text-center shadow-sm">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-700"><Lock className="h-6 w-6" /></div>
-          <div>
-            <h1 className="font-display text-xl font-medium">Restock is protected</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Enter the restock PIN. This keeps customers out of restock.</p>
-          </div>
-          <Input type="password" inputMode="numeric" autoFocus placeholder="Restock PIN" value={pin} onChange={(e) => setPin(e.target.value)} className="text-center tracking-widest" />
-          {pinError && <p className="text-sm text-red-600">{pinError}</p>}
-          <Button type="submit" disabled={unlocking} className="metal-sheen w-full text-[#17120b] font-semibold">
-            {unlocking ? <Loader2 className="h-4 w-4 animate-spin" /> : <><ShieldCheck className="mr-1.5 h-4 w-4" />Unlock</>}
-          </Button>
-        </form>
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <h1 className="text-3xl font-bold mb-6">Restock Guide</h1>
+        <div className="text-center py-12">
+          <p className="text-gray-500">Loading restock data...</p>
+        </div>
       </div>
     );
   }
 
-  if (placed) {
+  if (!sorted.length) {
     return (
-      <div className="mx-auto flex max-w-md flex-col items-center py-20 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-700"><CheckCircle2 className="h-7 w-7" /></div>
-        <h1 className="mt-4 font-display text-2xl font-medium">Restock sent</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Order <span className="font-mono">{placed}</span> sent to Head Office for approval.</p>
-        <Button className="mt-6 metal-sheen text-[#17120b] font-semibold" onClick={() => setPlaced(null)}>New restock</Button>
+      <div className="max-w-6xl mx-auto px-4 py-6">
+        <h1 className="text-3xl font-bold mb-6">Restock Guide</h1>
+        <div className="text-center py-12">
+          <p className="text-gray-500">No orders in the last 30 days</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <CatalogOrderPanel
-      title="Restock"
-      subtitle="Order stock for this store from the manufacturer catalog. Goes to Head Office for approval."
-      placeEndpoint="/api/branch-manager/restock-orders"
-      notePlaceholder="Any note for Head Office (optional)…"
-      onPlaced={(o) => setPlaced(o.orderNumber ?? 'placed')}
-    />
+    <div className="max-w-6xl mx-auto px-4 py-6">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">Restock Guide</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Products sorted by best-sellers from last 30 days
+          </p>
+        </div>
+      </div>
+
+      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <tr>
+              <th className="px-4 py-3 text-left text-sm font-semibold">Product</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">Category</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">Weight</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold">Rating</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold">Units (30d)</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold">Trend</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            {sorted.map((product) => (
+              <tr key={product.manufacturerProductId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <td className="px-4 py-3">
+                  <div>
+                    <p className="font-semibold text-sm">{product.productName}</p>
+                    <p className="text-xs text-gray-500">{product.designNumber}</p>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  {product.category || 'N/A'}
+                  {product.subCategory && <p className="text-xs text-gray-500">{product.subCategory}</p>}
+                </td>
+                <td className="px-4 py-3 text-sm">{product.weight ? `${product.weight}g` : 'N/A'}</td>
+                <td className="px-4 py-3 flex justify-center">
+                  <StarRating count={product.stars} size="sm" />
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <span className="inline-block px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-semibold">
+                    {product.unitsLast30d}
+                  </span>
+                </td>
+                <td className="px-4 py-3 flex justify-center">
+                  <TrendBadge direction={product.trendDirection} percent={product.trendPercent} size="sm" />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4 mt-6">
+        <div className="p-4 border rounded-lg">
+          <p className="text-sm text-gray-600">Total Products</p>
+          <p className="text-2xl font-bold">{sorted.length}</p>
+        </div>
+        <div className="p-4 border rounded-lg">
+          <p className="text-sm text-gray-600">Total Units (30d)</p>
+          <p className="text-2xl font-bold">{sorted.reduce((sum, p) => sum + p.unitsLast30d, 0)}</p>
+        </div>
+        <div className="p-4 border rounded-lg">
+          <p className="text-sm text-gray-600">Avg Rating</p>
+          <p className="text-2xl font-bold">{(sorted.reduce((sum, p) => sum + p.stars, 0) / sorted.length).toFixed(1)}★</p>
+        </div>
+      </div>
+    </div>
   );
 }

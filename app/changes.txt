@@ -1,0 +1,3 @@
+iss ai feature me changes kar do ... i mean jb Generate all pe click ho to pahle design name fill hona chahaiye ye backend ka rule h ki design name ke baad hi desing number generate hoga , iske baad aage wala kaam hoga isko analyse karke mujhe batao mai kya bolna chhaata hu 
+
+Store manager ko jo Restock wala feature h , usme mujhe chahiye ki jo jo product jada bik raha h wo sbse pahle show ho ... i mean unke stars dikhe ki sbse jada konsa bik raha h , jisse usse restock karne me easy ho ... tum mera baat samjhe kya ? don;t modify the code now 
