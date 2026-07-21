@@ -14,6 +14,7 @@ Related docs: `HANDOVER.md` (client setup) · `DATABASE.md` (schema) ·
 - [x] **Order-list filters** — every order list (Retailer, Manufacturer, Store Manager) has client-side filters: order-ID search + status + From/To date. Retailer lists also filter by Store (branch); Manufacturer lists by Retailer.
 - [x] **Similar-design (visual/photo) search** — Store Manager → Search, powered by AI-Features `/embed`.
 - [x] **Responsive / mobile-friendly** across the app.
+- [x] **Shared portal-entry UI** — responsive `PortalLoginScreen` now covers Retailer, Store Manager, and Manufacturer sign-in plus Retailer registration; sign-in stays centred and the long registration form scrolls inside its panel.
 - [x] **Docs reorganised** into `docs/` folder (`SYSTEM_FLOW.txt` → `flow.md`, stale `USER_FLOWS_AND_GUIDE.txt` deleted).
 
 ## 1. AI-Features service deploy  (repo: github.com/teamai-botivate/Jewel-Factory_AI; local `../AI-Features`)
@@ -58,6 +59,7 @@ Related docs: `HANDOVER.md` (client setup) · `DATABASE.md` (schema) ·
 - [ ] Photo (visual) search — needs embedder/AI-Features + Qdrant
 
 ## 7. Optional / future
+- [ ] **Mobile visual search:** replace the forced camera-only experience with explicit **Take photo** (`capture="environment"`) and **Choose photo** (no `capture`) actions.
 - [ ] Product_Recommendation (AI design ranking, folder ../Product_Recommendation) → AI-Features me merge (naya endpoint) — tumhari "sab AI ek service" vision
 - [ ] Order-confirmation email/SMS (kiosk) — abhi sirf reset + store-approval emails
 - [ ] pin/rate-limit + integration tests (approval + chat flows)
@@ -66,5 +68,6 @@ Related docs: `HANDOVER.md` (client setup) · `DATABASE.md` (schema) ·
 
 ## Known / by-design (bug nahi)
 - "Generate with AI" button **live pe tabhi dikhega** jab `AI_FEATURES_URL` Render pe set ho (safe default).
+- Mobile visual search currently opens the rear camera because both upload inputs use `capture="environment"`; this is intentional camera-first behavior, not a browser bug.
 - Migrations Supabase pooler pe `migrate dev` se atakte hain → `pnpm db:deploy` use karo (idempotent, safe).
 - AI-Features first `/embed` call cold Space pe ~30-90s (CLIP lazy-load).

@@ -225,6 +225,7 @@ Client apne fresh accounts use karega, toh ye apne aap alag ho jaayenge — bas 
 | Login redirect loop | `NODE_ENV=production` + `NEXT_PUBLIC_APP_URL`/`ALLOWED_ORIGINS` real URL pe |
 | Image upload fail | Cloudinary ke 4 env set hain? |
 | Photo search "warming up" | Embedder cold-boot (~30–90s) ya `EMBEDDER_URL` set nahi |
+| Mobile photo search camera kholta hai, gallery nahi | Current behavior by design: both visual-search inputs use `capture="environment"`. Gallery bhi deni ho to separate **Take photo** / **Choose photo** controls banao, ya chooser input se `capture` hatao. |
 | Email nahi jaa raha (Render) | `SMTP_PORT=465` + Gmail app password |
 | Store Manager login nahi | Retailer ne `/store/branches` me branch + manager banaya? |
 

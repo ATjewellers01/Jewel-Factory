@@ -75,6 +75,11 @@ login URLs bhi use kar sakte ho.
 >   daal ke dobara try karo.
 > - **Password bhool gaye?** Login page pe "Forgot password?" link se reset email
 >   aata hai.
+> - Retailer, Store Manager aur Manufacturer ke full-page login ek hi responsive
+>   portal layout use karte hain: desktop/tablet pe do panels aur mobile pe ek
+>   clean panel. Login form beech me rehta hai. Retailer registration me lamba
+>   form sirf right panel ke andar scroll hota hai; card ke bahar overflow nahi
+>   karta.
 
 ---
 
@@ -189,10 +194,16 @@ Har order list pe (Retailer/Head Office, Manufacturer, Store Manager — sab):
 
 ### Retailer khud register kaise kare — `/store/register`
 Retailer ye form bharta hai (3 hisse):
-1. **Store Details:** Store name, Owner name, Owner phone, Store email (login),
-   Password (min 6), Logo URL (optional).
+1. **Business Details:** Business name, Owner name, Owner phone, Business email
+   (login), Password (min 6), Logo URL (optional).
 2. **Fixed Delivery Address (Head Office address):** Street, City, State, Pincode,
    Landmark (optional) — **yahi pe manufacturer bhejega**.
+3. **First Store Manager:** Manager name, email aur password; phone optional.
+
+Desktop/tablet pe left side partnership ka short overview rehta hai aur right
+side application form. Scroll sirf right panel ke andar hota hai, isliye poora
+rounded frame screen me contained rehta hai. Mobile pe form single-column ho
+jaata hai.
 
 Registration se **Retailer account** ban jaata hai (yahi login `/store/login` pe
 chalega, aur yahi Head Office ka kaam — approvals + chat — sambhalta hai).
@@ -242,6 +253,12 @@ catalog se link ho jaata hai.
   piece auto-select ho jaata hai), aur "← Back" se wahi page pe wapas.
 - **Search:** `Search` → customer ki pasand ki koi photo upload karo → milte-julte
   catalog designs aa jaate hain → kisi pe click → detail + "Order from Catalog".
+
+> **Mobile camera note:** Abhi `Upload photo` phone par rear camera seedha kholta
+> hai. Ye in-store camera-first use ke liye expected behavior hai, error nahi.
+> Kai phones par isi control se purani gallery/file choose karne ka option nahi
+> milega. Dono choices chahiye to UI me alag **Take photo** aur **Choose photo**
+> actions dene chahiye.
 
 ---
 

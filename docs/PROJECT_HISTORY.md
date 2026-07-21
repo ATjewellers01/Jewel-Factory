@@ -186,6 +186,23 @@ repo root — `CLAUDE.md` is auto-loaded by Claude Code, `README.md` is the GitH
 landing). `SYSTEM_FLOW.txt` → `docs/flow.md` (rewritten as full markdown). Stale
 `USER_FLOWS_AND_GUIDE.txt` deleted. This file (`PROJECT_HISTORY.md`) added.
 
+### 3.12 Shared responsive portal entry UI
+Retailer, Store Manager, and Manufacturer sign-in pages, plus the Retailer
+registration page, now share `components/auth/PortalLoginScreen.tsx`. The shell
+uses the same contained width and spacing on desktop/tablet and collapses cleanly
+on mobile. Sign-in content is vertically centred; registration alone opts into an
+internally scrolling right panel so its long form remains inside the rounded
+frame. `StaffLoginForm` continues to own authentication behavior, with visible
+labels on full pages and a compact mode in the public login modal. Manufacturer
+entry authentication is checked server-side to avoid signed-out 401 console noise.
+
+### 3.13 Mobile visual-search capture behavior documented
+Both Store Manager and storefront visual-search inputs currently specify
+`capture="environment"`. Mobile browsers therefore normally open the rear camera
+instead of a general file chooser. This suits a camera-first in-store kiosk, but a
+customer-facing phone flow should offer explicit **Take photo** and **Choose
+photo** actions if existing gallery images must also be supported.
+
 ---
 
 ## 4. What's PENDING (see docs/PENDING.md for the live checklist)

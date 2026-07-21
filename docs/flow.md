@@ -69,6 +69,21 @@ Visiting `/` (or `/portal`, `/about`) with no session shows the **branded landin
   manufacturer login page (or redirects to the dashboard if already signed in).
   It is available from the public footer's **Manufacturer access** link.
 
+### Shared portal-entry layout
+
+The full-page Retailer, Store Manager, and Manufacturer sign-in screens, plus
+Retailer registration, use `components/auth/PortalLoginScreen.tsx`. On tablet and
+desktop it renders a contained two-panel card; on mobile it becomes a single
+content panel. Sign-in forms remain vertically centred. Registration is the one
+long-form variant: its right panel scrolls internally so fields never extend past
+the rounded outer card or make the marketing panel drift while scrolling.
+
+Authentication fields are supplied by the shared `StaffLoginForm`. Full-page
+forms show visible labels; the compact public-site login modal keeps its denser
+layout. The `/manufacturer` entry checks the manufacturer session on the server,
+so a signed-out visit does not generate avoidable `/api/manufacturer/me` 401
+errors in the browser console.
+
 ---
 
 ## 3. Who creates whom
@@ -90,7 +105,12 @@ The Store Manager logs in on a device (phone / tablet / PC):
 - **Kiosk** (`/store-manager/kiosk`) — browse catalog + place a customer order.
 - **Try-On** (`/store-manager/try-on`) — AR overlay of a piece on the customer.
 - **Search** (`/store-manager/search`) — **similar-design search**: upload a photo,
-  get visually-matching catalog designs.
+  get visually-matching catalog designs. The Store Manager route and the public
+  storefront search currently use `capture="environment"`; on most phones this
+  opens the rear camera directly. That is intentional for a camera-first in-store
+  kiosk, but it can prevent a customer from choosing an existing photo. If both
+  workflows are required, present separate **Take photo** and **Choose photo**
+  actions (the file-picker action must omit `capture`).
 - **Custom Design** (`/store-manager/custom-design`) — capture a custom requirement
   (specs + note + reference image).
 - **Restock** (`/store-manager/restock`) — order stock for THIS store.
