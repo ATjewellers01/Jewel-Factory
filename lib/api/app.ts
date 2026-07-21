@@ -15,6 +15,7 @@ import { storeCatalogRoutes } from './routes/store-catalog';
 import { storeOpsRoutes } from './routes/store-ops';
 import { branchManagerRoutes } from './routes/branch-manager';
 import { kioskRoutes } from './routes/kiosk';
+import { analyticsRouter } from './routes/analytics';
 
 export const app = new Hono<AppEnv>().basePath('/api');
 
@@ -53,5 +54,8 @@ app.route('/branch-manager', branchManagerRoutes);
 
 // Kiosk (public — customer, no login)
 app.route('/kiosk', kioskRoutes);
+
+// Analytics (sales insights for all roles)
+app.route('/analytics', analyticsRouter);
 
 export type AppType = typeof app;
