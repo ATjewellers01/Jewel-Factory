@@ -125,14 +125,11 @@ export function parseDecimal(value: unknown): number | null {
   if (value === null || value === undefined) return null;
   if (typeof value === 'number') return value;
   if (typeof value === 'string') return parseFloat(value);
-  // Handle Decimal object from prisma
-  if (typeof value === 'object' && 'toNumber' in value) {
-    return value.toNumber();
+  // Handle Decimal object from prisma (has a toNumber() method)
+  if (typeof value === 'object' && typeof (value as { toNumber?: unknown }).toNumber === 'function') {
+    return (value as { toNumber: () => number }).toNumber();
   }
-  if (typeof value === 'object' && 'd' in value) {
-    // Fallback for other decimal representations
-    return parseFloat(String(value));
-  }
+  // Fallback for other decimal representations (e.g. { d, e, s } internal shape)
   return parseFloat(String(value));
 }
 
