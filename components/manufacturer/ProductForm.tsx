@@ -107,7 +107,6 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   // Catalog: generate an attractive image and add it as a product photo.
   async function aiCatalog(withInstr = false) {
     if (!aiRaw) { setAiError('Choose a raw photo first.'); return; }
-    if (!form.name.trim()) { setAiError('Generate/enter a design name first (photos attach to the product).'); return; }
     setAiBusy('catalog'); setAiError(null);
     try {
       const res = await fetch('/api/manufacturer/ai/catalog', { method: 'POST', credentials: 'same-origin', body: aiForm(withInstr) });
@@ -121,7 +120,6 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   // Transparent: generate a background-free PNG and set it as the try-on asset.
   async function aiTransparent(withInstr = false) {
     if (!aiRaw) { setAiError('Choose a raw photo first.'); return; }
-    if (!form.name.trim()) { setAiError('Generate/enter a design name first.'); return; }
     setAiBusy('transparent'); setAiError(null);
     try {
       const fd = aiForm(withInstr);
@@ -134,21 +132,55 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
     } catch (e) { setAiError(e instanceof Error ? e.message : 'Transparent generation failed'); } finally { setAiBusy(null); }
   }
 
-  // Generate everything at once (name/desc, then catalog + transparent).
-  // aiDescribe returns the name so we can set it synchronously before the image
-  // steps run (React state hasn't flushed yet in the same tick).
+  // Generate everything at once: name/desc → create product (design number) → images.
   async function aiGenerateAll() {
     if (!aiRaw) { setAiError('Choose a raw photo first.'); return; }
     setAiBusy('all'); setAiError(null);
-    const newName = await aiDescribe(false);
-    if (newName && !form.name.trim()) {
-      // Ensure the name is committed before the image steps' name-gate.
-      setForm((p) => ({ ...p, name: p.name.trim() || newName }));
-      await new Promise((r) => setTimeout(r, 0)); // let the state flush
+    try {
+      // Step 1: AI generates name + description
+      const newName = await aiDescribe(false);
+      if (!newName) { setAiBusy(null); return; } // describe failed, error already set
+
+      // Step 2: Update form with the new name
+      const updatedForm = { ...form, name: form.name.trim() || newName };
+      setForm(updatedForm);
+
+      // Step 3: Create product immediately (generates design number) before images
+      setBusy(true);
+      const res = await fetch('/api/manufacturer/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: updatedForm.name,
+          category: updatedForm.category || undefined,
+          subCategory: updatedForm.subCategory || undefined,
+          description: updatedForm.description || undefined,
+          weightGrams: updatedForm.weightGrams ? Number(updatedForm.weightGrams) : undefined,
+          purity: updatedForm.purity || undefined,
+          minOrderQty: updatedForm.minOrderQty ? Number(updatedForm.minOrderQty) : 1,
+          status: updatedForm.status,
+        }),
+      });
+      const json = (await res.json()) as { data?: { id: string; designNumber: string }; error?: { message: string } };
+      if (!res.ok || !json.data) throw new Error(json.error?.message ?? 'Could not create product');
+
+      const productId = json.data.id;
+      const designNumber = json.data.designNumber;
+      createIdRef.current = productId;
+      setForm((p) => ({ ...p, id: productId, designNumber }));
+      setBusy(false);
+
+      // Step 4: Generate catalog image
+      await aiCatalog(false);
+
+      // Step 5: Generate try-on PNG
+      await aiTransparent(false);
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : 'Generate all failed');
+      setBusy(false);
+    } finally {
+      setAiBusy(null);
     }
-    await aiCatalog(false);
-    await aiTransparent(false);
-    setAiBusy(null);
   }
 
   const set = (k: keyof ProductFormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
