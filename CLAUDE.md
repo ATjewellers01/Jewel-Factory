@@ -204,6 +204,20 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
   - Manufacturer: `/manufacturer/{kiosk-orders, orders/[id], custom-designs}`
 - **UX:** Thumbnail click → modal. Multiple images render gallery counter + next/prev arrows. Close × top-right, ESC key, click outside.
 
+**Landing Page Animation Demo (Hero → Features Section):**
+- **New section** added right after hero (`app/page.tsx` lines ~152–246): "Find similar designs. See before you buy."
+- **Left side — Similar Image Search animation:**
+  - Upload box with animated bounce (Search icon floating up/down, 2s loop)
+  - 4 real catalog products appear with fade + scale (0.9 → 1, staggered 0.1s per item)
+  - Demonstrates the visual-search feature without requiring actual upload
+- **Right side — AR Try-On animation:**
+  - Face placeholder (circular gradient)
+  - 3 jewelry items animate with floating + opacity pulse (2s loop, cascading delays)
+  - Jewelry style buttons below with fade-in on scroll
+  - Demonstrates the AR try-on experience dynamically
+- **Layout:** Side-by-side on desktop (grid-cols-2), stacked on mobile. Left slides in from -X, right from +X (0.6s on scroll trigger via `whileInView`).
+- **Purpose:** Shows key features (Similar Search + Try-On) so visitors instantly see "what's possible" on the landing page.
+
 ## Gotchas
 
 - Catch-all route MUST export every method incl. **PUT** (password resets use PUT). The old LuxeMatch app 405'd because PUT was missing.
