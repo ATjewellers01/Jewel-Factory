@@ -246,7 +246,7 @@ analyticsRouter.get(
 // HELPERS
 // ────────────────────────────────────────────────────────────────────────────
 
-function getWeightRangeForDisplay(weight: any): string {
+function getWeightRangeForDisplay(weight: string | number | null | undefined): string {
   if (!weight) return 'Unknown';
   const w = typeof weight === 'string' ? parseFloat(weight) : weight;
   if (w < 5) return '0-5g';

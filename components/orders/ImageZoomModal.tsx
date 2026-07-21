@@ -14,6 +14,9 @@ type Props = {
 export function ImageZoomModal({ isOpen, images, productName, designNumber, onClose }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  const next = () => setCurrentIndex((i) => (i + 1) % images.length);
+  const prev = () => setCurrentIndex((i) => (i - 1 + images.length) % images.length);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -29,10 +32,7 @@ export function ImageZoomModal({ isOpen, images, productName, designNumber, onCl
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = 'unset';
     };
-  }, [isOpen, onClose]);
-
-  const next = () => setCurrentIndex((i) => (i + 1) % images.length);
-  const prev = () => setCurrentIndex((i) => (i - 1 + images.length) % images.length);
+  }, [isOpen, onClose, next, prev]);
 
   if (!isOpen || !images.length) return null;
 

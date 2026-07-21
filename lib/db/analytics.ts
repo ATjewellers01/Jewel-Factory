@@ -121,7 +121,7 @@ export function getWeightRange(weight: number | null | string): string {
 /**
  * Parse Decimal type from Prisma (may be Decimal object or number)
  */
-export function parseDecimal(value: any): number | null {
+export function parseDecimal(value: unknown): number | null {
   if (value === null || value === undefined) return null;
   if (typeof value === 'number') return value;
   if (typeof value === 'string') return parseFloat(value);

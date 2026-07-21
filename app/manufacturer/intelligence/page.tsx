@@ -2,8 +2,23 @@
 
 import { useEffect, useState } from 'react';
 
+interface TopProduct {
+  id: string;
+  name: string;
+  designNumber: string;
+  category: string;
+  units: number;
+}
+
+interface ManufacturerOverview {
+  totalUnits: number;
+  topProducts: TopProduct[];
+  categoryDistribution: Record<string, number>;
+  weightDistribution: Record<string, number>;
+}
+
 export default function ManufacturerIntelligencePage() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<ManufacturerOverview | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -11,7 +26,7 @@ export default function ManufacturerIntelligencePage() {
       try {
         const res = await fetch('/api/analytics/manufacturer/overview', { credentials: 'same-origin' });
         if (!res.ok) throw new Error('Failed to fetch');
-        const json = (await res.json()) as any;
+        const json = (await res.json()) as { data: ManufacturerOverview };
         setData(json.data);
       } catch (error) {
         console.error('Error fetching overview:', error);
@@ -49,7 +64,7 @@ export default function ManufacturerIntelligencePage() {
       <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6">
         <h2 className="text-lg font-bold mb-4">Top 10 Products (All Retailers)</h2>
         <div className="space-y-2">
-          {data.topProducts?.map((p: any, idx: number) => (
+          {data.topProducts?.map((p: TopProduct, idx: number) => (
             <div key={idx} className="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded">
               <div>
                 <p className="font-semibold text-sm">#{idx + 1} {p.name}</p>
@@ -69,8 +84,8 @@ export default function ManufacturerIntelligencePage() {
           <h2 className="text-lg font-bold mb-4">By Category</h2>
           <div className="space-y-2">
             {Object.entries(data.categoryDistribution || {})
-              .sort(([, a]: [string, any], [, b]: [string, any]) => b - a)
-              .map(([cat, units]: [string, any]) => (
+              .sort(([, a], [, b]) => (b as number) - (a as number))
+              .map(([cat, units]) => (
                 <div key={cat} className="flex items-center justify-between">
                   <span className="text-sm">{cat}</span>
                   <span className="font-semibold">{units}</span>
@@ -85,7 +100,7 @@ export default function ManufacturerIntelligencePage() {
           <div className="space-y-2">
             {Object.entries(data.weightDistribution || {})
               .sort(([a], [b]) => a.localeCompare(b))
-              .map(([range, units]: [string, any]) => (
+              .map(([range, units]) => (
                 <div key={range} className="flex items-center justify-between">
                   <span className="text-sm">{range}</span>
                   <span className="font-semibold">{units}</span>

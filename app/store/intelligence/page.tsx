@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { StarRating } from '@/components/ui/StarRating';
-import type { ProductSalesData, BranchSalesData } from '@/lib/db/analytics';
+import type { BranchSalesData } from '@/lib/db/analytics';
 
 export default function IntelligencePage() {
   const [branches, setBranches] = useState<BranchSalesData[]>([]);

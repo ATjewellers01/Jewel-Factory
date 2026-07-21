@@ -8,7 +8,7 @@ import type { ProductSalesData } from '@/lib/db/analytics';
 export default function RestockPage() {
   const [products, setProducts] = useState<ProductSalesData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<'stars' | 'units' | 'trend'>('stars');
+  const [sortBy] = useState<'stars' | 'units' | 'trend'>('stars');
 
   useEffect(() => {
     (async () => {
