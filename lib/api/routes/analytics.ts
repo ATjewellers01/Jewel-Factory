@@ -147,9 +147,9 @@ analyticsRouter.get(
       > = {};
 
       data.forEach((row) => {
-        const cat = row.category || 'Other';
-        const subCat = row.sub_category || 'General';
-        const weight = row.weight_grams;
+        const cat = (row.category as string | null) || 'Other';
+        const subCat = (row.sub_category as string | null) || 'General';
+        const weight = row.weight_grams as string | number | null;
         const units = Number(row.total_units) || 0;
 
         if (!byCategory[cat]) {
@@ -184,7 +184,7 @@ analyticsRouter.get(
   manufacturerGuard,
   async (c) => {
     try {
-      const limit = parseInt(c.query('limit') || '10', 10);
+      const limit = parseInt(c.req.query('limit') || '10', 10);
       const data = await getManufacturerTopProducts(Math.min(limit, 100));
       return c.json({ data });
     } catch (error) {
@@ -211,11 +211,11 @@ analyticsRouter.get(
       const byWeight: Record<string, number> = {};
 
       categoryStats.forEach((row) => {
-        const cat = row.category || 'Other';
+        const cat = (row.category as string | null) || 'Other';
         const units = Number(row.total_units) || 0;
         byCategory[cat] = (byCategory[cat] || 0) + units;
 
-        const range = getWeightRangeForDisplay(row.weight_grams);
+        const range = getWeightRangeForDisplay(row.weight_grams as string | number | null);
         byWeight[range] = (byWeight[range] || 0) + units;
       });
 
@@ -225,10 +225,10 @@ analyticsRouter.get(
         data: {
           totalUnits,
           topProducts: topProducts.map((p) => ({
-            id: p.id,
-            name: p.name,
-            designNumber: p.design_number,
-            category: p.category,
+            id: p.id as string,
+            name: p.name as string,
+            designNumber: p.design_number as string | null,
+            category: p.category as string | null,
             units: Number(p.total_units),
           })),
           categoryDistribution: byCategory,

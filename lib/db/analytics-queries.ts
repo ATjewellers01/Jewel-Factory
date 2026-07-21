@@ -14,6 +14,30 @@ import {
   getDateRanges,
 } from '@/lib/db/analytics';
 
+// Row shape for product-aggregation raw SQL queries (category/weight breakdowns,
+// retailer/branch product lists, top-products). Fields are optional since each
+// query only SELECTs a subset of these columns.
+interface ProductAggRow {
+  id?: string;
+  manufacturer_product_id?: string;
+  product_id?: string;
+  product_name?: string;
+  product_name_snapshot?: string;
+  name?: string;
+  design_number?: string | null;
+  category?: string | null;
+  sub_category?: string | null;
+  weight_grams?: string | number | null;
+  secure_url?: string | null;
+  total_units?: number | string;
+  units_last_30d?: number | string;
+  units_previous_30d?: number | string;
+  units_all_time?: number | string;
+  qty?: number | string;
+  retailer_id?: string;
+  retailer_name?: string;
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // STORE MANAGER: Best-sellers in THIS branch (last 30 days)
 // ────────────────────────────────────────────────────────────────────────────
@@ -112,7 +136,7 @@ export async function getRetailerProductSales(
     getDateRanges();
 
   // Query: Aggregate all kiosk + b2b orders across all branches of this retailer
-  const results = await prisma.$queryRaw<Record<string, unknown>[]>`
+  const results = await prisma.$queryRaw<ProductAggRow[]>`
     SELECT
       mp.id as manufacturer_product_id,
       COALESCE(koi.product_name_snapshot, boi.product_name_snapshot, mp.name) as product_name_snapshot,
@@ -152,13 +176,13 @@ export async function getRetailerProductSales(
     const { direction, percent } = calculateTrend(unitsLast30d, unitsPrevious30d);
 
     return {
-      manufacturerProductId: r.manufacturer_product_id,
+      manufacturerProductId: r.manufacturer_product_id || '',
       productName: r.product_name_snapshot || 'Unknown',
       designNumber: r.design_number || 'N/A',
-      category: r.category,
-      subCategory: r.sub_category,
+      category: r.category ?? null,
+      subCategory: r.sub_category ?? null,
       weight: parseDecimal(r.weight_grams),
-      imageUrl: r.secure_url,
+      imageUrl: r.secure_url ?? null,
       unitsLast30d,
       unitsPrevious30d,
       unitsAllTime: Number(r.units_all_time) || 0,
@@ -188,7 +212,7 @@ export async function getRetailerBranchSales(
   const branchSales: BranchSalesData[] = [];
 
   for (const branch of branches) {
-    const products = await prisma.$queryRaw<Record<string, unknown>[]>`
+    const products = await prisma.$queryRaw<ProductAggRow[]>`
       SELECT
         mp.id,
         COALESCE(koi.product_name_snapshot, boi.product_name_snapshot, mp.name) as product_name,
@@ -212,7 +236,7 @@ export async function getRetailerBranchSales(
     const byCategory: Record<string, number> = {};
     const byWeight: Record<string, number> = {};
 
-    const allProducts = await prisma.$queryRaw<Record<string, unknown>[]>`
+    const allProducts = await prisma.$queryRaw<ProductAggRow[]>`
       SELECT
         mp.category,
         mp.weight_grams,
@@ -227,8 +251,9 @@ export async function getRetailerBranchSales(
     `;
 
     allProducts.forEach((p) => {
-      if (p.category) byCategory[p.category] = (byCategory[p.category] || 0) + Number(p.qty);
-      const range = getWeightRange(p.weight_grams);
+      const cat = p.category;
+      if (cat) byCategory[cat] = (byCategory[cat] || 0) + Number(p.qty);
+      const range = getWeightRange(p.weight_grams ?? null);
       byWeight[range] = (byWeight[range] || 0) + Number(p.qty);
     });
 
@@ -239,9 +264,9 @@ export async function getRetailerBranchSales(
       branchName: branch.name,
       totalUnitsLast30d: totalUnits,
       topProducts: products.map((p) => ({
-        productName: p.product_name,
-        category: p.category,
-        subCategory: p.sub_category,
+        productName: p.product_name || 'Unknown',
+        category: p.category ?? null,
+        subCategory: p.sub_category ?? null,
         units: Number(p.total_units),
         stars: calculateStars(Number(p.total_units)),
       })),
@@ -257,10 +282,10 @@ export async function getRetailerBranchSales(
 // MANUFACTURER: Retailer-wise breakdown
 // ────────────────────────────────────────────────────────────────────────────
 
-export async function getManufacturerRetailerSales(): Promise<Record<string, unknown>[]> {
+export async function getManufacturerRetailerSales(): Promise<ProductAggRow[]> {
   const { last30dStart } = getDateRanges();
 
-  const results = await prisma.$queryRaw<Record<string, unknown>[]>`
+  const results = await prisma.$queryRaw<ProductAggRow[]>`
     SELECT
       s.id as retailer_id,
       s.name as retailer_name,
@@ -288,10 +313,10 @@ export async function getManufacturerRetailerSales(): Promise<Record<string, unk
 // MANUFACTURER: Category + Weight breakdown (all retailers)
 // ────────────────────────────────────────────────────────────────────────────
 
-export async function getManufacturerCategoryWeightBreakdown(): Promise<Record<string, unknown>[]> {
+export async function getManufacturerCategoryWeightBreakdown(): Promise<ProductAggRow[]> {
   const { last30dStart } = getDateRanges();
 
-  const results = await prisma.$queryRaw<Record<string, unknown>[]>`
+  const results = await prisma.$queryRaw<ProductAggRow[]>`
     SELECT
       mp.category,
       mp.sub_category,
@@ -314,8 +339,8 @@ export async function getManufacturerCategoryWeightBreakdown(): Promise<Record<s
 // MANUFACTURER: Top 10 products (all retailers, all time)
 // ────────────────────────────────────────────────────────────────────────────
 
-export async function getManufacturerTopProducts(limit = 10): Promise<Record<string, unknown>[]> {
-  const results = await prisma.$queryRaw<Record<string, unknown>[]>`
+export async function getManufacturerTopProducts(limit = 10): Promise<ProductAggRow[]> {
+  const results = await prisma.$queryRaw<ProductAggRow[]>`
     SELECT
       mp.id,
       mp.name,
