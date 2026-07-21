@@ -151,17 +151,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Features Demo: Similar Search + Try-On (Left/Right Animation) ── */}
+      {/* ── Features Demo: Similar Search Animation ── */}
       <section className="border-t border-black/5 bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+        <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6 sm:py-20">
           <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.5 }} className="mb-12 text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#a0824a]">Discover & Try</p>
-            <h2 className="mt-2 font-display text-3xl font-normal tracking-tight sm:text-4xl">Find similar designs. See before you buy.</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#a0824a]">Discover Similar</p>
+            <h2 className="mt-2 font-display text-3xl font-normal tracking-tight sm:text-4xl">Find similar designs in seconds.</h2>
           </motion.div>
 
-          <div className="grid gap-8 lg:grid-cols-2">
-            {/* LEFT: Similar Image Search */}
-            <motion.div initial={{ opacity: 0, x: -24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.6 }} className="rounded-2xl border bg-gradient-to-br from-[#fdf9f5] to-[#ede7dd] p-8">
+          <div>
+            {/* Similar Image Search */}
+            <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.6 }} className="rounded-2xl border bg-gradient-to-br from-[#fdf9f5] to-[#ede7dd] p-8">
               <div className="mb-6">
                 <p className="text-sm font-semibold text-primary">Similar Design Search</p>
                 <h3 className="mt-1 text-xl font-medium">Upload a photo</h3>
@@ -213,88 +213,6 @@ export default function LandingPage() {
                       </motion.div>
                     );
                   })}
-                </div>
-              </div>
-            </motion.div>
-
-            {/* RIGHT: AR Try-On */}
-            <motion.div initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.6 }} className="rounded-2xl border bg-gradient-to-br from-[#f5fdf9] to-[#ddeee7] p-8">
-              <div className="mb-6">
-                <p className="text-sm font-semibold text-primary">AR Virtual Try-On</p>
-                <h3 className="mt-1 text-xl font-medium">See it on you</h3>
-              </div>
-
-              {/* Person + Animated Jewelry Try-On */}
-              <div className="mb-6 flex items-center justify-center rounded-xl bg-white/60 py-12">
-                <div className="relative w-40 h-56">
-                  {/* Person Silhouette */}
-                  <svg viewBox="0 0 100 140" className="w-full h-full">
-                    {/* Head */}
-                    <circle cx="50" cy="20" r="12" fill="#d4a574" />
-                    {/* Neck */}
-                    <rect x="46" y="32" width="8" height="6" fill="#d4a574" />
-                    {/* Shoulders + Body */}
-                    <ellipse cx="50" cy="60" rx="20" ry="25" fill="#e8d5c4" />
-                    {/* Arms */}
-                    <rect x="20" y="50" width="30" height="6" rx="3" fill="#d4a574" />
-                    <rect x="50" y="50" width="30" height="6" rx="3" fill="#d4a574" />
-                  </svg>
-
-                  {/* Animated Jewelry Overlay */}
-                  {showcase && showcase.filter(p => p.hasTryon).slice(0, 3).map((p, i) => {
-                    const img = primaryImg(p);
-                    const jewelryTypes = ['necklace', 'bracelet', 'ring'];
-                    const jewelryType = jewelryTypes[i % jewelryTypes.length];
-
-                    return (
-                      <motion.div
-                        key={p.id}
-                        initial={{ opacity: 0, scale: 0 }}
-                        animate={{ opacity: [0, 1, 1, 0], scale: [0.3, 1, 1, 0.3] }}
-                        transition={{
-                          duration: 4,
-                          repeat: Infinity,
-                          times: [0, 0.3, 0.7, 1],
-                          delay: i * 1.3,
-                        }}
-                        className={`absolute ${
-                          jewelryType === 'necklace' ? 'top-16 left-1/2 -translate-x-1/2' :
-                          jewelryType === 'bracelet' ? 'top-24 left-2' :
-                          'top-28 right-4'
-                        }`}
-                      >
-                        {img ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={img} alt="jewelry" className="h-12 w-12 object-contain drop-shadow-lg" />
-                        ) : (
-                          <Sparkles className="h-10 w-10 text-[#c9a84c]" />
-                        )}
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Jewelry Try-On Steps */}
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Try different styles</p>
-                <div className="space-y-1.5">
-                  {['Necklace', 'Bracelet', 'Ring'].map((type, i) => (
-                    <motion.div
-                      key={type}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: [0, 1, 1, 0], x: [-8, 0, 0, -8] }}
-                      transition={{
-                        duration: 4,
-                        repeat: Infinity,
-                        times: [0, 0.3, 0.7, 1],
-                        delay: i * 1.3,
-                      }}
-                      className="text-sm font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-lg"
-                    >
-                      ✓ {type} fitted
-                    </motion.div>
-                  ))}
                 </div>
               </div>
             </motion.div>
