@@ -151,6 +151,101 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Features Demo: Similar Search + Try-On (Left/Right Animation) ── */}
+      <section className="border-t border-black/5 bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+          <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.5 }} className="mb-12 text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#a0824a]">Discover & Try</p>
+            <h2 className="mt-2 font-display text-3xl font-normal tracking-tight sm:text-4xl">Find similar designs. See before you buy.</h2>
+          </motion.div>
+
+          <div className="grid gap-8 lg:grid-cols-2">
+            {/* LEFT: Similar Image Search */}
+            <motion.div initial={{ opacity: 0, x: -24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.6 }} className="rounded-2xl border bg-gradient-to-br from-[#fdf9f5] to-[#ede7dd] p-8">
+              <div className="mb-6">
+                <p className="text-sm font-semibold text-primary">Similar Design Search</p>
+                <h3 className="mt-1 text-xl font-medium">Upload a photo</h3>
+              </div>
+
+              {/* Upload Box Animation */}
+              <motion.div className="mb-6 rounded-xl border-2 border-dashed border-primary/30 bg-white/60 p-8 text-center">
+                <motion.div animate={{ y: [0, -8, 0] }} transition={{ duration: 2, repeat: Infinity }} className="inline-block">
+                  <Search className="mx-auto h-8 w-8 text-primary" />
+                </motion.div>
+                <p className="mt-3 text-sm text-muted-foreground">Click to upload or drag & drop</p>
+              </motion.div>
+
+              {/* Results Animation */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Similar matches</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {showcase && showcase.slice(0, 4).map((p, i) => {
+                    const img = primaryImg(p);
+                    return (
+                      <motion.div
+                        key={p.id}
+                        initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.1, duration: 0.4 }}
+                        className="overflow-hidden rounded-lg border bg-[#ece5da]"
+                      >
+                        {img ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={img} alt={p.name} className="aspect-square h-full w-full object-cover" />
+                        ) : <div className="aspect-square flex items-center justify-center"><Gem className="h-5 w-5 text-muted-foreground/30" /></div>}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
+
+            {/* RIGHT: AR Try-On */}
+            <motion.div initial={{ opacity: 0, x: 24 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.6 }} className="rounded-2xl border bg-gradient-to-br from-[#f5fdf9] to-[#ddeee7] p-8">
+              <div className="mb-6">
+                <p className="text-sm font-semibold text-primary">AR Virtual Try-On</p>
+                <h3 className="mt-1 text-xl font-medium">See it on you</h3>
+              </div>
+
+              {/* Face Placeholder + Jewelry Animation */}
+              <div className="mb-6 flex items-center justify-center rounded-xl bg-white/60 py-12">
+                <div className="relative h-32 w-32">
+                  {/* Face Circle */}
+                  <motion.div className="absolute inset-0 rounded-full bg-gradient-to-b from-[#e8d5c4] to-[#d4a574] shadow-lg" />
+
+                  {/* Animated Jewelry Items */}
+                  {showcase && showcase.filter(p => p.hasTryon).slice(0, 3).map((p, i) => (
+                    <motion.div
+                      key={p.id}
+                      animate={{ y: [-4, 4, -4], opacity: [0.6, 1, 0.6] }} transition={{ delay: i * 0.4, duration: 2, repeat: Infinity }}
+                      className="absolute inset-0 flex items-center justify-center"
+                    >
+                      <motion.div animate={{ scale: [0.8, 1, 0.8] }} transition={{ delay: i * 0.4, duration: 2, repeat: Infinity }}>
+                        <Sparkles className="h-6 w-6 text-[#c9a84c]" />
+                      </motion.div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Jewelry Options */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Available styles</p>
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {showcase && showcase.filter(p => p.hasTryon).slice(0, 4).map((p, i) => (
+                    <motion.button
+                      key={p.id}
+                      initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
+                      className="group flex-shrink-0 overflow-hidden rounded-lg border-2 border-transparent bg-white p-1.5 transition-all hover:border-primary"
+                    >
+                      <Sparkles className="h-5 w-5 text-[#c9a84c] group-hover:scale-110 transition-transform" />
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Featured showcase (real catalog, no price) ────────────────────── */}
       <section id="showcase" className="scroll-mt-20 border-t border-black/5 bg-[#fbf9f5]/70">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
