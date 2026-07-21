@@ -205,15 +205,15 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
 - **UX:** Thumbnail click → modal. Multiple images render gallery counter + next/prev arrows. Close × top-right, ESC key, click outside.
 
 **Landing Page Animation Demo (Hero → Features Section):**
-- **New section** added right after hero (`app/page.tsx` lines ~152–190): "Find similar designs in seconds."
-- **Similar Image Search workflow animation (4s loop, centered max-w-2xl):**
-  1. Upload box appears (0–0.6s): Search icon scales in, "Upload jewelry image" text
+- **New section** added right after hero (`app/page.tsx` lines ~152–190): "Find similar designs with AI in seconds." — **AI-Powered branding throughout**
+- **AI Similar Image Search workflow animation (4s loop, wide max-w-5xl, compact height py-8/12):**
+  1. Upload box appears (0–0.6s): Search icon scales in, "Drag & drop or click to upload" text
   2. Search progress (0.4–0.7s): 3 pulsing dots + "Searching similar designs…" (loads while upload fades)
-  3. Results appear (2.5s+): 4 catalog products fade-in + scale with ring highlight, staggered 0.15s per item
-  - Real workflow demo: upload → search → results discovered
-  - Demonstrates the visual-search feature so visitors understand how it works
-- **Layout:** Centered single column, full-width responsive. Slides in from bottom (y: 24) on scroll trigger via `whileInView`.
-- **Purpose:** Showcase the Similar Search feature with realistic animation so visitors instantly see "what's possible" on the landing page.
+  3. Results appear (2.5s+): 4 catalog products in horizontal grid fade-in + scale, **"AI found similar designs"** label
+  - Real workflow demo: upload → AI search → results discovered
+  - Demonstrates the AI-powered visual-search feature so visitors understand the capability
+- **Layout:** Single column, wider container (max-w-5xl, not max-w-2xl). Compact padding: card p-5, boxes p-4/5, results grid 4 cols. Slides in from bottom (y: 24) on scroll trigger via `whileInView`.
+- **Purpose:** Showcase AI-powered Similar Search with realistic animation so visitors instantly see the intelligent discovery feature on the landing page.
 
 ## Gotchas
 
