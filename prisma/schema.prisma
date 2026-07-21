@@ -281,6 +281,8 @@ model ManufacturerProduct {
 
   @@index([status])
   @@index([category])
+  @@index([category, subCategory])
+  @@index([weightGrams])
   @@map("manufacturer_products")
 }
 
@@ -431,6 +433,7 @@ model B2bOrder {
   @@index([storeId])
   @@index([manufacturerId])
   @@index([status])
+  @@index([branchId, status, createdAt])
   @@map("b2b_orders")
 }
 
@@ -519,6 +522,8 @@ model KioskOrder {
   @@index([storeId])
   @@index([manufacturerId])
   @@index([status])
+  @@index([branchId, forwardedToManufacturer, createdAt])
+  @@index([forwardedToManufacturer])
   @@map("kiosk_orders")
 }
 
