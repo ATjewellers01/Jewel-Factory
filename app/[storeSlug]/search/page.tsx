@@ -1,13 +1,14 @@
 'use client';
 
-import { Camera, Loader2, Upload, Search as SearchIcon } from 'lucide-react';
+import { Camera, ImageIcon, Loader2, Search as SearchIcon } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { ProductCard, type KioskProduct } from '@/components/kiosk/ProductCard';
 
 export default function KioskSearchPage() {
-  const fileInput = useRef<HTMLInputElement>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
+  const libraryInput = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [results, setResults] = useState<KioskProduct[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -41,14 +42,18 @@ export default function KioskSearchPage() {
       <h1 className="font-display text-3xl font-normal tracking-tight">Find a match by photo</h1>
       <p className="mt-1 text-sm text-muted-foreground">Upload a photo and we&apos;ll find similar pieces in the catalog.</p>
 
-      <div className="mt-6 flex flex-wrap items-center gap-4">
-        <Button onClick={() => fileInput.current?.click()} className="metal-sheen text-[#17120b] font-semibold">
-          <Upload className="mr-1.5 h-4 w-4" />Upload Photo
+      <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+        <Button type="button" disabled={loading} onClick={() => cameraInput.current?.click()} className="metal-sheen min-h-11 font-semibold text-[#17120b] sm:min-w-40">
+          <Camera className="mr-1.5 h-4 w-4" />Take photo
         </Button>
-        <input ref={fileInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
+        <Button type="button" disabled={loading} variant="outline" onClick={() => libraryInput.current?.click()} className="min-h-11 border-[#c9a84c]/50 bg-white font-semibold hover:bg-[#c9a84c]/5 sm:min-w-40">
+          <ImageIcon className="mr-1.5 h-4 w-4" />Choose photo
+        </Button>
+        <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { const file = e.target.files?.[0]; e.currentTarget.value = ''; if (file) void onFile(file); }} />
+        <input ref={libraryInput} type="file" accept="image/*" hidden onChange={(e) => { const file = e.target.files?.[0]; e.currentTarget.value = ''; if (file) void onFile(file); }} />
         {preview && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="query" className="h-16 w-16 rounded-lg border object-cover" />
+          <img src={preview} alt="Selected search reference" className="mt-1 h-16 w-16 self-center rounded-lg border object-cover sm:ml-1 sm:mt-0" />
         )}
       </div>
 

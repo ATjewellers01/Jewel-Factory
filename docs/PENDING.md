@@ -13,6 +13,7 @@ Related docs: `HANDOVER.md` (client setup) · `DATABASE.md` (schema) ·
 - [x] **Public landing rebuilt** — branded Jewel Factory site: navbar (logo, Catalog, About, Login, Register), featured real-catalog showcase (public `GET /api/kiosk/catalog`, no price), 2-column Login popup (Retailer | Store Manager), auto register-prompt (~5s, once/session), `/about` page, `/manufacturer` as hidden admin entry. `/portal` now just redirects to `/`.
 - [x] **Order-list filters** — every order list (Retailer, Manufacturer, Store Manager) has client-side filters: order-ID search + status + From/To date. Retailer lists also filter by Store (branch); Manufacturer lists by Retailer.
 - [x] **Similar-design (visual/photo) search** — Store Manager → Search, powered by AI-Features `/embed`.
+- [x] **Mobile image source choice** — Store Manager and storefront search provide separate **Take photo** and **Choose photo** actions.
 - [x] **Responsive / mobile-friendly** across the app.
 - [x] **Shared portal-entry UI** — responsive `PortalLoginScreen` now covers Retailer, Store Manager, and Manufacturer sign-in plus Retailer registration; sign-in stays centred and the long registration form scrolls inside its panel.
 - [x] **Docs reorganised** into `docs/` folder (`SYSTEM_FLOW.txt` → `flow.md`, stale `USER_FLOWS_AND_GUIDE.txt` deleted).
@@ -59,7 +60,6 @@ Related docs: `HANDOVER.md` (client setup) · `DATABASE.md` (schema) ·
 - [ ] Photo (visual) search — needs embedder/AI-Features + Qdrant
 
 ## 7. Optional / future
-- [ ] **Mobile visual search:** replace the forced camera-only experience with explicit **Take photo** (`capture="environment"`) and **Choose photo** (no `capture`) actions.
 - [ ] Product_Recommendation (AI design ranking, folder ../Product_Recommendation) → AI-Features me merge (naya endpoint) — tumhari "sab AI ek service" vision
 - [ ] Order-confirmation email/SMS (kiosk) — abhi sirf reset + store-approval emails
 - [ ] pin/rate-limit + integration tests (approval + chat flows)
@@ -68,6 +68,6 @@ Related docs: `HANDOVER.md` (client setup) · `DATABASE.md` (schema) ·
 
 ## Known / by-design (bug nahi)
 - "Generate with AI" button **live pe tabhi dikhega** jab `AI_FEATURES_URL` Render pe set ho (safe default).
-- Mobile visual search currently opens the rear camera because both upload inputs use `capture="environment"`; this is intentional camera-first behavior, not a browser bug.
+- Mobile visual search intentionally uses the rear camera for **Take photo** and the normal image picker for **Choose photo**.
 - Migrations Supabase pooler pe `migrate dev` se atakte hain → `pnpm db:deploy` use karo (idempotent, safe).
 - AI-Features first `/embed` call cold Space pe ~30-90s (CLIP lazy-load).

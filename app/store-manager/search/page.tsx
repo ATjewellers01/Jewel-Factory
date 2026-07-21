@@ -1,6 +1,6 @@
 'use client';
 
-import { Camera, ImageIcon, Loader2, Plus, Sparkles, Upload } from 'lucide-react';
+import { Camera, ImageIcon, Loader2, Plus, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 
@@ -12,7 +12,8 @@ type Img = { secureUrl: string; isPrimary: boolean };
 type Product = { id: string; designNumber: string; name: string; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
 
 export default function StoreManagerSearchPage() {
-  const fileInput = useRef<HTMLInputElement>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
+  const libraryInput = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [results, setResults] = useState<Product[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -64,8 +65,7 @@ export default function StoreManagerSearchPage() {
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) void onFile(f); }}
-          onClick={() => fileInput.current?.click()}
-          className={`group flex cursor-pointer flex-col items-center justify-center rounded-3xl border-2 border-dashed px-6 py-12 text-center transition-colors ${dragOver ? 'border-[#c9a84c] bg-[#c9a84c]/5' : 'border-[#c9a84c]/40 bg-[#fffdf8] hover:border-[#c9a84c]/70'}`}
+          className={`group flex flex-col items-center justify-center rounded-3xl border-2 border-dashed px-5 py-10 text-center transition-colors sm:px-6 sm:py-12 ${dragOver ? 'border-[#c9a84c] bg-[#c9a84c]/5' : 'border-[#c9a84c]/40 bg-[#fffdf8]'}`}
         >
           {preview ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -75,12 +75,18 @@ export default function StoreManagerSearchPage() {
               <Camera className="h-7 w-7" />
             </span>
           )}
-          <p className="mt-4 text-sm font-medium text-foreground">{preview ? 'Search another photo' : 'Drag & drop a photo, or click to upload'}</p>
+          <p className="mt-4 text-sm font-medium text-foreground">{preview ? 'Search another photo' : 'Take a photo or choose one from your device'}</p>
           <p className="mt-1 text-xs text-muted-foreground">Use a clear, front-facing image for the closest match.</p>
-          <Button type="button" className="metal-sheen mt-5 rounded-full px-6 font-semibold text-[#17120b]" onClick={(e) => { e.stopPropagation(); fileInput.current?.click(); }}>
-            <Upload className="mr-1.5 h-4 w-4" /> Upload Photo
-          </Button>
-          <input ref={fileInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])} />
+          <div className="mt-5 flex w-full max-w-md flex-col gap-3 sm:flex-row sm:justify-center">
+            <Button type="button" disabled={loading} className="metal-sheen min-h-11 flex-1 rounded-full px-6 font-semibold text-[#17120b]" onClick={() => cameraInput.current?.click()}>
+              <Camera className="mr-1.5 h-4 w-4" /> Take photo
+            </Button>
+            <Button type="button" disabled={loading} variant="outline" className="min-h-11 flex-1 rounded-full border-[#c9a84c]/50 bg-white px-6 font-semibold text-foreground hover:bg-[#c9a84c]/5" onClick={() => libraryInput.current?.click()}>
+              <ImageIcon className="mr-1.5 h-4 w-4" /> Choose photo
+            </Button>
+          </div>
+          <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { const file = e.target.files?.[0]; e.currentTarget.value = ''; if (file) void onFile(file); }} />
+          <input ref={libraryInput} type="file" accept="image/*" hidden onChange={(e) => { const file = e.target.files?.[0]; e.currentTarget.value = ''; if (file) void onFile(file); }} />
         </div>
       </div>
 

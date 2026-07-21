@@ -105,12 +105,10 @@ The Store Manager logs in on a device (phone / tablet / PC):
 - **Kiosk** (`/store-manager/kiosk`) — browse catalog + place a customer order.
 - **Try-On** (`/store-manager/try-on`) — AR overlay of a piece on the customer.
 - **Search** (`/store-manager/search`) — **similar-design search**: upload a photo,
-  get visually-matching catalog designs. The Store Manager route and the public
-  storefront search currently use `capture="environment"`; on most phones this
-  opens the rear camera directly. That is intentional for a camera-first in-store
-  kiosk, but it can prevent a customer from choosing an existing photo. If both
-  workflows are required, present separate **Take photo** and **Choose photo**
-  actions (the file-picker action must omit `capture`).
+  get visually-matching catalog designs. The Store Manager route and public
+  storefront search provide separate **Take photo** and **Choose photo** actions.
+  **Take photo** requests the rear camera on mobile; **Choose photo** opens the
+  device's normal image picker so an existing gallery image can be used.
 - **Custom Design** (`/store-manager/custom-design`) — capture a custom requirement
   (specs + note + reference image).
 - **Restock** (`/store-manager/restock`) — order stock for THIS store.

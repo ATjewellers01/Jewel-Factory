@@ -196,12 +196,13 @@ frame. `StaffLoginForm` continues to own authentication behavior, with visible
 labels on full pages and a compact mode in the public login modal. Manufacturer
 entry authentication is checked server-side to avoid signed-out 401 console noise.
 
-### 3.13 Mobile visual-search capture behavior documented
-Both Store Manager and storefront visual-search inputs currently specify
-`capture="environment"`. Mobile browsers therefore normally open the rear camera
-instead of a general file chooser. This suits a camera-first in-store kiosk, but a
-customer-facing phone flow should offer explicit **Take photo** and **Choose
-photo** actions if existing gallery images must also be supported.
+### 3.13 Mobile visual-search source selection
+Store Manager and storefront visual search now provide explicit **Take photo**
+and **Choose photo** actions. The camera action uses `capture="environment"` to
+request the rear camera on mobile; the chooser deliberately omits `capture` and
+opens the device's normal image picker. Both paths feed the same preview and
+similarity-search request, and the action pair stacks into full-width touch
+targets on mobile.
 
 ---
 

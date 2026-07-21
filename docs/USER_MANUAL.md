@@ -254,11 +254,9 @@ catalog se link ho jaata hai.
 - **Search:** `Search` → customer ki pasand ki koi photo upload karo → milte-julte
   catalog designs aa jaate hain → kisi pe click → detail + "Order from Catalog".
 
-> **Mobile camera note:** Abhi `Upload photo` phone par rear camera seedha kholta
-> hai. Ye in-store camera-first use ke liye expected behavior hai, error nahi.
-> Kai phones par isi control se purani gallery/file choose karne ka option nahi
-> milega. Dono choices chahiye to UI me alag **Take photo** aur **Choose photo**
-> actions dene chahiye.
+> **Mobile photo options:** **Take photo** phone ka rear camera kholta hai.
+> **Choose photo** normal image picker kholta hai, jisse gallery ki purani photo
+> select kar sakte ho. Desktop par Choose photo system file picker kholega.
 
 ---
 
