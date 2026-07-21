@@ -3,6 +3,7 @@
 import { Loader2, Package, ChevronDown, ChevronUp, CheckCircle2, MessageCircle, Check } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderChat } from '@/components/orders/OrderChat';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,7 @@ function OrderList({ kind, endpoint }: { kind: Kind; endpoint: string }) {
   const [status, setStatus] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [zoomItem, setZoomItem] = useState<Item | null>(null);
 
   const filtered = useMemo(() => (data ?? []).filter((o) => {
     if (search.trim() && !o.orderNumber.toLowerCase().includes(search.trim().toLowerCase())) return false;
@@ -121,7 +123,12 @@ function OrderList({ kind, endpoint }: { kind: Kind; endpoint: string }) {
                     <div key={it.id} className="flex items-center gap-3">
                       {it.productImageSnapshot ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={it.productImageSnapshot} alt="" className="h-14 w-14 rounded-lg border bg-white object-contain p-0.5" />
+                        <img
+                          src={it.productImageSnapshot}
+                          alt=""
+                          className="h-14 w-14 rounded-lg border bg-white object-contain p-0.5 cursor-pointer hover:shadow-md transition-shadow"
+                          onClick={() => setZoomItem(it)}
+                        />
                       ) : <div className="h-14 w-14 rounded-lg border bg-muted" />}
                       <span className="flex-1 text-sm">{titleCaseName(it.productNameSnapshot ?? 'Product')}</span>
                       <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
@@ -143,6 +150,14 @@ function OrderList({ kind, endpoint }: { kind: Kind; endpoint: string }) {
           </div>
         );
       })}
+      {zoomItem?.productImageSnapshot && (
+        <ImageZoomModal
+          isOpen={!!zoomItem}
+          images={[zoomItem.productImageSnapshot]}
+          productName={zoomItem.productNameSnapshot ?? undefined}
+          onClose={() => setZoomItem(null)}
+        />
+      )}
     </div>
   );
 }
@@ -155,6 +170,7 @@ function CustomList() {
   const [status, setStatus] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   const filtered = useMemo(() => (data ?? []).filter((r) => {
     if (search.trim()) {
@@ -192,7 +208,12 @@ function CustomList() {
               <div className="flex items-center gap-3">
                 {r.referenceImageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={r.referenceImageUrl} alt="" className="h-14 w-14 rounded-lg border bg-white object-cover" />
+                  <img
+                    src={r.referenceImageUrl}
+                    alt=""
+                    className="h-14 w-14 rounded-lg border bg-white object-cover cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => setZoomUrl(r.referenceImageUrl)}
+                  />
                 ) : <div className="h-14 w-14 rounded-lg border bg-muted" />}
                 <div>
                   <p className="text-sm font-medium">{r.category}</p>
@@ -215,6 +236,14 @@ function CustomList() {
           </div>
         );
       })}
+      {zoomUrl && (
+        <ImageZoomModal
+          isOpen={!!zoomUrl}
+          images={[zoomUrl]}
+          productName="Reference Image"
+          onClose={() => setZoomUrl(null)}
+        />
+      )}
     </div>
   );
 }

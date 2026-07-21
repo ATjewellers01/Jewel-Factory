@@ -3,6 +3,7 @@
 import { Loader2, PencilLine, ChevronDown, ChevronUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { useApi, apiSend } from '@/hooks/use-api';
@@ -31,6 +32,7 @@ export default function ManufacturerCustomDesignsPage() {
   const [retailer, setRetailer] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   const retailerOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((o) => o.storeNameSnapshot)), [data]);
   const filtered = useMemo(
@@ -91,10 +93,13 @@ export default function ManufacturerCustomDesignsPage() {
                   <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to (store address)</p><p className="text-sm">{o.storeAddressSnapshot}</p></div>
                   {o.designNotes && <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Design Notes</p><p className="text-sm">{o.designNotes}</p></div>}
                   {o.referenceImageUrl && (
-                    <a href={o.referenceImageUrl} target="_blank" rel="noopener noreferrer">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={o.referenceImageUrl} alt="reference" className="max-h-56 rounded-lg border object-contain" />
-                    </a>
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={o.referenceImageUrl}
+                      alt="reference"
+                      className="max-h-56 rounded-lg border object-contain cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => setZoomUrl(o.referenceImageUrl)}
+                    />
                   )}
                   <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-xs text-blue-700">Customer details are not shared. Ship to the store address above.</div>
                   {NEXT[o.status] && (
@@ -107,6 +112,15 @@ export default function ManufacturerCustomDesignsPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {zoomUrl && (
+        <ImageZoomModal
+          isOpen={!!zoomUrl}
+          images={[zoomUrl]}
+          productName="Reference Image"
+          onClose={() => setZoomUrl(null)}
+        />
       )}
     </div>
   );

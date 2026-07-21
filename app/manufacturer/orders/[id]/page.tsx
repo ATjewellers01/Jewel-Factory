@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 
+import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { Button } from '@/components/ui/button';
 import { useApi, apiSend } from '@/hooks/use-api';
 
@@ -28,6 +29,7 @@ export default function ManufacturerOrderDetailPage() {
   const { data, error, loading, reload } = useApi<Order>(`/api/manufacturer/orders/${id}`, '/manufacturer/login');
   const [busy, setBusy] = useState(false);
   const [tracking, setTracking] = useState('');
+  const [zoomItem, setZoomItem] = useState<Item | null>(null);
 
   async function advance(status: string) {
     setBusy(true);
@@ -74,7 +76,12 @@ export default function ManufacturerOrderDetailPage() {
             <div key={i.id} className="flex items-center gap-3 px-4 py-3">
               {i.productImageSnapshot ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={i.productImageSnapshot} alt={i.productNameSnapshot ?? ''} className="h-20 w-20 flex-shrink-0 rounded-lg border bg-white object-contain p-1" />
+                <img
+                  src={i.productImageSnapshot}
+                  alt={i.productNameSnapshot ?? ''}
+                  className="h-20 w-20 flex-shrink-0 rounded-lg border bg-white object-contain p-1 cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => setZoomItem(i)}
+                />
               ) : <div className="h-20 w-20 flex-shrink-0 rounded-lg border bg-muted" />}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{i.productNameSnapshot ?? 'Product'}</p>
@@ -95,6 +102,16 @@ export default function ManufacturerOrderDetailPage() {
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : `Mark as ${next.toLowerCase()}`}
           </Button>
         </div>
+      )}
+
+      {zoomItem?.productImageSnapshot && (
+        <ImageZoomModal
+          isOpen={!!zoomItem}
+          images={[zoomItem.productImageSnapshot]}
+          productName={zoomItem.productNameSnapshot ?? undefined}
+          designNumber={zoomItem.productDesignSnapshot ?? undefined}
+          onClose={() => setZoomItem(null)}
+        />
       )}
     </div>
   );

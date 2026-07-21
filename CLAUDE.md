@@ -70,6 +70,7 @@ components/
   manufacturer/ ProductForm (image + tryon upload)
   kiosk/        StoreContext, KioskHeader, ProductCard
   orders/       OrderChat (per-order HO↔Store-Manager chat, reused both sides)
+                ImageZoomModal (clickable product images with lightbox zoom)
   ar/           ARViewport
 lib/
   prisma.ts, env.ts, auth.ts (3 HMAC cookies), password.ts (bcrypt), slug.ts,
@@ -182,6 +183,26 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
 - **Nav** — removed "Kiosk PIN" from the Retailer sidebar (managed per-Store on Branches); "Store Profile" → "**Retailer Profile**". (The old HO Manager sidebar is gone — the Retailer/Head Office has the full menu.)
 - **Order filters (all lists)** — reusable `components/orders/OrderFilters.tsx` + `lib/order-filters.ts`: order-ID search + status dropdown + **From/To date range** (on `createdAt`) everywhere; **Store (branch) filter** on HO lists (kiosk/custom/b2b) with a branch badge per row; **Retailer filter** on Manufacturer lists (kiosk/custom/orders); Store Manager My Orders searches by order-ID + derived status bucket + date range. HO custom list gained `branch{name}` via `listCustomRequests`.
 - **Wordmark** — landing + About navbars use a **"JEWEL FACTORY" text wordmark** (`FACTORY` in gold `#c9a84c`), NOT `public/logo-wordmark.png` — that PNG still shows "LUXEMATCH", so don't use it. Favicon is `public/logo-icon.png`.
+
+## Latest updates (branch: `feature/order-image-zoom`)
+
+**Abhay's UI Refinements (8 commits on `renderdep`):**
+- **Auth UI consolidation** — `PortalLoginScreen.tsx` + `PortalShell.tsx` reusable components consolidate login + registration; all 4 sign-in screens (Retailer, Manufacturer, Store Manager, Register) share one look.
+- **Store Manager layout polish** — Mobile hamburger nav + page-title tracking (tabs show "Catalog | Search | ...") + store-logo fallback favicon.
+- **Landing page assets** — Wordmark component + new branding AVIF logos (JF monogram, Jewel Factory logo, store medallion fallback, register hero image).
+- **Responsive fixes** — Mobile-friendly hero headings + padding tweaks.
+- **Code quality** — Variable renaming (p → product, res → response), alphabetized imports, useEffect cleanup (cancelled flag).
+- **Render deploy config** — `render.yaml` + `.env.example` clarified for Blueprint env prompts (BRANCH_MANAGER_SECRET, AI_FEATURES_URL, AI_FEATURES_API_KEY).
+- **AR viewport enhancements** — `fill` prop for full-screen immersive try-on + `onCameraAspectRatioChange` callback for responsive camera.
+
+**Order Image Zoom Feature (ALL 8 order pages + new component):**
+- **New component:** `components/orders/ImageZoomModal.tsx` — Lightbox modal (click image → zoom, next/prev for galleries, close via × or Escape).
+- **Product details shown:** Product Name + Design Number (from `productDesignSnapshot` on B2B; from FK lookup on kiosk). Custom orders show "Reference Image".
+- **Integrated on all 8 pages:**
+  - Store Manager: `/store-manager/my-orders` (kiosk/custom/restock tabs)
+  - Retailer (HO): `/store/{pending-approvals, kiosk-orders, b2b-orders, custom-designs}` 
+  - Manufacturer: `/manufacturer/{kiosk-orders, orders/[id], custom-designs}`
+- **UX:** Thumbnail click → modal. Multiple images render gallery counter + next/prev arrows. Close × top-right, ESC key, click outside.
 
 ## Gotchas
 

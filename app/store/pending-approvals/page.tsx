@@ -3,6 +3,7 @@
 import { CheckCircle2, XCircle, Loader2, ClipboardCheck, Store, Pencil, Save, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 
+import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { Button } from '@/components/ui/button';
 import { useApi, apiPost, apiSend } from '@/hooks/use-api';
 import { OrderChat } from '@/components/orders/OrderChat';
@@ -78,6 +79,7 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
   const [draft, setDraft] = useState(note ?? '');
   const [saving, setSaving] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [zoomItem, setZoomItem] = useState<Item | null>(null);
 
   async function saveNote() {
     setSaving(true);
@@ -139,12 +141,26 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
             <div key={it.id} className="flex items-center gap-2">
               {it.productImageSnapshot ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={it.productImageSnapshot} alt={it.productNameSnapshot ?? ''} className="h-16 w-16 rounded-lg border bg-white object-contain p-1" />
+                <img
+                  src={it.productImageSnapshot}
+                  alt={it.productNameSnapshot ?? ''}
+                  className="h-16 w-16 rounded-lg border bg-white object-contain p-1 cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => setZoomItem(it)}
+                />
               ) : <div className="h-16 w-16 rounded-lg border bg-muted" />}
               <span className="text-sm">{it.productNameSnapshot ?? 'Product'} × {it.quantity}</span>
             </div>
           ))}
         </div>
+      )}
+
+      {zoomItem?.productImageSnapshot && (
+        <ImageZoomModal
+          isOpen={!!zoomItem}
+          images={[zoomItem.productImageSnapshot]}
+          productName={zoomItem.productNameSnapshot ?? undefined}
+          onClose={() => setZoomItem(null)}
+        />
       )}
     </div>
   );

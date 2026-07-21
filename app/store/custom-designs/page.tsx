@@ -3,6 +3,7 @@
 import { CheckCircle2, XCircle, Loader2, PencilLine, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderChat } from '@/components/orders/OrderChat';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ export default function StoreCustomDesignsPage() {
   const [branch, setBranch] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   const branchOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((r) => r.branch?.name)), [data]);
   const filtered = useMemo(
@@ -103,10 +105,13 @@ export default function StoreCustomDesignsPage() {
                 <div className="border-t px-4 pb-4 pt-3 space-y-3 bg-muted/10">
                   {r.designNotes && <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Notes</p><p className="text-sm">{r.designNotes}</p></div>}
                   {r.referenceImageUrl && (
-                    <a href={r.referenceImageUrl} target="_blank" rel="noopener noreferrer">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={r.referenceImageUrl} alt="reference" className="max-h-56 rounded-lg border object-contain" />
-                    </a>
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={r.referenceImageUrl}
+                      alt="reference"
+                      className="max-h-56 rounded-lg border object-contain cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => setZoomUrl(r.referenceImageUrl || null)}
+                    />
                   )}
                   {r.status === 'FORWARDED' && r.order && (
                     <div className="rounded-lg border bg-[#fdf9f2] px-3 py-2">
@@ -148,6 +153,15 @@ export default function StoreCustomDesignsPage() {
           orderLabel={chat.label}
           viewer="HO"
           onClose={() => setChat(null)}
+        />
+      )}
+
+      {zoomUrl && (
+        <ImageZoomModal
+          isOpen={!!zoomUrl}
+          images={[zoomUrl]}
+          productName="Reference Image"
+          onClose={() => setZoomUrl(null)}
         />
       )}
     </div>
