@@ -250,6 +250,15 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   const createIdRef = useRef<string | null>(initial?.id ?? null);
   const creatingRef = useRef<Promise<string | null> | null>(null);
 
+  // Mirrors form.name for handleImageUpload/handleTryonUpload's name-required
+  // guard. Those are called from aiCatalog/aiTransparent inside aiGenerateAll,
+  // which closes over the `form` from whenever the button was clicked — a
+  // setForm() from the earlier "describe" step doesn't update that closure's
+  // `form` (same stale-closure issue createIdRef/creatingRef above works
+  // around for the product id). A ref always reads the latest value instead.
+  const nameRef = useRef(form.name);
+  useEffect(() => { nameRef.current = form.name; }, [form.name]);
+
   async function ensureProductId(): Promise<string | null> {
     if (createIdRef.current) return createIdRef.current;
     if (form.id) { createIdRef.current = form.id; return form.id; }
@@ -285,7 +294,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
   async function handleImageUpload(file: File) {
     setError(null);
-    if (!form.name.trim()) { setError('Enter a design name before uploading photos.'); return; }
+    if (!nameRef.current.trim()) { setError('Enter a design name before uploading photos.'); return; }
     const id = await ensureProductId();
     if (!id) return;
     setUploadingImage(true);
@@ -313,7 +322,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
   async function handleTryonUpload(file: File) {
     setError(null);
-    if (!form.name.trim()) { setError('Enter a design name before uploading a try-on asset.'); return; }
+    if (!nameRef.current.trim()) { setError('Enter a design name before uploading a try-on asset.'); return; }
     if (file.type !== 'image/png' && !file.name.toLowerCase().endsWith('.png')) {
       setError('Try-on asset must be a transparent PNG.');
       return;
