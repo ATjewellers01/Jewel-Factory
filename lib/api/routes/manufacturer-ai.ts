@@ -63,6 +63,7 @@ async function forward(c: Context<AppEnv>, path: string) {
     console.error('[ai-proxy] upstream not ok', path, res.status, msg);
     return sendError(c, 'upstream_failed', String(msg), res.status >= 500 ? 502 : 400);
   }
+  console.log('[ai-proxy] ok', path, res.status, `${text.length} bytes`);
   return sendData(c, json);
 }
 

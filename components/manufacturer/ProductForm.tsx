@@ -105,54 +105,78 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
       fd.append('weight', form.weightGrams); fd.append('purity', form.purity);
       const res = await fetch('/api/manufacturer/ai/describe', { method: 'POST', credentials: 'same-origin', body: fd });
       const json = (await res.json()) as { data?: { designName: string; description: string }; error?: { message: string } };
-      if (!res.ok || !json.data) throw new Error(json.error?.message ?? 'Describe failed');
+      console.log('[ai:describe]', res.status, json);
+      if (!res.ok || !json.data) throw new Error(`Describe failed (HTTP ${res.status}): ${json.error?.message ?? 'no details returned'}`);
       setForm((p) => ({ ...p, name: json.data!.designName || p.name, description: json.data!.description || p.description }));
       return json.data.designName || null;
-    } catch (e) { setAiError(e instanceof Error ? e.message : 'Describe failed'); return null; } finally { setAiBusy(null); }
+    } catch (e) {
+      console.error('[ai:describe] failed', e);
+      setAiError(e instanceof Error ? e.message : 'Describe failed');
+      return null;
+    } finally { setAiBusy(null); }
   }
 
   // Catalog: generate an attractive image and add it as a product photo.
-  async function aiCatalog(withInstr = false) {
-    if (!aiRaw) { setAiError('Choose a raw photo first.'); return; }
+  async function aiCatalog(withInstr = false): Promise<boolean> {
+    if (!aiRaw) { setAiError('Choose a raw photo first.'); return false; }
     setAiBusy('catalog'); setAiError(null);
     try {
       const res = await fetch('/api/manufacturer/ai/catalog', { method: 'POST', credentials: 'same-origin', body: aiFormWithCategory(withInstr) });
       const json = (await res.json()) as { data?: { imageBase64: string }; error?: { message: string } };
-      if (!res.ok || !json.data) throw new Error(json.error?.message ?? 'Catalog generation failed');
+      console.log('[ai:catalog]', res.status, { ...json, data: json.data ? '<image omitted>' : json.data });
+      if (!res.ok || !json.data) throw new Error(`Catalog generation failed (HTTP ${res.status}): ${json.error?.message ?? 'no details returned'}`);
       const file = await b64ToFile(json.data.imageBase64, 'ai-catalog.png');
       await handleImageUpload(file);
-    } catch (e) { setAiError(e instanceof Error ? e.message : 'Catalog generation failed'); } finally { setAiBusy(null); }
+      return true;
+    } catch (e) {
+      console.error('[ai:catalog] failed', e);
+      setAiError(e instanceof Error ? e.message : 'Catalog generation failed');
+      return false;
+    } finally { setAiBusy(null); }
   }
 
   // Transparent: generate a background-free PNG and set it as the try-on asset.
-  async function aiTransparent(withInstr = false) {
-    if (!aiRaw) { setAiError('Choose a raw photo first.'); return; }
+  async function aiTransparent(withInstr = false): Promise<boolean> {
+    if (!aiRaw) { setAiError('Choose a raw photo first.'); return false; }
     setAiBusy('transparent'); setAiError(null);
     try {
       const fd = aiFormWithCategory(withInstr);
       fd.append('jewelleryType', tryonType);
       const res = await fetch('/api/manufacturer/ai/transparent', { method: 'POST', credentials: 'same-origin', body: fd });
       const json = (await res.json()) as { data?: { imageBase64: string }; error?: { message: string } };
-      if (!res.ok || !json.data) throw new Error(json.error?.message ?? 'Transparent generation failed');
+      console.log('[ai:transparent]', res.status, { ...json, data: json.data ? '<image omitted>' : json.data });
+      if (!res.ok || !json.data) throw new Error(`Transparent generation failed (HTTP ${res.status}): ${json.error?.message ?? 'no details returned'}`);
       const file = await b64ToFile(json.data.imageBase64, 'ai-tryon.png');
       await handleTryonUpload(file);
-    } catch (e) { setAiError(e instanceof Error ? e.message : 'Transparent generation failed'); } finally { setAiBusy(null); }
+      return true;
+    } catch (e) {
+      console.error('[ai:transparent] failed', e);
+      setAiError(e instanceof Error ? e.message : 'Transparent generation failed');
+      return false;
+    } finally { setAiBusy(null); }
   }
 
   // Generate everything at once: name/desc → create product (design number) → images.
   async function aiGenerateAll() {
     if (!aiRaw) { setAiError('Choose a raw photo first.'); return; }
     setAiBusy('all'); setAiError(null);
+    console.log('[ai:generate-all] start');
     try {
       // Step 1: AI generates name + description
+      console.log('[ai:generate-all] step 1/4 — describe');
       const newName = await aiDescribe(false);
-      if (!newName) { setAiBusy(null); return; } // describe failed, error already set
+      if (!newName) {
+        console.error('[ai:generate-all] aborted at step 1 (describe) — see [ai:describe] logs above');
+        setAiBusy(null);
+        return; // describe failed, error already set
+      }
 
       // Step 2: Update form with the new name
       const updatedForm = { ...form, name: form.name.trim() || newName };
       setForm(updatedForm);
 
       // Step 3: Create product immediately (generates design number) before images
+      console.log('[ai:generate-all] step 2/4 — create product');
       setBusy(true);
       const res = await fetch('/api/manufacturer/products', {
         method: 'POST',
@@ -169,7 +193,8 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         }),
       });
       const json = (await res.json()) as { data?: { id: string; designNumber: string }; error?: { message: string } };
-      if (!res.ok || !json.data) throw new Error(json.error?.message ?? 'Could not create product');
+      console.log('[ai:generate-all] create product response', res.status, json);
+      if (!res.ok || !json.data) throw new Error(`Could not create product (HTTP ${res.status}): ${json.error?.message ?? 'no details returned'}`);
 
       const productId = json.data.id;
       const designNumber = json.data.designNumber;
@@ -178,11 +203,16 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
       setBusy(false);
 
       // Step 4: Generate catalog image
-      await aiCatalog(false);
+      console.log('[ai:generate-all] step 3/4 — catalog image');
+      const catalogOk = await aiCatalog(false);
+      if (!catalogOk) { console.error('[ai:generate-all] aborted at step 3 (catalog) — see [ai:catalog] logs above'); return; }
 
       // Step 5: Generate try-on PNG
-      await aiTransparent(false);
+      console.log('[ai:generate-all] step 4/4 — try-on PNG');
+      const transparentOk = await aiTransparent(false);
+      console.log(transparentOk ? '[ai:generate-all] done' : '[ai:generate-all] step 4 (try-on) failed — see [ai:transparent] logs above');
     } catch (e) {
+      console.error('[ai:generate-all] failed', e);
       setAiError(e instanceof Error ? e.message : 'Generate all failed');
       setBusy(false);
     } finally {
@@ -220,6 +250,15 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   const createIdRef = useRef<string | null>(initial?.id ?? null);
   const creatingRef = useRef<Promise<string | null> | null>(null);
 
+  // Mirrors form.name for handleImageUpload/handleTryonUpload's name-required
+  // guard. Those are called from aiCatalog/aiTransparent inside aiGenerateAll,
+  // which closes over the `form` from whenever the button was clicked — a
+  // setForm() from the earlier "describe" step doesn't update that closure's
+  // `form` (same stale-closure issue createIdRef/creatingRef above works
+  // around for the product id). A ref always reads the latest value instead.
+  const nameRef = useRef(form.name);
+  useEffect(() => { nameRef.current = form.name; }, [form.name]);
+
   async function ensureProductId(): Promise<string | null> {
     if (createIdRef.current) return createIdRef.current;
     if (form.id) { createIdRef.current = form.id; return form.id; }
@@ -255,7 +294,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
   async function handleImageUpload(file: File) {
     setError(null);
-    if (!form.name.trim()) { setError('Enter a design name before uploading photos.'); return; }
+    if (!nameRef.current.trim()) { setError('Enter a design name before uploading photos.'); return; }
     const id = await ensureProductId();
     if (!id) return;
     setUploadingImage(true);
@@ -283,7 +322,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
   async function handleTryonUpload(file: File) {
     setError(null);
-    if (!form.name.trim()) { setError('Enter a design name before uploading a try-on asset.'); return; }
+    if (!nameRef.current.trim()) { setError('Enter a design name before uploading a try-on asset.'); return; }
     if (file.type !== 'image/png' && !file.name.toLowerCase().endsWith('.png')) {
       setError('Try-on asset must be a transparent PNG.');
       return;
