@@ -137,7 +137,7 @@ export default function StoreManagerCustomDesignPage() {
                 <span className="text-xs text-muted-foreground">to</span>
                 <Input type="number" step="0.01" min="0" inputMode="decimal" placeholder="To" value={form.weightTo} onChange={(e) => set('weightTo', e.target.value)} className="h-10" />
               </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">Leave "To" blank for an exact weight.</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">Leave &ldquo;To&rdquo; blank for an exact weight.</p>
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Purity</label>
