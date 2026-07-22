@@ -41,10 +41,9 @@ COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 
-# Prisma CLI + engines + schema for `migrate deploy` at container start.
-COPY --from=build /app/node_modules/prisma ./node_modules/prisma
-COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=build /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+# Keep the pnpm dependency graph intact so Prisma CLI's linked runtime
+# dependencies are available for `migrate deploy` at container start.
+COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/prisma ./prisma
 
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
