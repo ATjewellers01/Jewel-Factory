@@ -2,7 +2,7 @@
 
 import {
   LayoutDashboard, Package, ShoppingBag, PencilLine, ClipboardCheck,
-  BarChart3, Lightbulb, Store as StoreIcon, Settings, Gem, Building2, Search,
+  Lightbulb, Store as StoreIcon, Settings, Gem, Building2, Search,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -23,7 +23,6 @@ const NAV = [
   { label: 'Kiosk Orders', href: '/store/kiosk-orders', icon: ShoppingBag, section: 'Operations' },
   { label: 'Custom Designs', href: '/store/custom-designs', icon: PencilLine, section: 'Operations' },
   { label: 'Intelligence', href: '/store/intelligence', icon: Lightbulb, section: 'Insights' },
-  { label: 'Analytics', href: '/store/analytics', icon: BarChart3, section: 'Insights' },
   // Kiosk PIN is managed per-Store on the Stores (Branches) page.
   { label: 'Stores (Branches)', href: '/store/branches', icon: Building2, section: 'Account' },
   { label: 'Retailer Profile', href: '/store/profile', icon: StoreIcon, section: 'Account' },
