@@ -4,13 +4,14 @@ import { Loader2, Package, BarChart3, Scale, Store as StoreIcon, Trophy } from '
 import { useEffect, useMemo, useState } from 'react';
 
 import { AnalyticsFilterBar } from '@/components/analytics/AnalyticsFilterBar';
+import { ProductDetailModal, type AnalyticsProduct } from '@/components/analytics/ProductDetailModal';
 import {
   AnalyticsFilters,
   DEFAULT_ANALYTICS_FILTERS,
   matchesFilters,
   rangeQueryString,
 } from '@/lib/analytics-filters';
-import { getWeightRange } from '@/lib/db/analytics';
+import { calculateStars, getWeightRange } from '@/lib/db/analytics';
 
 // Flat row shape shared by /manufacturer/top-products, /category-weight, /retailers
 interface FlatRow {
@@ -21,6 +22,7 @@ interface FlatRow {
   category?: string | null;
   sub_category?: string | null;
   weight_grams?: string | number | null;
+  secure_url?: string | null;
   total_units?: number | string;
   retailer_id?: string;
   retailer_name?: string;
@@ -30,22 +32,27 @@ interface FilterableProduct {
   id: string;
   name: string;
   designNumber: string | null;
+  imageUrl: string | null;
   category: string | null;
   subCategory: string | null;
   weight: number | null;
   units: number;
+  stars: number;
   retailerName?: string;
 }
 
 function toProduct(row: FlatRow): FilterableProduct {
+  const units = Number(row.total_units) || 0;
   return {
     id: row.id ?? row.product_id ?? '',
     name: row.name ?? 'Unknown',
     designNumber: row.design_number ?? null,
+    imageUrl: row.secure_url ?? null,
     category: row.category ?? null,
     subCategory: row.sub_category ?? null,
     weight: row.weight_grams != null ? parseFloat(String(row.weight_grams)) : null,
-    units: Number(row.total_units) || 0,
+    units,
+    stars: calculateStars(units),
     retailerName: row.retailer_name,
   };
 }
@@ -57,6 +64,7 @@ export default function ManufacturerIntelligencePage() {
   const [retailerRows, setRetailerRows] = useState<FilterableProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<AnalyticsProduct | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -155,7 +163,22 @@ export default function ManufacturerIntelligencePage() {
             <div className="divide-y">
               {view.topProducts.length === 0 && <p className="px-4 py-8 text-center text-sm text-muted-foreground">No orders match these filters.</p>}
               {view.topProducts.slice(0, 15).map((p, idx) => (
-                <div key={p.id || idx} className="flex items-center justify-between px-4 py-3">
+                <button
+                  type="button"
+                  key={p.id || idx}
+                  onClick={() => setSelectedProduct({
+                    manufacturerProductId: p.id,
+                    productName: p.name,
+                    designNumber: p.designNumber,
+                    imageUrl: p.imageUrl,
+                    category: p.category,
+                    subCategory: p.subCategory,
+                    weight: p.weight,
+                    units: p.units,
+                    stars: p.stars,
+                  })}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40"
+                >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">#{idx + 1} {p.name}</p>
                     <p className="text-xs text-muted-foreground">
@@ -163,7 +186,7 @@ export default function ManufacturerIntelligencePage() {
                     </p>
                   </div>
                   <span className="shrink-0 font-semibold tabular-nums">{p.units}</span>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -221,6 +244,10 @@ export default function ManufacturerIntelligencePage() {
             </div>
           </div>
         </>
+      )}
+
+      {selectedProduct && (
+        <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
       )}
     </div>
   );

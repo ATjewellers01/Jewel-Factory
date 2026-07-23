@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApi } from '@/hooks/use-api';
 import { StarRating } from '@/components/ui/StarRating';
 import { AnalyticsFilterBar } from '@/components/analytics/AnalyticsFilterBar';
+import { ProductDetailModal, type AnalyticsProduct } from '@/components/analytics/ProductDetailModal';
 import { getWeightRange } from '@/lib/db/analytics';
 import type { BranchSalesData } from '@/lib/db/analytics';
 import {
@@ -95,6 +96,7 @@ function BranchBreakdown() {
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState<AnalyticsFilters>(DEFAULT_ANALYTICS_FILTERS);
+  const [selectedProduct, setSelectedProduct] = useState<AnalyticsProduct | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -179,7 +181,12 @@ function BranchBreakdown() {
               <div className="space-y-2">
                 {view.topProducts.length === 0 && <p className="text-sm text-muted-foreground">No sales match these filters.</p>}
                 {view.topProducts.map((p, idx) => (
-                  <div key={idx} className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    key={idx}
+                    onClick={() => setSelectedProduct(p)}
+                    className="flex w-full items-center justify-between gap-3 rounded-lg -mx-2 px-2 py-1.5 text-left transition-colors hover:bg-muted/60"
+                  >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{p.productName}</p>
                       <p className="text-xs text-muted-foreground">
@@ -190,7 +197,7 @@ function BranchBreakdown() {
                       <StarRating count={p.stars} size="sm" />
                       <span className="text-sm font-semibold tabular-nums">{p.units}</span>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -223,6 +230,10 @@ function BranchBreakdown() {
             </div>
           </div>
         </>
+      )}
+
+      {selectedProduct && (
+        <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
       )}
     </div>
   );

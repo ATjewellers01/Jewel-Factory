@@ -119,7 +119,8 @@ function RestockPin({ branch, onChange }: { branch: Branch; onChange: () => void
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  async function save() {
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
     if (pin.length < 4) { setMsg('PIN must be at least 4 digits.'); return; }
     setBusy(true); setMsg(null);
     try { await apiSend('PUT', `/api/store/branches/${branch.id}/restock-pin`, { pin }); setPin(''); setMsg('Restock PIN set.'); onChange(); }
@@ -136,11 +137,11 @@ function RestockPin({ branch, onChange }: { branch: Branch; onChange: () => void
       <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <ShieldCheck className="h-3.5 w-3.5" />Restock PIN {branch.restockPinHash && <span className="rounded-full bg-amber-100 px-1.5 text-[10px] text-amber-800">set</span>}
       </p>
-      <div className="flex flex-wrap items-center gap-2">
+      <form onSubmit={save} className="flex flex-wrap items-center gap-2">
         <Input type="password" inputMode="numeric" placeholder="New PIN (4–12)" value={pin} onChange={(e) => setPin(e.target.value)} className="max-w-[160px]" />
-        <Button size="sm" onClick={save} disabled={busy} className="metal-sheen text-[#17120b] font-semibold">{busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><KeyRound className="mr-1 h-3.5 w-3.5" />Set</>}</Button>
-        {branch.restockPinHash && <Button size="sm" variant="outline" onClick={clear} disabled={busy} className="text-red-600 border-red-200 hover:bg-red-50"><ShieldOff className="mr-1 h-3.5 w-3.5" />Remove</Button>}
-      </div>
+        <Button type="submit" size="sm" disabled={busy} className="metal-sheen text-[#17120b] font-semibold">{busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><KeyRound className="mr-1 h-3.5 w-3.5" />Set</>}</Button>
+        {branch.restockPinHash && <Button type="button" size="sm" variant="outline" onClick={clear} disabled={busy} className="text-red-600 border-red-200 hover:bg-red-50"><ShieldOff className="mr-1 h-3.5 w-3.5" />Remove</Button>}
+      </form>
       {msg && <p className="text-xs text-muted-foreground">{msg}</p>}
     </div>
   );

@@ -229,13 +229,16 @@ export async function getRetailerBranchSales(
       SELECT
         mp.id,
         mp.name AS product_name,
+        mp.design_number,
         mp.category,
         mp.sub_category,
         mp.weight_grams,
+        mpi.secure_url,
         SUM(c.quantity) AS total_units
       FROM combined c
       JOIN manufacturer_products mp ON mp.id = c.product_id
-      GROUP BY mp.id, mp.name, mp.category, mp.sub_category, mp.weight_grams
+      LEFT JOIN manufacturer_product_images mpi ON mp.id = mpi.product_id AND mpi.is_primary = true
+      GROUP BY mp.id, mp.name, mp.design_number, mp.category, mp.sub_category, mp.weight_grams, mpi.secure_url
       ORDER BY total_units DESC
     `;
 
@@ -254,11 +257,12 @@ export async function getRetailerBranchSales(
       branchId: branch.id,
       branchName: branch.name,
       totalUnitsLast30d: totalUnits,
-      // Full list — frontend slices/filters as needed (product_id kept as `id`
-      // internally but not exposed on this shape; category/weight/units cover
-      // every filter the UI offers).
+      // Full list — frontend slices/filters as needed.
       products: products.map((p) => ({
+        manufacturerProductId: p.id ?? '',
         productName: p.product_name || 'Unknown',
+        designNumber: p.design_number ?? null,
+        imageUrl: p.secure_url ?? null,
         category: p.category ?? null,
         subCategory: p.sub_category ?? null,
         weight: parseDecimal(p.weight_grams ?? null),
@@ -266,7 +270,10 @@ export async function getRetailerBranchSales(
         stars: calculateStars(Number(p.total_units) || 0),
       })),
       topProducts: products.slice(0, 5).map((p) => ({
+        manufacturerProductId: p.id ?? '',
         productName: p.product_name || 'Unknown',
+        designNumber: p.design_number ?? null,
+        imageUrl: p.secure_url ?? null,
         category: p.category ?? null,
         subCategory: p.sub_category ?? null,
         units: Number(p.total_units) || 0,

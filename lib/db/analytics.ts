@@ -29,7 +29,10 @@ export interface BranchSalesData {
   // (category/sub-category/weight/units) and re-derive topProducts/byCategory
   // /byWeight from one consistent dataset instead of re-querying the server.
   products: Array<{
+    manufacturerProductId: string;
     productName: string;
+    designNumber: string | null;
+    imageUrl: string | null;
     category: string | null;
     subCategory: string | null;
     weight: number | null;
@@ -37,7 +40,10 @@ export interface BranchSalesData {
     stars: number;
   }>;
   topProducts: Array<{
+    manufacturerProductId: string;
     productName: string;
+    designNumber: string | null;
+    imageUrl: string | null;
     category: string | null;
     subCategory: string | null;
     units: number;
