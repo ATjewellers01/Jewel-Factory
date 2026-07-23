@@ -96,7 +96,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   // Describe: fill name + description (editable). Returns the new name (so the
   // "generate all" flow can pass it to catalog/transparent without waiting for
   // React state to update).
-  async function aiDescribe(withInstr = false): Promise<string | null> {
+  async function aiDescribe(withInstr = false): Promise<{ designName: string; description: string } | null> {
     if (!aiRaw) { setAiError('Choose a raw photo first.'); return null; }
     setAiBusy('describe'); setAiError(null);
     try {
@@ -108,7 +108,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
       console.log('[ai:describe]', res.status, json);
       if (!res.ok || !json.data) throw new Error(`Describe failed (HTTP ${res.status}): ${json.error?.message ?? 'no details returned'}`);
       setForm((p) => ({ ...p, name: json.data!.designName || p.name, description: json.data!.description || p.description }));
-      return json.data.designName || null;
+      return json.data;
     } catch (e) {
       console.error('[ai:describe] failed', e);
       setAiError(e instanceof Error ? e.message : 'Describe failed');
@@ -164,15 +164,19 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
     try {
       // Step 1: AI generates name + description
       console.log('[ai:generate-all] step 1/4 — describe');
-      const newName = await aiDescribe(false);
-      if (!newName) {
+      const described = await aiDescribe(false);
+      if (!described) {
         console.error('[ai:generate-all] aborted at step 1 (describe) — see [ai:describe] logs above');
         setAiBusy(null);
         return; // describe failed, error already set
       }
 
-      // Step 2: Update form with the new name
-      const updatedForm = { ...form, name: form.name.trim() || newName };
+      // Step 2: Update form with the new name + description. Read both explicitly
+      // off `described` (NOT form.description) — `form` here is the stale closure
+      // from before aiDescribe's setForm() ran, so spreading it would silently
+      // overwrite the description aiDescribe just fetched back to empty (the same
+      // stale-closure class of bug as the image-upload one fixed earlier).
+      const updatedForm = { ...form, name: form.name.trim() || described.designName, description: described.description || form.description };
       setForm(updatedForm);
 
       // Step 3: Create product immediately (generates design number) before images
