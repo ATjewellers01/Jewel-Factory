@@ -319,6 +319,50 @@ because the bug only manifests with real data — see §3.14). This session:
    debugging production, check whether there's an AWS deploy before assuming
    Render is the only one** — this doc will hopefully now save that rediscovery.
 
+### 3.19 Retailer profile expansion + photo-search web enhancement planning (2026-07-24 continued)
+The owner asked for complete visibility into retailers at the manufacturer's manage-
+retailers page, plus planning for web-based photo search. This session:
+
+1. **Expanded retailer profile modal** — Manufacturer now sees complete retailer
+   details in `/manufacturer/stores` edit modal: business contact (name/email/phone
+   /city, editable), owner details (read-only), full HQ address (street/city/state
+   /pincode/landmark, read-only), operations stats (active stores + store manager
+   count, read-only), registration status + joined date (read-only), + editable
+   extra-stores-granted field. Backend updated (`lib/db/stores.ts`
+   `listStoresByManufacturer`) to return branches with manager info.
+
+2. **Stores (branches) list in modal** — New section shows each retailer's active
+   stores: name, location, manager count, restock PIN set/not-set status. Hidden
+   from customer; staff-only (badges show source: 🏠 catalog or 🌐 web).
+
+3. **Store-limit enforcement** — Enforced per-retailer limit: 2 free branches +
+   manufacturer-editable `extraBranchAllowance`. API returns 409 + "You've reached
+   your store limit" message when exceeded.
+
+4. **AWS redeploy** — Built `jewel-factory-prod:c54a967`, all migrations applied,
+   container verified running. Tested expanded modal live; shows all fields.
+
+5. **Feature/sales-analytics branch synced** — Merged `master` (7 commits) into
+   `feature/sales-analytics` so the team's branch reflects all recent work (store-
+   limit, expanded modal, stores list, product-detail modal, restock PIN fix,
+   analytics cleanup). Team's `teamai/feature/sales-analytics` now mirrors
+   `origin/master` again.
+
+6. **Photo-search web enhancement spec** — Comprehensive plan approved and saved
+   to `docs/PENDING.md` (section 7): Blend catalog + web results for customer
+   (seamless, no source labels), show badges to Store Manager (🏠 | 🌐), use
+   Azure Bing Visual Search API (vs SerpApi/TinEye; real reverse-image-search,
+   best for jewelry, ~₹500-600/month, reliable). Safety: timeouts (5s max),
+   rate-limiting (100/day), image validation (size/format/magic bytes), circuit
+   breaker (3 fails → 5-min cooldown), feature flag (instant disable). Rollout:
+   code → staging (flag OFF) → pilot store (10%) → 100% if stable. Python Colab
+   test script created (`bing_visual_search_test.py`) to validate Azure Bing API
+   before implementation. **Pending:** Owner sign-off on Bing API choice + budget
+   before writing code.
+
+7. **Docs updated** — CLAUDE.md, PROJECT_HISTORY.md, PENDING.md all reflect
+   this session's work.
+
 ---
 
 ## 4. What's PENDING (see docs/PENDING.md for the live checklist — this section is a summary, PENDING.md is the source of truth)

@@ -73,19 +73,78 @@ Related docs: `HANDOVER.md` (client setup) · `DATABASE.md` (schema) ·
 - [ ] Manufacturer → order dikhe (retailer + branch + note, no customer PII)
 - [ ] Photo (visual) search — needs embedder/AI-Features + pgvector (RDS)
 
-## 7. Optional / future
+## 7. Photo Search Web Enhancement — DETAILED SPEC (deferred, approved 2026-07-24)
+
+**Status:** Approved scope + recommendations. Waiting for owner sign-off on API choice + budget. Test script provided (Python/Colab).
+
+**Problem:** Store Manager kiosk only searches own catalog via pgvector. If no good match, customer leaves. **Solution:** Also search web for similar images, expand options seamlessly.
+
+**UX Design:**
+- **Customer:** Sees blended results (catalog + web mixed), no distinction, feels like store's own collection
+- **Store Manager:** Sees badges (🏠 Catalog | 🌐 Web) so they know which is which while helping customer
+- **Retailer/Manufacturer:** In order details, sees source badge ("Reference image from web search")
+
+**Technical Flow:**
+1. Customer uploads photo → Store Manager kiosk
+2. Backend parallel calls:
+   - AI-Features `/embed/image` → 512-d vector embedding
+   - pgvector search RDS → catalog results
+   - Azure Bing Visual Search API → web results (non-blocking, 5s timeout)
+3. Results merged + blended for customer (seamless view)
+4. Store Manager sees badges (hidden from customer)
+5. If customer picks web image → existing Custom Design Request flow (no changes)
+6. Web image downloaded + uploaded to S3 (stable URL, no expiry/hotlink issues)
+7. Custom Design goes: Store Manager → Retailer approval → Manufacturer (same pipeline)
+
+**API Choice: Azure Bing Visual Search** ✅
+- Real reverse-image-search (not wrapper)
+- Best for jewelry/fashion
+- Cost: ~₹500-600/month (100 searches/day × 30 days × $0.25/search)
+- Free tier: 100 calls/month
+- Reliable, Azure ecosystem, clear pricing
+- Alternative: SerpApi (cheaper but third-party wrapper), TinEye (specialist but less jewelry-focused)
+
+**Safety & Reliability:**
+- ✅ Non-blocking: If web-search fails → catalog still works
+- ✅ Timeouts: Web-search max 5 seconds
+- ✅ Image validation: File size (<5MB), format (jpg/png), magic bytes
+- ✅ URL validation: Whitelist domains, no suspicious/internal URLs
+- ✅ S3 upload: Images downloaded + re-uploaded to our S3 (immutable, CDN-cached, no hotlink issues)
+- ✅ Rate limiting: Max 100 searches/day per store, circuit breaker (3 failures → 5-min cooldown)
+- ✅ Cost monitoring: Logged every call, set budget alerts, disable if over-quota
+- ✅ Feature flag: `ENABLE_WEB_SEARCH=true/false` to toggle instantly
+- ✅ Error logging: Every failure logged (web-search timeout, image validation fail, S3 upload fail)
+
+**Implementation Details:**
+- **New endpoint:** `POST /api/branch-manager/search` (lib/api/routes/branch-manager.ts)
+- **Helper functions:** embedImage(), searchWebImages(), downloadAndUploadToS3(), validateImage()
+- **Frontend:** `/store-manager/search` page shows blended results with Store Manager badges
+- **Custom design:** If web image selected → use s3Url (not external URL) in custom design request
+
+**Rollout Plan:**
+1. Week 1: Code locally + test (use Colab script below to validate Azure Bing API)
+2. Week 2: Feature flag OFF on staging, full regression test
+3. Week 3: Feature flag ON for 1 pilot store (10% traffic), monitor costs/errors
+4. Week 4: 100% rollout if stable + within budget
+
+**Decisions Made (approved 2026-07-24):**
+- ✅ Use Azure Bing Visual Search API
+- ✅ Download web images → re-upload to S3 (safety over simplicity)
+- ✅ Blend results (no separate sections) for customer
+- ✅ Show badges only to Store Manager (internal knowledge)
+
+**Testing:**
+- Unit test: Image validation (size, format, magic bytes)
+- Integration test: Azure Bing API call + response parsing
+- E2E test: Customer uploads → sees blended results → picks web image → custom design created → Retailer approves
+- Use Python Colab script below to validate API before full implementation
+
+---
+
+## 7b. Optional / future
 - [ ] Product_Recommendation (AI design ranking, folder ../Product_Recommendation) → AI-Features me merge (naya endpoint) — tumhari "sab AI ek service" vision
 - [ ] Order-confirmation email/SMS (kiosk) — abhi sirf reset + store-approval emails
 - [ ] pin/rate-limit + integration tests (approval + chat flows)
-- [ ] **Photo search enhancement — catalog + web search, separate listings** (discussed 2026-07-24, deferred — DO NOT start without re-confirming scope):
-  - Current visual search (`/store-manager/search`, `/store/similar-search`) only searches OUR OWN manufacturer catalog via pgvector/OpenCLIP embeddings.
-  - **Wanted:** when a customer's uploaded photo doesn't match well in the catalog, ALSO search the **internet** for visually similar images, and show **two separate sections/listings** — "From our catalog" vs "Similar from the web" (never mixed together).
-  - **Catalog-match path stays 100% unchanged** — only the web-search path + its custom-order hookup are new.
-  - If the customer likes a web-found image, the **Store Manager** sends it through the **existing Custom Design Request flow** (Store Manager → Retailer/Head-Office approval → Retailer → Manufacturer) — same pipeline as today's custom designs, just with a web image as the reference instead of a customer-supplied photo. Goal: no customer leaves without either a catalog match or a custom-order started.
-  - **Open decisions before implementing (ask the owner again):**
-    1. **Which web reverse-image-search API** — options considered: Bing Visual Search / Azure Cognitive Services (real reverse-image-search, most likely fit), SerpApi (Google Lens wrapper, paid third-party), TinEye API (reverse-image-search specialist, paid). All are paid/quota-based — needs a pricing/quota comparison (like the OpenAI cost analysis done for AI Generate) before picking one.
-    2. **How the web image attaches to the Custom Design Request** — use the external URL directly (simpler, but the URL could break/expire/hotlink-block), or download it server-side and re-upload to our own S3 first (consistent with how customer-photo custom-design uploads already work, more reliable, slightly more work).
-  - Nothing implemented yet — this is a note-to-self from the planning conversation, not a spec. Re-confirm both open decisions with the owner before writing any code.
 
 ---
 

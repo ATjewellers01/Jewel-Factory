@@ -209,6 +209,21 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
 - **Order filters (all lists)** — reusable `components/orders/OrderFilters.tsx` + `lib/order-filters.ts`: order-ID search + status dropdown + **From/To date range** (on `createdAt`) everywhere; **Store (branch) filter** on HO lists (kiosk/custom/b2b) with a branch badge per row; **Retailer filter** on Manufacturer lists (kiosk/custom/orders); Store Manager My Orders searches by order-ID + derived status bucket + date range. HO custom list gained `branch{name}` via `listCustomRequests`.
 - **Wordmark** — landing + About navbars use a **"JEWEL FACTORY" text wordmark** (`FACTORY` in gold `#c9a84c`), NOT `public/logo-wordmark.png` — that PNG still shows "LUXEMATCH", so don't use it. Favicon is `public/logo-icon.png`.
 
+## Latest session (2026-07-24 continued) — Retailer profile expansion + photo-search web enhancement planning
+
+**Completed:**
+- **[x] Expanded retailer detail modal** (`app/manufacturer/stores/page.tsx`) — Manufacturer now sees complete retailer profile in modal with 5 clear sections: Contact Info (editable name/email/phone/city), Owner Details (read-only), Headquarters Address (read-only, full breakdown), Operations (read-only stores + managers count), Status (read-only registration status + joined date), Extra stores granted (editable). Scrollable `max-h-[70vh]` modal with clear read-only indicators.
+- **[x] Stores (branches) list in retailer profile** — Backend query expanded (`lib/db/stores.ts` `listStoresByManufacturer`) to include branches with managers. Modal now shows list of all stores per retailer: name, location (city), manager count, restock PIN status (set/not set). Staff only (Store Manager sees badges 🏠 Catalog | 🌐 Web; customer sees blended results).
+- **[x] Store-limit enforcement** — `FREE_BRANCH_LIMIT=2` enforced + manufacturer-editable `extraBranchAllowance` per retailer. Retailer can't exceed limit without manufacturer grant. API returns 409 "You've reached your store limit" error.
+- **[x] AWS redeploy** — Built Docker image `jewel-factory-prod:c54a967`, all 9 Prisma migrations applied, container running healthy. Verified: expanded retailer modal now shows all fields (owner, address, operations, status, stores list).
+- **[x] Merged feature/sales-analytics ← master** — 7 commits fast-forwarded (store-limit + expanded modal + stores list + product-detail modal + restock PIN fix + analytics cleanup + docs). Branch now in sync.
+- **[x] Photo-search web enhancement spec** — Comprehensive plan saved to `docs/PENDING.md` (section 7): Blend catalog + web results for customer (no visible source distinction), show badges to Store Manager (🏠 | 🌐), use Azure Bing Visual Search API (~₹500-600/month), safety checklist (timeouts, rate-limiting, image validation, circuit breaker), rollout phases. Python Colab test script created (`bing_visual_search_test.py`) to validate API before implementation.
+- **[x] Docs updated** — CLAUDE.md, PROJECT_HISTORY.md, PENDING.md reflect all work.
+
+**API Choice:** Azure Bing Visual Search ✅ (vs SerpApi, TinEye). Real reverse-image-search, best for jewelry, cost-effective (~$0.25/search), reliable.
+
+**Pending:** Owner sign-off on Bing API + budget before implementation. Python Colab test ready to validate.
+
 ## Latest updates (branch: `feature/order-image-zoom`)
 
 **Abhay's UI Refinements (8 commits on `renderdep`):**
