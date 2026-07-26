@@ -45,6 +45,15 @@ const TRUST = [
 
 const primaryImg = (p: ShowcaseProduct) => (p.images.find((i) => i.isPrimary) ?? p.images[0])?.secureUrl;
 
+function shuffled<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index--) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [copy[index], copy[randomIndex]] = [copy[randomIndex]!, copy[index]!];
+  }
+  return copy;
+}
+
 export default function LandingPage() {
   const [showcase, setShowcase] = useState<ShowcaseProduct[] | null>(null);
   const [showLogin, setShowLogin] = useState(false);
@@ -59,7 +68,10 @@ export default function LandingPage() {
       try {
         const res = await fetch('/api/kiosk/catalog', { cache: 'no-store' });
         const json = (await res.json()) as { data?: ShowcaseProduct[] };
-        setShowcase((json.data ?? []).slice(0, 8));
+        // The landing showcase is an editorial preview, not a fixed catalog
+        // sort. A new visit samples a fresh group so growing catalogs don't
+        // keep showing only the first designs returned by the API.
+        setShowcase(shuffled(json.data ?? []).slice(0, 8));
       } catch { setShowcase([]); }
     })();
   }, []);

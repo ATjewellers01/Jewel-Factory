@@ -48,7 +48,9 @@ export default function StoreManagerHome() {
 
   const featured = products[0];
   const popular = products.slice(0, 4);
-  const more = products.length >= 8 ? products.slice(4, 12) : products.slice(0, 8);
+  // Keep the two editorial grids distinct. When the catalog is still small we
+  // prefer omitting this section to showing the same four pieces twice.
+  const more = products.slice(4, 12);
   const collections = useMemo(() => {
     const seen = new Set<string>();
     return products.filter((product) => {
