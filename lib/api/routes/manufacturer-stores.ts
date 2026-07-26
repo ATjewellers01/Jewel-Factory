@@ -39,6 +39,7 @@ manufacturerStoreRoutes.post('/store-registrations/:id/approve', async (c) => {
     ownerEmail: result.email,
     managerEmails: result.managers.map((m) => m.email),
     appUrl: env.NEXT_PUBLIC_APP_URL,
+    retailerLogoUrl: result.logoUrl,
   });
   void sendEmail({ to: result.email, subject, html }).catch((e) =>
     console.warn('[approve] store-approved email failed:', e),

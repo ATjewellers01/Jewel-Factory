@@ -194,20 +194,30 @@ export class TryOnEngine {
   async captureFrame(): Promise<Blob | null> {
     // Composite the video and overlay canvas into a single image. We can't
     // re-use the WebGL canvas alone because the video pixels aren't on it.
-    const w = this.renderer['viewportWidth'] as number;
-    const h = this.renderer['viewportHeight'] as number;
+    const { width: w, height: h } = this.renderer.size;
+    if (w === 0 || h === 0) return null;
+
     const out = document.createElement('canvas');
     out.width = w;
     out.height = h;
     const ctx = out.getContext('2d');
     if (!ctx) return null;
 
+    // Re-render immediately before reading back. The rAF loop may have painted
+    // some time ago, and on browsers that ignore preserveDrawingBuffer this
+    // guarantees the overlay pixels are present in the buffer we're about to
+    // copy — otherwise the capture would silently come out as video-only.
+    this.renderer.render();
+
     // Mirror the video so the captured frame matches what the user saw.
     ctx.save();
     ctx.scale(-1, 1);
     ctx.drawImage(this.video, -w, 0, w, h);
     ctx.restore();
-    ctx.drawImage((this.renderer as unknown as { renderer: { domElement: HTMLCanvasElement } }).renderer.domElement, 0, 0);
+
+    // Overlay canvas is already in the same pixel space (setViewportSize uses
+    // the video's intrinsic resolution), so it composites 1:1 with no scaling.
+    ctx.drawImage(this.renderer.canvas, 0, 0, w, h);
 
     return new Promise((resolve) => out.toBlob((b) => resolve(b), 'image/png'));
   }

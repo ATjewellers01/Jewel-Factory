@@ -60,31 +60,28 @@ export default function StoreManagerHome() {
 
   return (
     <div className="min-h-screen overflow-hidden">
-      <section className="relative min-h-[calc(100svh-92px)] overflow-hidden bg-[#211711]">
+      <section className="relative overflow-hidden bg-[#211711]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="https://images.unsplash.com/photo-1599643478524-fb66f7ca2b6e?w=1800&q=90" alt="Premium jewellery showroom" className="absolute inset-0 h-full w-full object-cover opacity-[0.18]" />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(20,14,10,0.84)_0%,rgba(20,14,10,0.58)_42%,rgba(20,14,10,0.20)_72%,rgba(20,14,10,0.44)_100%)]" />
+        <img src="https://images.unsplash.com/photo-1599643478524-fb66f7ca2b6e?w=1800&q=90" alt="Premium jewellery showroom" className="absolute inset-0 h-full w-full object-cover object-center opacity-[0.2]" />
+        {/* Copy-side scrim: vertical on small screens (text sits below the image),
+            horizontal from lg up (text sits beside it). */}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,14,10,0.35)_0%,rgba(20,14,10,0.85)_58%,rgba(20,14,10,0.95)_100%)] lg:bg-[linear-gradient(90deg,rgba(20,14,10,0.94)_0%,rgba(20,14,10,0.76)_48%,rgba(20,14,10,0.28)_78%,rgba(20,14,10,0.5)_100%)]" />
         <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#fbf9f5]/45 via-[#fbf9f5]/10 to-transparent" />
 
-        <div className="pointer-events-none absolute right-[-1%] top-[9%] hidden h-[78%] w-[49%] md:block">
-          {products[0] ? <FloatingProduct product={products[0]} className="absolute right-0 top-0 h-[51%] max-w-[62%] opacity-95 drop-shadow-[0_38px_72px_rgba(0,0,0,0.55)]" /> : null}
-          {products[1] ? <FloatingProduct product={products[1]} className="absolute bottom-[5%] right-[38%] h-[27%] max-w-[34%] -rotate-6 opacity-90 drop-shadow-[0_28px_50px_rgba(0,0,0,0.48)]" /> : null}
-          {products[2] ? <FloatingProduct product={products[2]} className="absolute bottom-[16%] right-0 h-[29%] max-w-[35%] rotate-6 opacity-90 drop-shadow-[0_28px_50px_rgba(0,0,0,0.48)]" /> : null}
-        </div>
-        {products[0] ? (
-          <div className="pointer-events-none absolute -right-[42%] top-[9%] h-[44%] w-[94%] opacity-30 md:hidden">
-            <FloatingProduct product={products[0]} className="h-full w-full drop-shadow-[0_30px_60px_rgba(0,0,0,0.5)]" />
-          </div>
-        ) : null}
+        {/* Content-driven height — no forced svh rows, so the section can never
+            clip its own copy on short/landscape viewports. */}
+        <div className="relative mx-auto grid max-w-[1400px] gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-center lg:gap-12 lg:px-12 lg:py-20">
+          {featured ? <HeroProduct product={featured} /> : null}
 
-        <div className="relative mx-auto flex min-h-[calc(100svh-92px)] max-w-[1400px] items-center px-4 py-16 md:px-6 lg:px-12">
-          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="max-w-2xl">
-            <p className="mb-5 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-[#e4cf8f]"><Sparkles className="h-3.5 w-3.5" /> AI jewellery showroom</p>
-            <h1 className="font-display max-w-2xl break-words text-5xl font-normal leading-[0.98] text-white sm:text-6xl md:text-7xl">{manager.retailer.name}</h1>
-            <p className="mt-5 max-w-md text-lg leading-7 text-white/75">Browse the live catalogue at {manager.branch.name}, find similar designs, and preview favourites with virtual try-on.</p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link href="/store-manager/kiosk" className="metal-sheen inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#17120b] shadow-lg shadow-black/20 transition-transform hover:scale-[1.02]">Explore Catalogue <ArrowRight className="h-4 w-4" /></Link>
-              <Link href="/store-manager/try-on" className="inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/[0.08] px-6 py-3 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/[0.14]"><Camera className="h-4 w-4" /> Try On</Link>
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="relative z-10 lg:order-1">
+            <p className="mb-4 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#e4cf8f] sm:mb-5 sm:text-xs sm:tracking-[0.28em]"><Sparkles className="h-3.5 w-3.5" /> AI jewellery showroom</p>
+            {/* min(...) on the fluid step stops long retailer names overflowing
+                narrow phones, where 12vw alone was too aggressive. */}
+            <h1 className="font-display max-w-2xl text-balance break-words text-[clamp(2.25rem,9vw,4rem)] font-normal leading-[1.02] text-white sm:text-[clamp(3.25rem,6vw,5.5rem)] sm:leading-[0.95]">{manager.retailer.name}</h1>
+            <p className="mt-4 max-w-md text-base leading-7 text-white/75 sm:mt-5 sm:text-lg">Browse the live catalogue at {manager.branch.name}, find similar designs, and preview favourites with virtual try-on.</p>
+            <div className="mt-7 flex flex-wrap items-center gap-3 sm:mt-8">
+              <Link href="/store-manager/kiosk" className="metal-sheen inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-[#17120b] shadow-lg shadow-black/20 transition-transform hover:scale-[1.02] max-[359px]:w-full sm:px-6">Explore Catalogue <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/store-manager/try-on" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/35 bg-white/[0.08] px-5 py-3 text-sm font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/[0.14] max-[359px]:w-full sm:px-6"><Camera className="h-4 w-4" /> Try On</Link>
             </div>
           </motion.div>
         </div>
@@ -165,8 +162,27 @@ function ProductImage({ product, className }: { product: Product; className: str
   return source ? <img src={source} alt={product.name} className={className} /> : null; // eslint-disable-line @next/next/no-img-element
 }
 
-function FloatingProduct({ product, className }: { product: Product; className: string }) {
-  return <ProductImage product={product} className={`${className} object-contain`} />;
+function HeroProduct({ product }: { product: Product }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.97, x: 20 }}
+      animate={{ opacity: 1, scale: 1, x: 0 }}
+      transition={{ delay: 0.08, duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+      /* A fixed aspect ratio (rather than a tall min-height + object-cover) keeps
+         the piece centred and fully framed at every width — the old box left the
+         jewellery floating high with dead space beneath it on laptop screens. */
+      className="pointer-events-none relative aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-[0_24px_60px_rgba(0,0,0,0.4)] sm:aspect-[16/10] lg:order-2 lg:aspect-[4/5] lg:max-h-[560px] lg:max-w-[520px] lg:justify-self-end lg:rounded-[2rem] lg:shadow-[0_38px_90px_rgba(0,0,0,0.48)]"
+      aria-hidden="true"
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(201,168,76,0.22),transparent_68%)] blur-2xl" />
+      <ProductImage
+        product={product}
+        className="absolute inset-0 h-full w-full object-cover object-center opacity-90 lg:opacity-95"
+      />
+      {/* Soft edge blend into the section background, direction-aware per breakpoint. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#211711]/10 via-transparent to-[#211711]/45 lg:bg-gradient-to-r lg:from-[#211711]/28 lg:via-transparent lg:to-transparent" />
+    </motion.div>
+  );
 }
 
 function LoadingGrid() {

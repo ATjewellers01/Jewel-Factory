@@ -9,7 +9,7 @@ import { hashPassword, verifyPassword } from '@/lib/password';
 import { STORE_COOKIE, issueStoreCookie, cookieOptions } from '@/lib/auth';
 import { slugify, uniqueStoreSlug } from '@/lib/slug';
 import { createResetToken, verifyResetToken, consumeResetToken } from '@/lib/reset-token';
-import { sendEmail, passwordResetEmail } from '@/lib/email';
+import { buildAppUrl, passwordResetEmail, sendEmail } from '@/lib/email';
 import { sendData, sendError } from '../envelope';
 import { storeGuard, type AppEnv } from '../guards';
 
@@ -156,11 +156,19 @@ const ForgotBody = z.object({ email: z.string().email() });
 storeAuthRoutes.post('/forgot-password', zValidator('json', ForgotBody), async (c) => {
   const env = getServerEnv();
   const email = c.req.valid('json').email.toLowerCase().trim();
-  const store = await prisma.store.findUnique({ where: { email }, select: { id: true } });
+  const store = await prisma.store.findUnique({
+    where: { email },
+    select: { id: true, name: true, logoUrl: true },
+  });
   if (store) {
     const token = await createResetToken(email, 'STORE_OWNER', store.id);
-    const url = `${env.NEXT_PUBLIC_APP_URL}/store/reset-password?token=${token}`;
-    const { subject, html } = passwordResetEmail(url);
+    const url = buildAppUrl(env.NEXT_PUBLIC_APP_URL, `/store/reset-password?token=${encodeURIComponent(token)}`);
+    const { subject, html } = passwordResetEmail({
+      resetUrl: url,
+      appUrl: env.NEXT_PUBLIC_APP_URL,
+      retailerLogoUrl: store.logoUrl,
+      retailerName: store.name,
+    });
     void sendEmail({ to: email, subject, html }); // fire-and-forget
   }
   return sendData(c, { ok: true });

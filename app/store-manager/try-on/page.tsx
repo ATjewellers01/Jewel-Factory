@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Camera, Loader2, RotateCcw, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, Camera, ChevronDown, ChevronUp, Loader2, RotateCcw, Sparkles, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -37,6 +37,7 @@ function TryOnInner() {
   const [products, setProducts] = useState<TryonProduct[] | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [capture, setCapture] = useState<string | null>(null);
+  const [stripOpen, setStripOpen] = useState(true);
   const [cameraAspectRatio, setCameraAspectRatio] = useState(16 / 9);
   const [cameraFrame, setCameraFrame] = useState({ width: 0, height: 0 });
   const params = useSearchParams();
@@ -73,7 +74,8 @@ function TryOnInner() {
     observer.observe(area);
     fitCameraFrame();
     return () => observer.disconnect();
-  }, [cameraAspectRatio]);
+    // stripOpen changes the area's available height — re-fit when it toggles.
+  }, [cameraAspectRatio, stripOpen]);
 
   useEffect(() => {
     (async () => {
@@ -142,13 +144,20 @@ function TryOnInner() {
         </div>
       </div>
 
-      {/* Bottom product strip */}
-      <div className="max-h-[112px] flex-shrink-0 overflow-hidden px-3 pb-3 pt-1.5 sm:px-4">
-        <div className="mb-2 flex items-center gap-2">
+      {/* Bottom product strip — collapsible so the camera can use the full height */}
+      <div className="flex-shrink-0 px-3 pb-3 pt-1.5 sm:px-4">
+        <button
+          onClick={() => setStripOpen((v) => !v)}
+          aria-expanded={stripOpen}
+          className="mb-2 flex w-full items-center gap-2 text-left"
+        >
           <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">Choose a piece</span>
           {products ? <span className="rounded-full bg-[#c9a84c]/20 px-2 py-0.5 text-[10px] font-medium text-[#e4cf8f]">{products.length}</span> : null}
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-medium text-white/80 transition-colors hover:bg-white/20">
+            {stripOpen ? <><ChevronDown className="h-3 w-3" /> Hide</> : <><ChevronUp className="h-3 w-3" /> Show</>}
+          </span>
+        </button>
+        <div className={`flex gap-2 overflow-x-auto pb-1 ${stripOpen ? '' : 'hidden'}`}>
           {products === null && <div className="flex items-center gap-2 py-4 text-xs text-white/60"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
           {products && products.length === 0 && <div className="py-4 text-xs text-white/60">No try-on pieces available yet.</div>}
           {products?.map((p) => (

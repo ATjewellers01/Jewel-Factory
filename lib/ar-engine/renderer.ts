@@ -33,7 +33,15 @@ export class ARRenderer {
   private viewportHeight = 720;
 
   constructor(canvas: HTMLCanvasElement) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    // preserveDrawingBuffer keeps the rendered pixels readable after the frame
+    // is composited — without it captureFrame() reads an already-cleared buffer
+    // and the jewellery layer is missing from the saved photo.
+    this.renderer = new THREE.WebGLRenderer({
+      canvas,
+      alpha: true,
+      antialias: true,
+      preserveDrawingBuffer: true,
+    });
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.NoToneMapping;
@@ -68,6 +76,16 @@ export class ARRenderer {
 
   setJewelleryType(t: JewelleryType): void {
     this.currentJewellery = t;
+  }
+
+  /** Overlay buffer size in pixels — matches the video's intrinsic resolution. */
+  get size(): { width: number; height: number } {
+    return { width: this.viewportWidth, height: this.viewportHeight };
+  }
+
+  /** The WebGL canvas holding the rendered overlay, for compositing a capture. */
+  get canvas(): HTMLCanvasElement {
+    return this.renderer.domElement;
   }
 
   /**

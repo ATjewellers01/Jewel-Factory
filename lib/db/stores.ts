@@ -65,7 +65,7 @@ export async function approveRegistration(manufacturerId: string, storeId: strin
     },
     // Return the fields the approval email needs.
     select: {
-      id: true, name: true, slug: true, email: true, registrationStatus: true,
+      id: true, name: true, slug: true, email: true, registrationStatus: true, logoUrl: true,
       managers: { select: { email: true }, where: { isActive: true } },
     },
   });

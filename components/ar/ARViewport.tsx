@@ -123,33 +123,27 @@ const ARViewport = forwardRef<ARViewportHandle, Props>(function ARViewport(
         autoPlay
         muted
         playsInline
-        className="absolute inset-0 h-full w-full object-cover"
+        className="absolute inset-0 h-full w-full object-contain"
         style={{ transform: 'scaleX(-1)' }}
       />
 
       {/* AR overlay canvas — NOT mirrored (the engine mirrors landmarks
-          internally and draws into display-space pixels). */}
+          internally and draws into video-pixel space).
+          object-contain MUST match the video: the canvas backing store is the
+          video's intrinsic size, so any difference in fit (e.g. cover cropping
+          the video while the canvas stretches) shifts the overlay off the body. */}
       <canvas
         ref={canvasRef}
-        className="pointer-events-none absolute inset-0 h-full w-full"
+        className="pointer-events-none absolute inset-0 h-full w-full object-contain"
       />
 
       {/* HUD — DOM elements over the canvas, not drawn into it, so captures
           stay clean. */}
       <div className="pointer-events-none absolute inset-0 flex flex-col">
-        <div className="flex items-start justify-between gap-2 p-2 sm:p-4">
-          <div
-            className={`max-w-[75%] rounded-full px-3 py-1.5 text-[10px] font-medium backdrop-blur-md sm:max-w-none sm:text-xs ${
-              hint.tone === 'error'
-                ? 'bg-red-500/80 text-white'
-                : hint.tone === 'warn'
-                  ? 'bg-amber-500/80 text-white'
-                  : 'bg-white/90 text-black'
-            }`}
-          >
-            {hint.label}
-          </div>
-
+        {/* Metrics sit top-RIGHT; the status hint is moved to the bottom so
+            neither can collide with the product-name badge the try-on page
+            renders at top-left. */}
+        <div className="flex items-start justify-end gap-2 p-2 sm:p-4">
           {(status === 'tracking' || status === 'no_subject') && (
             <div className="hidden rounded-full bg-black/50 px-3 py-1.5 text-[10px] font-mono text-white/80 backdrop-blur-md sm:block">
               {metricsSnapshot.fps} FPS · {metricsSnapshot.inferenceMs}ms · conf {Math.round(metricsSnapshot.confidence * 100)}%
@@ -158,6 +152,24 @@ const ARViewport = forwardRef<ARViewportHandle, Props>(function ARViewport(
         </div>
 
         <div className="flex-1" />
+
+        {/* Status hint — bottom-centred, and only while it's actually useful.
+            'tracking' is self-evident from the overlay, so we stay out of the way. */}
+        {status !== 'tracking' && status !== 'loading_models' && status !== 'camera_denied' && status !== 'idle' && status !== 'awaiting_camera' && (
+          <div className="flex justify-center px-3 pb-3">
+            <div
+              className={`rounded-full px-3 py-1.5 text-center text-[10px] font-medium backdrop-blur-md sm:text-xs ${
+                hint.tone === 'error'
+                  ? 'bg-red-500/80 text-white'
+                  : hint.tone === 'warn'
+                    ? 'bg-amber-500/80 text-white'
+                    : 'bg-black/60 text-white'
+              }`}
+            >
+              {hint.label}
+            </div>
+          </div>
+        )}
 
         {status === 'loading_models' && (
           <div className="flex items-center justify-center pb-12">
