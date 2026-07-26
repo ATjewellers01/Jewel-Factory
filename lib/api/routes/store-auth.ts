@@ -10,10 +10,25 @@ import { STORE_COOKIE, issueStoreCookie, cookieOptions } from '@/lib/auth';
 import { slugify, uniqueStoreSlug } from '@/lib/slug';
 import { createResetToken, verifyResetToken, consumeResetToken } from '@/lib/reset-token';
 import { buildAppUrl, passwordResetEmail, sendEmail } from '@/lib/email';
+import { registrationLogoFolder, signUpload } from '@/lib/storage';
 import { sendData, sendError } from '../envelope';
 import { storeGuard, type AppEnv } from '../guards';
 
 export const storeAuthRoutes = new Hono<AppEnv>();
+
+// ── Registration logo upload (public) ─────────────────────────────────────────
+// Self-registration happens before a Store row exists, so this can't be behind
+// storeGuard. Like the public kiosk reference-photo route, the server chooses the
+// key and only signs folder+bucket, so a caller can't pick an arbitrary path or
+// overwrite an existing object (keys are random UUIDs).
+storeAuthRoutes.post('/register/logo-sign', async (c) => {
+  try {
+    const signed = await signUpload({ folder: registrationLogoFolder(), bucket: 'logo' });
+    return sendData(c, signed);
+  } catch (err) {
+    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Object storage not configured', 503);
+  }
+});
 
 // Treat empty strings from optional form fields as "not provided".
 const emptyToUndef = (v: unknown) => (typeof v === 'string' && v.trim() === '' ? undefined : v);

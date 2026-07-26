@@ -12,10 +12,12 @@ import {
   LockKeyhole,
   MapPin,
   Store,
+  Upload,
   UserRound,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { PortalLoginScreen } from '@/components/auth/PortalLoginScreen';
 import { Wordmark } from '@/components/landing/Wordmark';
@@ -64,12 +66,63 @@ export default function StoreRegisterPage() {
   const [step, setStep] = useState<Step>(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [logoMode, setLogoMode] = useState<'upload' | 'url'>('upload');
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const logoInput = useRef<HTMLInputElement>(null);
   const [success, setSuccess] = useState(false);
 
   const set = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
+
+  /**
+   * Upload the logo straight to S3 via a presigned PUT. The sign route is public
+   * because registration runs before any Store row exists, so there is no session
+   * to authenticate against yet.
+   */
+  async function handleLogoUpload(file: File) {
+    setLogoError(null);
+    setLogoUploading(true);
+    try {
+      const signRes = await fetch('/api/store/register/logo-sign', { method: 'POST' });
+      const signJson = (await signRes.json()) as {
+        data?: { uploadUrl: string; secureUrl: string; maxBytes: number; allowedFormats: string[] };
+        error?: { message: string };
+      };
+      if (!signRes.ok || !signJson.data) {
+        setLogoError(signJson.error?.message ?? 'Logo upload is unavailable right now.');
+        return;
+      }
+      const signed = signJson.data;
+
+      if (file.size > signed.maxBytes) {
+        setLogoError(`Logo is too large (max ${Math.round(signed.maxBytes / 1024 / 1024)}MB).`);
+        return;
+      }
+      const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+      if (extension && !signed.allowedFormats.includes(extension)) {
+        setLogoError(`Use one of: ${signed.allowedFormats.join(', ')}.`);
+        return;
+      }
+
+      const upload = await fetch(signed.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        body: file,
+      });
+      if (!upload.ok) {
+        setLogoError(`Logo upload failed (${upload.status}).`);
+        return;
+      }
+      setForm((prev) => ({ ...prev, logoUrl: signed.secureUrl }));
+    } catch (err) {
+      setLogoError(err instanceof Error ? err.message : 'Logo upload failed.');
+    } finally {
+      setLogoUploading(false);
+    }
+  }
 
   function validate(target: Step): string | null {
     if (target === 1) {
@@ -204,7 +257,49 @@ export default function StoreRegisterPage() {
                       </button>
                     </span>
                   </label>
-                  <label className={labelClass}><span className="flex items-center justify-between">Logo URL <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span></span><Input type="url" placeholder="https://…" value={form.logoUrl} onChange={set('logoUrl')} className={fieldClass} /></label>
+                  <div className={labelClass}>
+                    <span className="flex items-center justify-between">
+                      Store logo <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
+                    </span>
+
+                    <div className="flex gap-1 text-[11px] font-semibold normal-case tracking-normal">
+                      {/* Switching mode clears the other mode's value so an uploaded
+                          URL can't linger while the user is typing one, or vice-versa. */}
+                      <button type="button" onClick={() => { setLogoMode('upload'); setLogoError(null); setForm((prev) => ({ ...prev, logoUrl: '' })); }}
+                        className={`rounded-full px-3 py-1 transition-colors ${logoMode === 'upload' ? 'bg-[#2b2119] text-white' : 'text-[#8d8379] hover:bg-[#f2ede5]'}`}>
+                        Upload
+                      </button>
+                      <button type="button" onClick={() => { setLogoMode('url'); setLogoError(null); setForm((prev) => ({ ...prev, logoUrl: '' })); }}
+                        className={`rounded-full px-3 py-1 transition-colors ${logoMode === 'url' ? 'bg-[#2b2119] text-white' : 'text-[#8d8379] hover:bg-[#f2ede5]'}`}>
+                        Use a URL
+                      </button>
+                    </div>
+
+                    {form.logoUrl && logoMode === 'upload' ? (
+                      <div className="relative inline-block w-fit">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={form.logoUrl} alt="Store logo" className="h-24 w-24 rounded-xl border border-[#ded5ca] bg-white object-contain p-1.5" />
+                        <button type="button" onClick={() => setForm((prev) => ({ ...prev, logoUrl: '' }))}
+                          className="absolute -right-2 -top-2 rounded-full bg-black/70 p-1 text-white transition-colors hover:bg-black" aria-label="Remove logo">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : logoMode === 'upload' ? (
+                      <>
+                        <button type="button" onClick={() => logoInput.current?.click()} disabled={logoUploading}
+                          className="flex h-24 w-full flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-[#ded5ca] bg-white/60 font-normal normal-case tracking-normal text-[#8d8379] transition-colors hover:border-[#b98a35] hover:text-[#b98a35] disabled:opacity-60 sm:w-48">
+                          {logoUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+                          <span className="text-xs">{logoUploading ? 'Uploading…' : 'Choose an image'}</span>
+                        </button>
+                        <input ref={logoInput} type="file" accept="image/*" hidden
+                          onChange={(e) => { const file = e.target.files?.[0]; if (file) void handleLogoUpload(file); e.target.value = ''; }} />
+                      </>
+                    ) : (
+                      <Input type="url" inputMode="url" placeholder="https://…" value={form.logoUrl} onChange={set('logoUrl')} className={fieldClass} />
+                    )}
+
+                    {logoError ? <span className="font-normal normal-case tracking-normal text-[11px] text-red-600">{logoError}</span> : null}
+                  </div>
                 </fieldset>
               )}
 

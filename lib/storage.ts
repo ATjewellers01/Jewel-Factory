@@ -48,6 +48,15 @@ export function storeFolder(storeId: string, bucket: 'logo' | 'custom'): string 
   return `jewelfactory/store/${storeId}/${bucket}`;
 }
 
+/**
+ * Logo folder for a retailer that does not exist yet (self-registration happens
+ * before any Store row, so there is no storeId to scope by). Keys land under a
+ * dedicated prefix so these uploads are distinguishable from tenant-scoped ones.
+ */
+export function registrationLogoFolder(): string {
+  return 'jewelfactory/registration/logo';
+}
+
 export type SignedUpload = {
   uploadUrl: string;
   publicId: string;

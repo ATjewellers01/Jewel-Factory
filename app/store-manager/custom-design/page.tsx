@@ -10,6 +10,21 @@ import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 
 const PURITIES = ['24K', '22K', '18K', '14K', '916', '750', '585'];
 
+/**
+ * Only preview a pasted URL once it parses as an absolute http(s) URL — otherwise
+ * every keystroke fires a request for a half-typed address and logs a 404.
+ */
+function isPreviewableUrl(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export default function StoreManagerCustomDesignPage() {
   const [form, setForm] = useState({ category: CATEGORIES[0], subCategory: '', weightFrom: '', weightTo: '', purity: '', notes: '', imageUrl: '' });
   const [subCustom, setSubCustom] = useState(false);
@@ -150,11 +165,17 @@ export default function StoreManagerCustomDesignPage() {
             <div className="mb-1.5 flex items-center justify-between">
               <label className="text-xs font-medium text-muted-foreground">Reference image <span className="font-normal">(optional)</span></label>
               <div className="flex gap-1 text-xs">
-                <button type="button" onClick={() => setImageMode('upload')} className={`rounded px-2 py-0.5 ${imageMode === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>Upload</button>
-                <button type="button" onClick={() => setImageMode('url')} className={`rounded px-2 py-0.5 ${imageMode === 'url' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>URL</button>
+                {/* Switching mode clears the other mode's value so a stale uploaded
+                    URL can't be submitted as if it were typed (and vice-versa). */}
+                <button type="button" onClick={() => { setImageMode('upload'); set('imageUrl', ''); }} className={`rounded px-2 py-0.5 ${imageMode === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>Upload</button>
+                <button type="button" onClick={() => { setImageMode('url'); set('imageUrl', ''); }} className={`rounded px-2 py-0.5 ${imageMode === 'url' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>URL</button>
               </div>
             </div>
-            {form.imageUrl ? (
+            {/* Preview replaces the picker only for a COMPLETED upload. In URL mode the
+                input must stay mounted while typing — keying the preview off a
+                non-empty imageUrl swapped it out on the first character, so a URL
+                could never be finished. */}
+            {form.imageUrl && imageMode === 'upload' ? (
               <div className="relative inline-block">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={form.imageUrl} alt="reference" className="h-32 w-32 rounded-xl border object-cover" />
@@ -172,7 +193,27 @@ export default function StoreManagerCustomDesignPage() {
                 <input ref={fileInput} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])} />
               </>
             ) : (
-              <Input placeholder="https://…" value={form.imageUrl} onChange={(e) => set('imageUrl', e.target.value)} />
+              <div className="space-y-2">
+                <Input
+                  type="url"
+                  inputMode="url"
+                  placeholder="https://…"
+                  value={form.imageUrl}
+                  onChange={(e) => set('imageUrl', e.target.value)}
+                />
+                {isPreviewableUrl(form.imageUrl) ? (
+                  <div className="relative inline-block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={form.imageUrl.trim()}
+                      alt="reference"
+                      className="h-32 w-32 rounded-xl border object-cover"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      onLoad={(e) => { e.currentTarget.style.display = ''; }}
+                    />
+                  </div>
+                ) : null}
+              </div>
             )}
           </div>
 
