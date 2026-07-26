@@ -7,6 +7,7 @@ import { useRef, useState } from 'react';
 import { KioskProductCard } from '@/components/kiosk/KioskProductCard';
 import { StoreManagerProductDetailModal } from '@/components/kiosk/StoreManagerProductDetailModal';
 import { Button } from '@/components/ui/button';
+import { useGuestCart } from '@/hooks/use-guest-cart';
 
 type Img = { secureUrl: string; isPrimary: boolean };
 type Product = { id: string; designNumber: string; name: string; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
@@ -20,6 +21,7 @@ export default function StoreManagerSearchPage() {
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [detail, setDetail] = useState<Product | null>(null);
+  const guestCart = useGuestCart();
 
   async function onFile(file: File) {
     setError(null); setResults(null);
@@ -123,9 +125,20 @@ export default function StoreManagerSearchPage() {
           products={results ?? []}
           onClose={() => setDetail(null)}
           tryOnBack="/store-manager/search"
-          primaryAction={() => (
-            <Button asChild className="metal-sheen flex-1 font-semibold text-[#17120b]">
-              <Link href="/store-manager/kiosk"><Plus className="mr-1.5 h-4 w-4" />Order from Catalog</Link>
+          primaryAction={(product) => (
+            <Button
+              onClick={() => {
+                guestCart.add({
+                  productId: product.id,
+                  name: product.name,
+                  imageUrl: product.images.find(i => i.isPrimary)?.secureUrl,
+                });
+                setDetail(null);
+              }}
+              className="metal-sheen flex-1 font-semibold text-[#17120b]"
+            >
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add to Order
             </Button>
           )}
         />

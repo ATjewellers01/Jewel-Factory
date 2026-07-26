@@ -8,10 +8,10 @@ export type GuestCartItem = { productId: string; name: string; imageUrl?: string
 
 function read(): GuestCartItem[] {
   if (typeof window === 'undefined') return [];
-  try { return JSON.parse(sessionStorage.getItem(KEY) ?? '[]'); } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(KEY) ?? '[]'); } catch { return []; }
 }
 function write(items: GuestCartItem[]) {
-  sessionStorage.setItem(KEY, JSON.stringify(items));
+  localStorage.setItem(KEY, JSON.stringify(items));
   window.dispatchEvent(new Event('jf_guest_cart_change'));
 }
 

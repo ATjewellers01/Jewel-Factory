@@ -175,7 +175,12 @@ Whether Render is still actively used alongside AWS EC2, or AWS is now the sole 
 
 ## Status
 
-**Latest session (2026-07-24) — AWS prod bug hunt + docs correction:**
+**Latest session (2026-07-26) — Cart persistence fix + Photo search direct add:**
+- **[x] Fixed cart disappears on refresh** — Changed `sessionStorage` → `localStorage` in `hooks/use-guest-cart.ts` + `hooks/use-b2b-cart.ts`. Cart now persists across page refreshes and browser tab closures. Affects: Retailer catalog orders, Store Manager kiosk, restock orders, B2B orders.
+- **[x] Fixed photo search direct add** — Store Manager photo search (`/store-manager/search`) now directly adds similar images to cart instead of navigating to catalog. Updated `app/store-manager/search/page.tsx` to import `useGuestCart`, pass product to `primaryAction` callback. "Add to Order" button now adds directly + closes modal, maintaining search context.
+- **[x] Docs updated** — CLAUDE.md + PROJECT_HISTORY.md
+
+**Previous session (2026-07-24) — AWS prod bug hunt + docs correction:**
 - **`retailer-multistore` is merged into `master`** — the paragraphs below that say "master stays at the pre-hierarchy state, merge before handover" are now **stale/incorrect**; `master` is the active branch (confirmed via `git status`) and is what's actually deployed. Don't re-attempt that merge.
 - **AWS EC2 is now a live production deployment**, alongside (or instead of — unconfirmed) Render. See the new "Production deployments" section above for full detail (RDS, S3+CloudFront, pgvector, SSH access). This was discovered/verified this session via direct SSH — it was not previously documented here.
 - **Fixed: Manufacturer Intelligence page 500s** (`/manufacturer/retailers`, `/manufacturer/top-products`, `/manufacturer/category-weight`) — root-caused via live container logs (`sudo docker logs jewel-factory`) to `TypeError: Do not know how to serialize a BigInt`. `getManufacturerRetailerSales`/`getManufacturerCategoryWeightBreakdown`/`getManufacturerTopProducts` in `lib/db/analytics-queries.ts` returned raw `$queryRaw` rows straight to `c.json()`; Postgres `SUM()` comes back as a JS `BigInt`, which `JSON.stringify` can't serialize — only crashed once real order data existed to sum (empty dev/staging DBs never hit it). Fixed by mapping `total_units` through `Number(...)` before returning, matching the pattern `getRetailerBranchSales` already used. **This fix needs the AWS container rebuilt/redeployed to take effect** — pushing to git alone does not update the running container (see "Production deployments").

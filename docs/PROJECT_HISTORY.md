@@ -363,6 +363,24 @@ retailers page, plus planning for web-based photo search. This session:
 7. **Docs updated** — CLAUDE.md, PROJECT_HISTORY.md, PENDING.md all reflect
    this session's work.
 
+### 3.20 Cart persistence + photo-search UX fixes (2026-07-26)
+Two user-facing bugs discovered and fixed:
+
+1. **Cart disappears on page refresh** — Both guest cart (`use-guest-cart.ts`) and
+   B2B cart (`use-b2b-cart.ts`) used `sessionStorage`, which browsers automatically
+   clear on refresh. **Fix:** Changed to `localStorage`, which persists across sessions.
+   Affects all cart flows: Retailer catalog → kiosk, Store Manager kiosk/restock,
+   B2B orders.
+
+2. **Photo search result click → catalog navigation (UX break)** — When Store Manager
+   clicked a similar image from photo search (`/store-manager/search`), detail modal
+   opened but the primary action was "Order from Catalog" (a hard `<Link>` to
+   `/store-manager/kiosk`), causing navigation away and loss of search context.
+   **Fix:** Imported `useGuestCart` hook into search page, changed primary action
+   to directly add product to cart + close modal. User now stays on search page,
+   can accumulate multiple similar images in one cart, then proceed to checkout.
+   Same UX as kiosk "Add to Order" flow.
+
 ---
 
 ## 4. What's PENDING (see docs/PENDING.md for the live checklist — this section is a summary, PENDING.md is the source of truth)

@@ -8,10 +8,10 @@ export type B2bCartItem = { productId: string; name: string; designNumber: strin
 
 function read(): B2bCartItem[] {
   if (typeof window === 'undefined') return [];
-  try { return JSON.parse(sessionStorage.getItem(KEY) ?? '[]'); } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(KEY) ?? '[]'); } catch { return []; }
 }
 function write(items: B2bCartItem[]) {
-  sessionStorage.setItem(KEY, JSON.stringify(items));
+  localStorage.setItem(KEY, JSON.stringify(items));
   window.dispatchEvent(new Event('jf_b2b_cart_change'));
 }
 
