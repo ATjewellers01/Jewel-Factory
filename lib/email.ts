@@ -81,34 +81,57 @@ export function buildAppUrl(appUrl: string, path: string): string {
   return new URL(path, `${normalizeAppUrl(appUrl)}/`).toString();
 }
 
+function safeImageUrl(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Text-first lockup: email clients commonly hide remote images until the reader
- * opts in, so the brand and retailer must remain legible without downloaded media.
+ * Image-led lockup with alt-text fallbacks for clients that block remote images.
+ * Light tiles keep transparent retailer marks legible against the dark header.
  */
-function emailHeader(opts: { retailerName?: string; kicker?: string }): string {
+function emailHeader(opts: {
+  appUrl: string;
+  retailerName?: string;
+  retailerLogoUrl?: string | null;
+  kicker?: string;
+}): string {
   const hasRetailer = Boolean(opts.retailerName);
-  const retailerName = escapeHtml(opts.retailerName ?? '');
+  const retailerName = escapeHtml(opts.retailerName ?? 'Retailer');
   const kicker = opts.kicker ? escapeHtml(opts.kicker) : '';
+  // PNG is deliberately used here: AVIF is ideal for the web UI but is not
+  // consistently displayed by major email clients.
+  const jewelLogoUrl = escapeHtml(buildAppUrl(opts.appUrl, '/logo-icon.png'));
+  const retailerLogoUrl = safeImageUrl(opts.retailerLogoUrl);
+  const jewelLogo = `<img src="${jewelLogoUrl}" width="112" alt="Jewel Factory" class="jf-email-logo" style="display:block;width:112px;max-width:112px;height:auto;max-height:42px;object-fit:contain;" />`;
+  const retailerLogo = retailerLogoUrl
+    ? `<img src="${escapeHtml(retailerLogoUrl)}" width="92" alt="${retailerName}" class="jf-email-logo" style="display:block;width:92px;max-width:92px;height:auto;max-height:42px;object-fit:contain;" />`
+    : `<span style="display:block;color:${INK};font-family:Georgia,'Times New Roman',serif;font-size:13px;font-weight:700;letter-spacing:1.1px;line-height:42px;white-space:nowrap;">${retailerName}</span>`;
 
   const lockup = hasRetailer
     ? `
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;border-collapse:separate;">
         <tr>
-          <td style="padding:0 14px 0 0;color:#e9dcb8;font-family:Georgia,'Times New Roman',serif;font-size:13px;font-weight:700;letter-spacing:2px;white-space:nowrap;">
-            JEWEL FACTORY
+          <td class="jf-email-logo-cell" style="padding:0 10px 0 0;vertical-align:middle;">
+            <div style="background:#ffffff;border-radius:8px;padding:6px 8px;">${jewelLogo}</div>
           </td>
-          <td style="padding:0 14px;color:${BORDER};font-size:20px;font-weight:300;">×</td>
-          <td style="padding:0 0 0 14px;color:#ffffff;font-family:Georgia,'Times New Roman',serif;font-size:13px;font-weight:700;letter-spacing:1.5px;white-space:nowrap;">
-            ${retailerName}
+          <td style="padding:0 10px;color:#d7c79b;font-size:18px;font-weight:300;vertical-align:middle;">×</td>
+          <td class="jf-email-logo-cell" style="padding:0 0 0 10px;vertical-align:middle;">
+            <div style="background:#ffffff;border-radius:8px;padding:6px 8px;">${retailerLogo}</div>
           </td>
         </tr>
       </table>`
-    : `<p style="margin:0;color:#e9dcb8;font-family:Georgia,'Times New Roman',serif;font-size:15px;font-weight:700;letter-spacing:2.5px;">JEWEL FACTORY</p>`;
+    : `<div style="display:inline-block;background:#ffffff;border-radius:8px;padding:6px 8px;">${jewelLogo}</div>`;
 
   return `
-    <div style="background:${INK};padding:28px 24px 24px;text-align:center;border-radius:14px 14px 0 0;">
+    <div style="background:${INK};padding:24px 20px 22px;text-align:center;border-radius:14px 14px 0 0;">
       ${lockup}
-      ${kicker ? `<p style="margin:16px 0 0;color:#bfb395;font-size:10px;letter-spacing:2.2px;text-transform:uppercase;font-weight:600;">${kicker}</p>` : ''}
+      ${kicker ? `<p style="margin:14px 0 0;color:#bfb395;font-size:10px;letter-spacing:2.2px;text-transform:uppercase;font-weight:600;">${kicker}</p>` : ''}
     </div>`;
 }
 
@@ -121,20 +144,35 @@ function emailFooter(): string {
 
 /** Wraps inner content in the shared card shell (rounded, cream background, gold accents). */
 function emailShell(opts: {
+  appUrl: string;
   retailerName?: string;
+  retailerLogoUrl?: string | null;
   kicker?: string;
   body: string;
 }): string {
   return `
-    <div style="background:${CREAM};padding:32px 16px;font-family:Georgia,'Times New Roman',serif;">
-      <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid ${BORDER};box-shadow:0 2px 10px rgba(31,26,20,0.06);">
-        ${emailHeader({ retailerName: opts.retailerName, kicker: opts.kicker })}
-        <div style="padding:32px 28px 8px;font-family:system-ui,-apple-system,sans-serif;">
+    <style>
+      @media only screen and (max-width: 560px) {
+        .jf-email-shell { padding:0 !important; }
+        .jf-email-card { border-radius:0 !important; border-left:0 !important; border-right:0 !important; }
+        .jf-email-body { padding:26px 20px 8px !important; }
+        .jf-email-logo-cell { padding-left:4px !important; padding-right:4px !important; }
+        .jf-email-logo { max-width:84px !important; max-height:36px !important; }
+      }
+    </style>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="jf-email-shell" style="width:100%;background:${CREAM};padding:32px 16px;font-family:Georgia,'Times New Roman',serif;">
+      <tr><td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="jf-email-card" style="width:100%;max-width:520px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid ${BORDER};box-shadow:0 2px 10px rgba(31,26,20,0.06);">
+          <tr><td>
+        ${emailHeader({ appUrl: opts.appUrl, retailerName: opts.retailerName, retailerLogoUrl: opts.retailerLogoUrl, kicker: opts.kicker })}
+        <div class="jf-email-body" style="padding:32px 28px 8px;font-family:system-ui,-apple-system,sans-serif;">
           ${opts.body}
         </div>
         ${emailFooter()}
-      </div>
-    </div>`;
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>`;
 }
 
 /** Build the standard password-reset email HTML. */
@@ -162,7 +200,9 @@ export function passwordResetEmail(opts: {
   return {
     subject: 'Reset your Jewel Factory password',
     html: emailShell({
+      appUrl: opts.appUrl,
       retailerName: opts.retailerName,
+      retailerLogoUrl: opts.retailerLogoUrl,
       kicker: 'Account security',
       body,
     }),
@@ -226,6 +266,12 @@ export function storeApprovedEmail(opts: {
 
   return {
     subject: `Your retailer account "${opts.storeName}" is approved — Jewel Factory`,
-    html: emailShell({ retailerName: opts.storeName, kicker: 'Retailer approved', body }),
+    html: emailShell({
+      appUrl,
+      retailerName: opts.storeName,
+      retailerLogoUrl: opts.retailerLogoUrl,
+      kicker: 'Retailer approved',
+      body,
+    }),
   };
 }
