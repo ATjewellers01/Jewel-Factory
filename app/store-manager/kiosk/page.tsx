@@ -1,13 +1,21 @@
 'use client';
 
 import { CheckCircle2 } from 'lucide-react';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { CatalogOrderPanel } from '../CatalogOrderPanel';
 
 export default function StoreManagerKioskPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [placed, setPlaced] = useState<string | null>(null);
+  const openCart = searchParams.get('cart') === 'open';
+
+  useEffect(() => {
+    if (openCart) router.replace('/store-manager/kiosk', { scroll: false });
+  }, [openCart, router]);
 
   if (placed) {
     return (
@@ -27,6 +35,7 @@ export default function StoreManagerKioskPage() {
       placeEndpoint="/api/branch-manager/kiosk-orders"
       notePlaceholder="Customer's requirement, e.g. size, engraving, timeline…"
       onPlaced={(o) => setPlaced(o.orderNumber ?? 'placed')}
+      openCartOnMount={openCart}
     />
   );
 }

@@ -9,12 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StarRating } from '@/components/ui/StarRating';
 import { useApi, apiPost } from '@/hooks/use-api';
+import { useStoreManagerKioskCart, useStoreManagerRestockCart } from '@/hooks/use-store-manager-cart';
 import { subCategoriesFor } from '@/lib/categories';
 import { titleCaseName, formatWeight } from '@/lib/format';
+import { useStoreManager } from './store-manager-context';
 
 type Img = { secureUrl: string; isPrimary: boolean };
 type Product = StoreManagerProduct & { images: Img[] };
-type CartLine = { id: string; name: string; designNumber: string; imageUrl?: string; qty: number };
 // Best-seller info for THIS branch, keyed by manufacturerProductId (restock only).
 type SalesInfo = { stars: number; unitsLast30d: number };
 
@@ -29,6 +30,7 @@ export function CatalogOrderPanel({
   onPlaced,
   notePlaceholder,
   showPopularity = false,
+  openCartOnMount = false,
 }: {
   title: string;
   subtitle: string;
@@ -38,15 +40,19 @@ export function CatalogOrderPanel({
   // Restock only: shows this branch's best-sellers (⭐ + units sold, last 30 days)
   // and offers a "Best sellers" sort so the manager restocks what's actually moving.
   showPopularity?: boolean;
+  /** Opens the persisted customer cart when arriving from the global header. */
+  openCartOnMount?: boolean;
 }) {
+  const manager = useStoreManager();
+  const kioskCart = useStoreManagerKioskCart(manager.branch.id);
+  const restockCart = useStoreManagerRestockCart(manager.branch.id);
+  const orderCart = showPopularity ? restockCart : kioskCart;
   const { data, loading, error } = useApi<Product[]>('/api/branch-manager/catalog', '/store-manager/login');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
   const [sort, setSort] = useState<'relevance' | 'newest' | 'name' | 'popularity'>(showPopularity ? 'popularity' : 'relevance');
   const [mobileFilters, setMobileFilters] = useState(false);
-  const [cart, setCart] = useState<CartLine[]>([]);
-  const [note, setNote] = useState('');
   const [showCart, setShowCart] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [detail, setDetail] = useState<Product | null>(null);
@@ -57,6 +63,10 @@ export function CatalogOrderPanel({
     const requestedCategory = new URLSearchParams(window.location.search).get('category');
     if (requestedCategory) setCategory(requestedCategory);
   }, []);
+
+  useEffect(() => {
+    if (openCartOnMount) setShowCart(true);
+  }, [openCartOnMount]);
 
   useEffect(() => {
     if (!showPopularity) return;
@@ -95,18 +105,19 @@ export function CatalogOrderPanel({
     return items;
   }, [category, data, search, sort, subCategory, salesMap]);
 
-  const count = cart.reduce((s, l) => s + l.qty, 0);
+  const cart = orderCart.items;
+  const count = orderCart.count;
 
   function add(p: Product) {
-    setCart((c) => {
-      const ex = c.find((l) => l.id === p.id);
-      if (ex) return c.map((l) => (l.id === p.id ? { ...l, qty: l.qty + 1 } : l));
-      return [...c, { id: p.id, name: p.name, designNumber: p.designNumber, imageUrl: (p.images.find((i) => i.isPrimary) ?? p.images[0])?.secureUrl, qty: 1 }];
+    orderCart.add({
+      productId: p.id,
+      name: p.name,
+      designNumber: p.designNumber,
+      imageUrl: (p.images.find((i) => i.isPrimary) ?? p.images[0])?.secureUrl,
     });
   }
   function setQty(id: string, qty: number) {
-    if (qty <= 0) return setCart((c) => c.filter((l) => l.id !== id));
-    setCart((c) => c.map((l) => (l.id === id ? { ...l, qty } : l)));
+    orderCart.setQuantity(id, qty);
   }
 
   async function place() {
@@ -114,10 +125,10 @@ export function CatalogOrderPanel({
     setPlacing(true);
     try {
       const order = (await apiPost(placeEndpoint, {
-        requirementNote: note.trim() || undefined,
-        items: cart.map((l) => ({ manufacturerProductId: l.id, quantity: l.qty })),
+        requirementNote: orderCart.note.trim() || undefined,
+        items: cart.map((l) => ({ manufacturerProductId: l.productId, quantity: l.quantity })),
       })) as { orderNumber?: string };
-      setCart([]); setNote(''); setShowCart(false);
+      orderCart.clear(); setShowCart(false);
       onPlaced(order);
     } catch (e) {
       setPlaceError(e instanceof Error ? e.message : 'Could not place order');
@@ -133,7 +144,7 @@ export function CatalogOrderPanel({
             <h1 className="font-display text-4xl font-normal md:text-6xl">{title}</h1>
             <p className="mt-4 max-w-xl text-sm leading-6 text-white/68">{subtitle}</p>
           </div>
-          <button onClick={() => setShowCart(true)} className="metal-sheen inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#17120b] shadow-lg shadow-black/20"><ShoppingCart className="h-4 w-4" /> Order ({count})</button>
+          {showPopularity ? <button onClick={() => setShowCart(true)} className="metal-sheen inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#17120b] shadow-lg shadow-black/20"><ShoppingCart className="h-4 w-4" /> Order ({count})</button> : null}
         </div>
       </section>
 
@@ -165,24 +176,24 @@ export function CatalogOrderPanel({
             <>
               <div className="space-y-2">
                 {cart.map((l) => (
-                  <div key={l.id} className="flex items-center gap-3">
+                  <div key={l.productId} className="flex items-center gap-3">
                     {l.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={l.imageUrl} alt="" className="h-12 w-12 rounded-lg border bg-white object-contain p-0.5" />
                     ) : <div className="h-12 w-12 rounded-lg border bg-muted" />}
-                    <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{titleCaseName(l.name)}</p><p className="text-xs text-muted-foreground">{l.designNumber}</p></div>
+                    <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{titleCaseName(l.name)}</p>{l.designNumber ? <p className="text-xs text-muted-foreground">{l.designNumber}</p> : null}</div>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => setQty(l.id, l.qty - 1)} className="rounded border p-1"><Minus className="h-3 w-3" /></button>
-                      <span className="w-8 text-center text-sm tabular-nums">{l.qty}</span>
-                      <button onClick={() => setQty(l.id, l.qty + 1)} className="rounded border p-1"><Plus className="h-3 w-3" /></button>
+                      <button onClick={() => setQty(l.productId, l.quantity - 1)} className="rounded border p-1"><Minus className="h-3 w-3" /></button>
+                      <span className="w-8 text-center text-sm tabular-nums">{l.quantity}</span>
+                      <button onClick={() => setQty(l.productId, l.quantity + 1)} className="rounded border p-1"><Plus className="h-3 w-3" /></button>
                     </div>
-                    <button onClick={() => setQty(l.id, 0)} className="text-muted-foreground hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                    <button onClick={() => setQty(l.productId, 0)} className="text-muted-foreground hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 ))}
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Requirement / note (goes to Head Office)</label>
-                <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={notePlaceholder} className="mt-1 min-h-[90px] w-full rounded-lg border border-black/15 bg-white/60 px-3 py-2 text-sm" />
+                <textarea value={orderCart.note} onChange={(e) => orderCart.setNote(e.target.value)} placeholder={notePlaceholder} className="mt-1 min-h-[90px] w-full rounded-lg border border-black/15 bg-white/60 px-3 py-2 text-sm" />
               </div>
               {placeError && <p className="text-sm text-red-600">{placeError}</p>}
               <Button onClick={place} disabled={placing} className="metal-sheen h-11 w-full rounded-full font-semibold text-[#17120b]">
@@ -206,7 +217,7 @@ export function CatalogOrderPanel({
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
           {filtered.map((p) => {
             const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
-            const inCart = cart.some((l) => l.id === p.id);
+            const inCart = cart.some((l) => l.productId === p.id);
             return (
               <motion.article key={p.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="group">
                 <button type="button" onClick={() => setDetail(p)} className="relative block aspect-[3/4] w-full overflow-hidden rounded-lg bg-[#ece5da] shadow-[0_1px_0_rgba(25,21,17,0.08)] ring-1 ring-black/5 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_18px_40px_rgba(31,24,15,0.16)]" title="View details">

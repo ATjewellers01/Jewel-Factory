@@ -13,6 +13,7 @@ import {
   PencilRuler,
   ScanSearch,
   Shield,
+  ShoppingBag,
   Sparkles,
   Users,
   X,
@@ -31,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
+import { useStoreManagerKioskCart } from '@/hooks/use-store-manager-cart';
 import { StoreManagerProvider, type StoreManagerMe } from './store-manager-context';
 
 // Fallback store logo (gold medallion) when a retailer has no logoUrl set.
@@ -81,6 +83,7 @@ function Shell({ children }: { children: ReactNode }) {
   const { data, loading } = useApi<StoreManagerMe>('/api/branch-manager/me', '/store-manager/login');
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const kioskCart = useStoreManagerKioskCart(data?.branch.id ?? '');
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -179,6 +182,16 @@ function Shell({ children }: { children: ReactNode }) {
               <div className="flex shrink-0 items-center gap-1.5">
                 <Link href="/store-manager/try-on" className="metal-sheen hidden items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-semibold text-[#17120b] shadow-sm transition-transform hover:scale-[1.02] sm:flex">
                   <Sparkles className="h-3.5 w-3.5" /> Try On
+                </Link>
+                <Link
+                  href="/store-manager/kiosk?cart=open"
+                  className="relative inline-flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-full border border-black/10 bg-white/70 px-3 text-[#211c17] shadow-[0_2px_10px_rgba(49,38,24,0.04)] transition-colors hover:border-[#c9a84c]/50 hover:bg-white"
+                  aria-label={`Open customer order cart${kioskCart.count ? `, ${kioskCart.count} items` : ''}`}
+                  title="Customer order cart"
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  <span className="hidden text-xs font-semibold sm:inline">Cart</span>
+                  {kioskCart.count > 0 ? <span className="absolute -right-1.5 -top-1.5 flex min-w-5 items-center justify-center rounded-full bg-[#211c17] px-1 text-[10px] font-bold leading-5 text-[#f2d37d] ring-2 ring-[#fbf8f1]">{kioskCart.count}</span> : null}
                 </Link>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
