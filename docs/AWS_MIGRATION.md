@@ -88,3 +88,18 @@ No `QDRANT_*`, no `CLOUDINARY_*` set in the running container (confirmed absent)
 - [ ] Rotate the RDS database password — it was printed in plaintext in a debugging session on 2026-07-24 (a redaction `sed` pattern missed the `DATABASE_URL=` line).
 - [ ] Decide whether to delete the now-dead `lib/cloudinary.ts`-shaped `CLOUDINARY_*` optional env vars from `lib/env.ts`/`.env.example`, or keep them as intentional legacy no-ops.
 - [ ] `scripts/migrate_cloudinary_to_s3.ts` / `scripts/migrate_qdrant_to_pgvector.ts` are one-off migration scripts already run against production — safe to keep for reference, but don't re-run against a DB that's already migrated without checking they're idempotent first.
+
+## Post-Deploy Verification Checklist
+
+- [ ] App is running (`sudo docker ps` and `sudo docker logs --tail 100 jewel-factory`).
+- [ ] Prisma migrations applied successfully during container startup.
+- [ ] S3 CORS is configured:
+  ```bash
+  aws s3api get-bucket-cors \
+    --bucket atjewellers01-jewel-factory-prod-152439496944
+  ```
+- [ ] S3 CORS allows `https://jewelfactory.in` and the temporary
+  `https://13-126-65-154.sslip.io` origin for `GET`, `PUT`, `POST`, and `DELETE`.
+- [ ] Manufacturer **Generate with AI** image upload works.
+- [ ] Custom-design image upload works.
+- [ ] Public and authenticated application endpoints respond successfully.

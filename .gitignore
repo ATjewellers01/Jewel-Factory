@@ -2,6 +2,7 @@
 /node_modules
 /.pnp
 .pnp.*
+/.pnpm-store/
 
 # next
 /.next/
@@ -27,6 +28,7 @@ credentials
 
 # misc
 .DS_Store
+/AGENTS.md
 *.pem
 *.log
 npm-debug.log*
