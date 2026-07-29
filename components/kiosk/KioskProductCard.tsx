@@ -1,6 +1,6 @@
 'use client';
 
-import { Camera, Check, Gem, Plus } from 'lucide-react';
+import { Camera, Check, Gem, Heart, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { useState } from 'react';
@@ -38,6 +38,8 @@ export function KioskProductCard({
   onAdd,
   onOpen,
   tryOnBack = '/store-manager/kiosk',
+  isFavorite,
+  onToggleFavorite,
 }: {
   product: KioskCardProduct;
   index?: number;
@@ -45,6 +47,8 @@ export function KioskProductCard({
   onAdd?: (p: KioskCardProduct) => void;
   onOpen?: (p: KioskCardProduct) => void;
   tryOnBack?: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: (p: KioskCardProduct) => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const img = primaryUrl(product);
@@ -88,6 +92,19 @@ export function KioskProductCard({
         {product.hasTryon && (
           <span className="metal-sheen absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-semibold text-[#1a1208] shadow-sm">
             AR
+          </span>
+        )}
+
+        {/* Favorite toggle */}
+        {onToggleFavorite && (
+          <span
+            role="button"
+            tabIndex={-1}
+            onClick={(e) => { e.stopPropagation(); onToggleFavorite(product); }}
+            className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-colors hover:bg-black/60"
+            aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            <Heart className={`h-3.5 w-3.5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
           </span>
         )}
 

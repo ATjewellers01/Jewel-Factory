@@ -1,6 +1,6 @@
 'use client';
 
-import { Award, Check, ChevronDown, Gem, Loader2, Minus, Plus, Search, ShoppingCart, SlidersHorizontal, SortAsc, Trash2, X } from 'lucide-react';
+import { Award, Check, ChevronDown, Gem, Heart, Loader2, Minus, Plus, Search, ShoppingCart, SlidersHorizontal, SortAsc, Trash2, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StarRating } from '@/components/ui/StarRating';
 import { useApi, apiPost } from '@/hooks/use-api';
+import { useFavorites } from '@/hooks/use-favorites';
 import { useStoreManagerKioskCart, useStoreManagerRestockCart } from '@/hooks/use-store-manager-cart';
 import { subCategoriesFor } from '@/lib/categories';
 import { formatWeight } from '@/lib/format';
@@ -48,12 +49,14 @@ export function CatalogOrderPanel({
   const restockCart = useStoreManagerRestockCart(manager.branch.id);
   const orderCart = showPopularity ? restockCart : kioskCart;
   const { data, loading, error } = useApi<Product[]>('/api/branch-manager/catalog', '/store-manager/login');
+  const favorites = useFavorites('/api/branch-manager/favorites');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
   const [sort, setSort] = useState<'relevance' | 'newest' | 'name' | 'popularity'>(showPopularity ? 'popularity' : 'relevance');
   const [mobileFilters, setMobileFilters] = useState(false);
   const [showCart, setShowCart] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [detail, setDetail] = useState<Product | null>(null);
   const [placeError, setPlaceError] = useState<string | null>(null);
@@ -144,7 +147,12 @@ export function CatalogOrderPanel({
             <h1 className="font-display text-4xl font-normal md:text-6xl">{title}</h1>
             <p className="mt-4 max-w-xl text-sm leading-6 text-white/68">{subtitle}</p>
           </div>
-          {showPopularity ? <button onClick={() => setShowCart(true)} className="metal-sheen inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#17120b] shadow-lg shadow-black/20"><ShoppingCart className="h-4 w-4" /> Order ({count})</button> : null}
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowFavorites(true)} className="inline-flex items-center gap-2 rounded-full border border-white/25 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10">
+              <Heart className="h-4 w-4" /> Favorites ({favorites.count})
+            </button>
+            {showPopularity ? <button onClick={() => setShowCart(true)} className="metal-sheen inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#17120b] shadow-lg shadow-black/20"><ShoppingCart className="h-4 w-4" /> Order ({count})</button> : null}
+          </div>
         </div>
       </section>
 
@@ -206,6 +214,40 @@ export function CatalogOrderPanel({
         </div>
       )}
 
+      {showFavorites && (
+        <div className="fixed inset-0 z-[60]">
+          <button onClick={() => setShowFavorites(false)} className="absolute inset-0 bg-black/45 backdrop-blur-sm" aria-label="Close favorites" />
+          <div className="absolute right-0 top-0 flex h-full w-[min(94vw,440px)] flex-col bg-[#fffdf8] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-black/10 px-5 py-4">
+              <div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#9b762f]">Favorites</p><h2 className="mt-1 font-display text-2xl">{favorites.count} item{favorites.count === 1 ? '' : 's'}</h2></div>
+              <button onClick={() => setShowFavorites(false)} className="rounded-full p-2 hover:bg-black/5" aria-label="Close favorites"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="flex-1 space-y-2 overflow-y-auto p-5">
+              {favorites.entries.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center text-center"><Heart className="h-9 w-9 text-[#b68a3e]/35" /><p className="mt-3 text-sm text-muted-foreground">No favorites yet.</p></div>
+              ) : (
+                favorites.entries.map((f) => {
+                  const img = f.manufacturerProduct.images.find((i) => i.isPrimary) ?? f.manufacturerProduct.images[0];
+                  return (
+                    <div key={f.id} className="flex items-center gap-3">
+                      {img ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={img.secureUrl} alt="" className="h-12 w-12 rounded-lg border bg-white object-contain p-0.5" />
+                      ) : <div className="h-12 w-12 rounded-lg border bg-muted" />}
+                      <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{f.manufacturerProduct.designNumber}</p></div>
+                      <Button size="sm" variant="outline" onClick={() => { orderCart.add({ productId: f.manufacturerProductId, name: f.manufacturerProduct.designNumber, designNumber: f.manufacturerProduct.designNumber, imageUrl: img?.secureUrl }); }}>
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                      <button onClick={() => void favorites.toggle(f.manufacturerProductId)} className="text-muted-foreground hover:text-red-600"><Heart className="h-4 w-4 fill-red-500 text-red-500" /></button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start gap-8">
         <aside className="sticky top-28 hidden w-60 shrink-0 border-r border-black/10 pr-6 lg:block">
           <CatalogFilters categories={availableCategories} category={category} subCategory={subCategory} setCategory={setCategory} setSubCategory={setSubCategory} />
@@ -227,6 +269,15 @@ export function CatalogOrderPanel({
                   ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-8 w-8" /></div>}
                   <span className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
                   {p.hasTryon && <span className="metal-sheen absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-semibold text-[#17120b]">AR</span>}
+                  <span
+                    role="button"
+                    tabIndex={-1}
+                    onClick={(event) => { event.stopPropagation(); void favorites.toggle(p.id); }}
+                    className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-colors hover:bg-black/60"
+                    aria-label={favorites.isFavorite(p.id) ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    <Heart className={`h-3.5 w-3.5 ${favorites.isFavorite(p.id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                  </span>
                   <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-[#f7fff8]/90 px-1.5 py-0.5 text-[9px] font-semibold text-[#15803d]"><Award className="h-2.5 w-2.5" /> BIS</span>
                   <span className="absolute inset-x-3 bottom-3 flex translate-y-2 gap-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                     <span onClick={(event) => { event.stopPropagation(); add(p); }} className="metal-sheen flex flex-1 items-center justify-center rounded-lg py-2 text-xs font-semibold text-[#17120b]"><ShoppingCart className="mr-1.5 h-3.5 w-3.5" />{inCart ? 'Add another' : 'Add to Order'}</span>

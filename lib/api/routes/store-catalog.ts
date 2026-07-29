@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { listActiveProducts, getActiveProductByDesignOrId } from '@/lib/db/manufacturer-catalog';
 import { placeB2bOrder } from '@/lib/db/orders';
 import { formatStoreAddress } from '@/lib/db/stores';
+import { listFavorites, addFavorite, removeFavorite } from '@/lib/db/favorites';
 import { sendData, sendError } from '../envelope';
 import { storeGuard, type AppEnv } from '../guards';
 
@@ -33,6 +34,21 @@ storeCatalogRoutes.get('/catalog/:id', storeGuard, async (c) => {
   const product = await getActiveProductByDesignOrId(c.req.param('id'));
   if (!product) return sendError(c, 'not_found', 'Product not found', 404);
   return sendData(c, product);
+});
+
+// ── Favorites (Retailer's own — branchId is always null here) ─────────────────
+storeCatalogRoutes.get('/favorites', storeGuard, async (c) => {
+  return sendData(c, await listFavorites(c.get('storeId'), null));
+});
+
+storeCatalogRoutes.post('/favorites/:productId', storeGuard, async (c) => {
+  await addFavorite(c.get('storeId'), null, c.req.param('productId'));
+  return sendData(c, { ok: true }, 201);
+});
+
+storeCatalogRoutes.delete('/favorites/:productId', storeGuard, async (c) => {
+  await removeFavorite(c.get('storeId'), null, c.req.param('productId'));
+  return sendData(c, { ok: true });
 });
 
 // Place a B2B order (goes to manager approval first).

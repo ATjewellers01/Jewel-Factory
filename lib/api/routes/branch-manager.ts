@@ -22,6 +22,7 @@ import {
 import { placeCustomRequest, getCustomRequestsByBranch, markCustomCompleted } from '@/lib/db/custom-design';
 import { listOrderMessages, addOrderMessage } from '@/lib/db/messages';
 import { formatStoreAddress } from '@/lib/db/stores';
+import { listFavorites, addFavorite, removeFavorite } from '@/lib/db/favorites';
 import { signUpload, storeFolder } from '@/lib/storage';
 import { embedImageBase64, searchByVector } from '@/lib/search';
 import { sendData, sendError } from '../envelope';
@@ -110,6 +111,21 @@ branchManagerRoutes.get('/catalog/:id', branchManagerGuard, async (c) => {
   const product = await getActiveProductByDesignOrId(c.req.param('id'));
   if (!product) return sendError(c, 'not_found', 'Product not found', 404);
   return sendData(c, product);
+});
+
+// ── Favorites (this Store Manager's own — scoped by branchId) ─────────────────
+branchManagerRoutes.get('/favorites', branchManagerGuard, async (c) => {
+  return sendData(c, await listFavorites(c.get('storeId'), c.get('branchId')));
+});
+
+branchManagerRoutes.post('/favorites/:productId', branchManagerGuard, async (c) => {
+  await addFavorite(c.get('storeId'), c.get('branchId'), c.req.param('productId'));
+  return sendData(c, { ok: true }, 201);
+});
+
+branchManagerRoutes.delete('/favorites/:productId', branchManagerGuard, async (c) => {
+  await removeFavorite(c.get('storeId'), c.get('branchId'), c.req.param('productId'));
+  return sendData(c, { ok: true });
 });
 
 // ── Try-on products (active, hasTryon) ────────────────────────────────────────

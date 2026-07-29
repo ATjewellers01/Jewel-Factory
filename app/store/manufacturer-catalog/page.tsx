@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Gem, ShoppingCart, Check, Minus, Plus, Trash2, Sparkles } from 'lucide-react';
+import { Loader2, Gem, Heart, ShoppingCart, Check, Minus, Plus, Trash2, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { StarRating } from '@/components/ui/StarRating';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { useB2bCart } from '@/hooks/use-b2b-cart';
+import { useFavorites } from '@/hooks/use-favorites';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 import { formatWeight } from '@/lib/format';
 
@@ -20,11 +21,13 @@ type SalesInfo = { stars: number; unitsLast30d: number };
 export default function ManufacturerCatalogBrowsePage() {
   const { data, error, loading } = useApi<Product[]>('/api/store/catalog', '/store/login');
   const cart = useB2bCart();
+  const favorites = useFavorites('/api/store/favorites');
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
   const [showCart, setShowCart] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
   const [notes, setNotes] = useState('');
   const [placing, setPlacing] = useState(false);
   const [salesMap, setSalesMap] = useState<Record<string, SalesInfo>>({});
@@ -71,9 +74,14 @@ export default function ManufacturerCatalogBrowsePage() {
           <h1 className="text-2xl font-medium tracking-tight">Manufacturer Catalog</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">Browse designs and place a restock order (goes to manager approval).</p>
         </div>
-        <Button variant="outline" onClick={() => setShowCart((v) => !v)}>
-          <ShoppingCart className="mr-1.5 h-4 w-4" />Cart ({cart.count})
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowFavorites((v) => !v)}>
+            <Heart className="mr-1.5 h-4 w-4" />Favorites ({favorites.count})
+          </Button>
+          <Button variant="outline" onClick={() => setShowCart((v) => !v)}>
+            <ShoppingCart className="mr-1.5 h-4 w-4" />Cart ({cart.count})
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -95,6 +103,36 @@ export default function ManufacturerCatalogBrowsePage() {
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
+
+      {showFavorites && (
+        <div className="rounded-xl border bg-card p-4 space-y-3">
+          <h2 className="text-sm font-semibold">Your Favorites</h2>
+          {favorites.entries.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No favorites yet.</p>
+          ) : (
+            <div className="space-y-2">
+              {favorites.entries.map((f) => {
+                const img = f.manufacturerProduct.images.find((i) => i.isPrimary) ?? f.manufacturerProduct.images[0];
+                const inCart = cart.items.some((i) => i.productId === f.manufacturerProductId);
+                return (
+                  <div key={f.id} className="flex items-center gap-3">
+                    {img ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={img.secureUrl} alt="" className="h-12 w-12 rounded-lg border bg-white object-contain p-0.5" />
+                    ) : <div className="h-12 w-12 rounded-lg border bg-muted" />}
+                    <div className="flex-1 min-w-0"><p className="truncate text-sm">{f.manufacturerProduct.designNumber}</p></div>
+                    <Button size="sm" variant={inCart ? 'outline' : 'default'} className={inCart ? 'border-green-300 text-green-700' : 'metal-sheen text-[#17120b] font-semibold'}
+                      onClick={() => cart.add({ productId: f.manufacturerProductId, name: f.manufacturerProduct.designNumber, designNumber: f.manufacturerProduct.designNumber, imageUrl: img?.secureUrl })}>
+                      {inCart ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+                    </Button>
+                    <button onClick={() => void favorites.toggle(f.manufacturerProductId)} className="text-muted-foreground hover:text-red-600"><Heart className="h-4 w-4 fill-red-500 text-red-500" /></button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {showCart && (
         <div className="rounded-xl border bg-card p-4 space-y-3">
@@ -139,6 +177,14 @@ export default function ManufacturerCatalogBrowsePage() {
                     <img src={img.secureUrl} alt={p.designNumber} className="h-full w-full object-cover" />
                   ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-8 w-8" /></div>}
                   {p.hasTryon && <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]"><Sparkles className="mr-0.5 inline h-2.5 w-2.5" />AR</span>}
+                  <button
+                    type="button"
+                    onClick={() => void favorites.toggle(p.id)}
+                    className="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-colors hover:bg-black/60"
+                    aria-label={favorites.isFavorite(p.id) ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    <Heart className={`h-3.5 w-3.5 ${favorites.isFavorite(p.id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                  </button>
                 </div>
                 <div className="p-3 space-y-2">
                   <div>

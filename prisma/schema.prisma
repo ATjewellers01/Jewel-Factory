@@ -285,6 +285,7 @@ model ManufacturerProduct {
   tryonAssets TryonAsset[]
   embedding   ManufacturerProductEmbedding?
   b2bItems    B2bOrderItem[]
+  favorites   FavoriteProduct[]
 
   @@index([status])
   @@index([category])
@@ -666,6 +667,23 @@ model OrderMessage {
   @@index([orderKind, orderId])
   @@index([storeId])
   @@map("order_messages")
+}
+
+// Favorites — Retailer (storeId, branchId null) and Store Manager (storeId +
+// branchId) both save favorites scoped to their own account/branch — never
+// shared between them, even though a Store Manager's storeId equals the
+// retailer's id (branchManagerGuard sets storeId = retailerId for tenancy).
+model FavoriteProduct {
+  id                    String              @id @default(uuid())
+  storeId               String              @map("store_id") // retailer id — tenancy scope
+  branchId              String?             @map("branch_id") // set when saved by a Store Manager; null = Retailer's own favorite
+  manufacturerProductId String              @map("manufacturer_product_id")
+  manufacturerProduct   ManufacturerProduct @relation(fields: [manufacturerProductId], references: [id], onDelete: Cascade)
+  createdAt             DateTime            @default(now()) @map("created_at")
+
+  @@unique([storeId, branchId, manufacturerProductId])
+  @@index([storeId, branchId])
+  @@map("favorite_products")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
