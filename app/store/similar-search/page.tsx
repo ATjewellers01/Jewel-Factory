@@ -1,28 +1,33 @@
 'use client';
 
-import { Camera, ImageIcon, Loader2, Sparkles } from 'lucide-react';
+import { Camera, Check, ImageIcon, Loader2, Plus, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 
 import { KioskProductCard } from '@/components/kiosk/KioskProductCard';
 import { StoreManagerProductDetailModal } from '@/components/kiosk/StoreManagerProductDetailModal';
 import { Button } from '@/components/ui/button';
+import { useB2bCart } from '@/hooks/use-b2b-cart';
 
 type Img = { secureUrl: string; isPrimary: boolean };
 type Product = { id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
+
+const PAGE_SIZE = 5;
 
 export default function RetailerSimilarSearchPage() {
   const cameraInput = useRef<HTMLInputElement>(null);
   const libraryInput = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [results, setResults] = useState<Product[] | null>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [detail, setDetail] = useState<Product | null>(null);
+  const cart = useB2bCart();
 
   async function onFile(file: File) {
-    setError(null); setResults(null);
+    setError(null); setResults(null); setVisibleCount(PAGE_SIZE);
     const reader = new FileReader();
     reader.onload = async () => {
       const dataUrl = reader.result as string;
@@ -42,6 +47,9 @@ export default function RetailerSimilarSearchPage() {
     };
     reader.readAsDataURL(file);
   }
+
+  const visibleResults = results?.slice(0, visibleCount) ?? [];
+  const hasMore = !!results && visibleCount < results.length;
 
   return (
     <main className="relative mx-auto min-h-[calc(100vh-8rem)] w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
@@ -109,10 +117,17 @@ export default function RetailerSimilarSearchPage() {
             <Link href="/store/manufacturer-catalog" className="metal-sheen inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#17120b]">View Full Catalog</Link>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {results.map((p, i) => (
+            {visibleResults.map((p, i) => (
               <KioskProductCard key={p.id} product={p} index={i} onOpen={(product) => setDetail(product)} tryOnBack="/store/similar-search" />
             ))}
           </div>
+          {hasMore && (
+            <div className="mt-6 flex justify-center">
+              <Button type="button" variant="outline" className="rounded-full px-6" onClick={() => setVisibleCount((v) => v + PAGE_SIZE)}>
+                Show more
+              </Button>
+            </div>
+          )}
         </section>
       )}
 
@@ -123,7 +138,26 @@ export default function RetailerSimilarSearchPage() {
           products={results ?? []}
           onClose={() => setDetail(null)}
           tryOnBack="/store/similar-search"
-          primaryAction={() => null}
+          primaryAction={(product) => {
+            const inCart = cart.items.some((i) => i.productId === product.id);
+            return (
+              <Button
+                onClick={() => {
+                  if (inCart) return;
+                  cart.add({
+                    productId: product.id,
+                    name: product.designNumber,
+                    designNumber: product.designNumber,
+                    imageUrl: product.images.find((i) => i.isPrimary)?.secureUrl,
+                  });
+                  setDetail(null);
+                }}
+                className="metal-sheen flex-1 font-semibold text-[#17120b]"
+              >
+                {inCart ? <><Check className="mr-1.5 h-4 w-4" />In cart</> : <><Plus className="mr-1.5 h-4 w-4" />Add to Cart</>}
+              </Button>
+            );
+          }}
         />
       ) : null}
     </main>
