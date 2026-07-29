@@ -264,7 +264,7 @@ model ManufacturerProduct {
   manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
 
   designNumber String        @unique @map("design_number") // JF-0001, auto-generated
-  name         String
+  name         String? // deprecated — design name removed per client request; kept nullable for legacy rows
   category     String?
   subCategory  String?       @map("sub_category")
   description  String?
@@ -274,6 +274,8 @@ model ManufacturerProduct {
   occasionTags String[]      @default([]) @map("occasion_tags")
   styleTags    String[]      @default([]) @map("style_tags")
   minOrderQty  Int           @default(1) @map("min_order_qty")
+  pieces       Int           @default(1) // how many physical pieces make up weightGrams (e.g. a bangle pair = 2)
+  karigarCode  String?       @map("karigar_code") // manufacturer-internal only — never exposed to retailer/store manager
   hasTryon     Boolean       @default(false) @map("has_tryon")
   status       ProductStatus @default(DRAFT)
   createdAt    DateTime      @default(now()) @map("created_at")

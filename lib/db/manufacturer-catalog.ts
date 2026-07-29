@@ -10,6 +10,7 @@ export type CatalogFilters = {
   status?: ProductStatus;
   search?: string;
   hasTryon?: boolean;
+  karigarCode?: string;
 };
 
 export async function listManufacturerProducts(manufacturerId: string, filters: CatalogFilters = {}) {
@@ -17,10 +18,11 @@ export async function listManufacturerProducts(manufacturerId: string, filters: 
   if (filters.category) where.category = filters.category;
   if (filters.status) where.status = filters.status;
   if (filters.hasTryon !== undefined) where.hasTryon = filters.hasTryon;
+  if (filters.karigarCode) where.karigarCode = filters.karigarCode;
   if (filters.search) {
     where.OR = [
-      { name: { contains: filters.search, mode: 'insensitive' } },
       { designNumber: { contains: filters.search, mode: 'insensitive' } },
+      { karigarCode: { contains: filters.search, mode: 'insensitive' } },
     ];
   }
   return prisma.manufacturerProduct.findMany({
@@ -47,6 +49,7 @@ export async function getActiveProductByDesignOrId(idOrDesign: string) {
       status: 'ACTIVE',
       OR: [{ id: idOrDesign }, { designNumber: idOrDesign }],
     },
+    omit: { karigarCode: true },
     include: {
       images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }] },
       tryonAssets: { where: { isActive: true } },
@@ -54,18 +57,19 @@ export async function getActiveProductByDesignOrId(idOrDesign: string) {
   });
 }
 
+// karigarCode is manufacturer-internal only — never expose it to retailer/store
+// manager/customer surfaces, so every public read below omits it structurally
+// (not just "don't render it" in the UI, which a future call site could forget).
 export async function listActiveProducts(filters: { category?: string; search?: string; hasTryon?: boolean } = {}) {
   const where: Prisma.ManufacturerProductWhereInput = { status: 'ACTIVE' };
   if (filters.category) where.category = filters.category;
   if (filters.hasTryon !== undefined) where.hasTryon = filters.hasTryon;
   if (filters.search) {
-    where.OR = [
-      { name: { contains: filters.search, mode: 'insensitive' } },
-      { designNumber: { contains: filters.search, mode: 'insensitive' } },
-    ];
+    where.OR = [{ designNumber: { contains: filters.search, mode: 'insensitive' } }];
   }
   return prisma.manufacturerProduct.findMany({
     where,
+    omit: { karigarCode: true },
     orderBy: { createdAt: 'desc' },
     include: { images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }] } },
   });

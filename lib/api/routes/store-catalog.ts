@@ -83,7 +83,7 @@ storeCatalogRoutes.post('/orders', storeGuard, zValidator('json', OrderBody), as
       return {
         manufacturerProductId: i.manufacturerProductId,
         quantity: i.quantity,
-        productNameSnapshot: p.name,
+        productNameSnapshot: p.name ?? p.designNumber,
         productDesignSnapshot: p.designNumber,
         productImageSnapshot: p.images[0]?.secureUrl,
       };

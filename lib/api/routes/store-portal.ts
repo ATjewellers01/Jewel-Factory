@@ -66,6 +66,7 @@ storePortalRoutes.post('/search/image', storeGuard, zValidator('json', z.object(
   if (ids.length === 0) return sendData(c, []);
   const products = await prisma.manufacturerProduct.findMany({
     where: { id: { in: ids }, status: 'ACTIVE' },
+    omit: { karigarCode: true },
     include: { images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }] } },
   });
   const byId = new Map(products.map((p) => [p.id, p]));

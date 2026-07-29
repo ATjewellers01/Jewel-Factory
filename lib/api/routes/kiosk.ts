@@ -153,6 +153,7 @@ kioskRoutes.post('/orders', zValidator('json', OrderBody), async (c) => {
   // order item (FK is to store products); details go into snapshots.
   const products = await prisma.manufacturerProduct.findMany({
     where: { id: { in: body.items.map((i) => i.productId) }, status: 'ACTIVE' },
+    omit: { karigarCode: true },
     include: { images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], take: 1 } },
   });
   const byId = new Map(products.map((p) => [p.id, p]));
@@ -162,7 +163,7 @@ kioskRoutes.post('/orders', zValidator('json', OrderBody), async (c) => {
     if (!p) return null;
     return {
       manufacturerProductId: p.id,
-      productNameSnapshot: p.name,
+      productNameSnapshot: p.designNumber,
       productImageSnapshot: p.images[0]?.secureUrl,
       categorySnapshot: p.category ?? undefined,
       quantity: i.quantity,
@@ -207,6 +208,7 @@ kioskRoutes.post('/search/image', zValidator('json', SearchBody), async (c) => {
   // Hydrate + preserve Qdrant rank order.
   const products = await prisma.manufacturerProduct.findMany({
     where: { id: { in: ids }, status: 'ACTIVE' },
+    omit: { karigarCode: true },
     include: { images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], take: 1 } },
   });
   const byId = new Map(products.map((p) => [p.id, p]));

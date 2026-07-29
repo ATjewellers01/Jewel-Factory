@@ -37,6 +37,7 @@ const ListQuery = z.object({
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional(),
   search: z.string().optional(),
   hasTryon: z.enum(['true', 'false']).optional(),
+  karigarCode: z.string().optional(),
 });
 
 manufacturerCatalogRoutes.get('/products', zValidator('query', ListQuery), async (c) => {
@@ -46,6 +47,7 @@ manufacturerCatalogRoutes.get('/products', zValidator('query', ListQuery), async
     status: q.status as ProductStatus | undefined,
     search: q.search,
     hasTryon: q.hasTryon === undefined ? undefined : q.hasTryon === 'true',
+    karigarCode: q.karigarCode,
   });
   return sendData(c, products);
 });
@@ -60,7 +62,6 @@ manufacturerCatalogRoutes.get('/products/:id', async (c) => {
 // NOTE: no price, no metal — per Jewel Factory rules.
 
 const ProductBody = z.object({
-  name: z.string().min(1),
   category: z.string().optional(),
   subCategory: z.string().optional(),
   description: z.string().optional(),
@@ -70,6 +71,8 @@ const ProductBody = z.object({
   occasionTags: z.array(z.string()).optional(),
   styleTags: z.array(z.string()).optional(),
   minOrderQty: z.number().int().positive().optional(),
+  pieces: z.number().int().positive().optional(),
+  karigarCode: z.string().optional(),
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional(),
 });
 

@@ -141,6 +141,7 @@ branchManagerRoutes.post('/search/image', branchManagerGuard, zValidator('json',
   if (ids.length === 0) return sendData(c, []);
   const products = await prisma.manufacturerProduct.findMany({
     where: { id: { in: ids }, status: 'ACTIVE' },
+    omit: { karigarCode: true },
     include: { images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }] } },
   });
   const byId = new Map(products.map((p) => [p.id, p]));
@@ -166,7 +167,7 @@ branchManagerRoutes.post('/kiosk-orders', branchManagerGuard, zValidator('json',
   const body = c.req.valid('json');
   const products = await prisma.manufacturerProduct.findMany({
     where: { id: { in: body.items.map((i) => i.manufacturerProductId) }, status: 'ACTIVE' },
-    select: { id: true, name: true, category: true, images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], take: 1, select: { secureUrl: true } } },
+    select: { id: true, name: true, designNumber: true, category: true, images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], take: 1, select: { secureUrl: true } } },
   });
   const byId = new Map(products.map((p) => [p.id, p]));
   for (const it of body.items) if (!byId.has(it.manufacturerProductId)) return sendError(c, 'not_found', 'One or more products are unavailable.', 404);
@@ -184,7 +185,7 @@ branchManagerRoutes.post('/kiosk-orders', branchManagerGuard, zValidator('json',
     requirementNote: body.requirementNote,
     items: body.items.map((i) => {
       const p = byId.get(i.manufacturerProductId)!;
-      return { manufacturerProductId: i.manufacturerProductId, productNameSnapshot: p.name, productImageSnapshot: p.images[0]?.secureUrl, categorySnapshot: p.category ?? undefined, quantity: i.quantity };
+      return { manufacturerProductId: i.manufacturerProductId, productNameSnapshot: p.name ?? p.designNumber, productImageSnapshot: p.images[0]?.secureUrl, categorySnapshot: p.category ?? undefined, quantity: i.quantity };
     }),
   });
   return sendData(c, order, 201);
@@ -306,7 +307,7 @@ branchManagerRoutes.post('/restock-orders', branchManagerGuard, zValidator('json
     requirementNote: body.requirementNote,
     items: body.items.map((i) => {
       const p = byId.get(i.manufacturerProductId)!;
-      return { manufacturerProductId: i.manufacturerProductId, quantity: i.quantity, productNameSnapshot: p.name, productDesignSnapshot: p.designNumber, productImageSnapshot: p.images[0]?.secureUrl };
+      return { manufacturerProductId: i.manufacturerProductId, quantity: i.quantity, productNameSnapshot: p.name ?? p.designNumber, productDesignSnapshot: p.designNumber, productImageSnapshot: p.images[0]?.secureUrl };
     }),
   });
   return sendData(c, order, 201);
