@@ -18,9 +18,10 @@ export default function EditProductPage() {
         if (res.status === 401) { window.location.assign('/manufacturer/login'); return; }
         const json = (await res.json()) as {
           data?: {
-            id: string; designNumber: string; name: string; category: string | null;
+            id: string; designNumber: string; name: string | null; category: string | null;
             subCategory: string | null; description: string | null; weightGrams: string | null;
-            purity: string | null; minOrderQty: number; status: string; hasTryon: boolean;
+            purity: string | null; minOrderQty: number; pieces: number | null; karigarCode: string | null;
+            status: string; hasTryon: boolean;
             images: { id: string; secureUrl: string; isPrimary: boolean }[];
             tryonAssets: { assetUrl: string; jewelleryType: string }[];
           };
@@ -31,13 +32,15 @@ export default function EditProductPage() {
         setInitial({
           id: p.id,
           designNumber: p.designNumber,
-          name: p.name,
+          name: p.name ?? '',
           category: p.category ?? '',
           subCategory: p.subCategory ?? '',
           description: p.description ?? '',
           weightGrams: p.weightGrams != null ? String(p.weightGrams) : '',
           purity: p.purity ?? '',
           minOrderQty: String(p.minOrderQty ?? 1),
+          pieces: String(p.pieces ?? 1),
+          karigarCode: p.karigarCode ?? '',
           status: (p.status === 'ACTIVE' ? 'ACTIVE' : 'DRAFT'),
           images: p.images,
           hasTryon: p.hasTryon,

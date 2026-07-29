@@ -30,7 +30,6 @@ interface FlatRow {
 
 interface FilterableProduct {
   id: string;
-  name: string;
   designNumber: string | null;
   imageUrl: string | null;
   category: string | null;
@@ -45,7 +44,6 @@ function toProduct(row: FlatRow): FilterableProduct {
   const units = Number(row.total_units) || 0;
   return {
     id: row.id ?? row.product_id ?? '',
-    name: row.name ?? 'Unknown',
     designNumber: row.design_number ?? null,
     imageUrl: row.secure_url ?? null,
     category: row.category ?? null,
@@ -168,7 +166,6 @@ export default function ManufacturerIntelligencePage() {
                   key={p.id || idx}
                   onClick={() => setSelectedProduct({
                     manufacturerProductId: p.id,
-                    productName: p.name,
                     designNumber: p.designNumber,
                     imageUrl: p.imageUrl,
                     category: p.category,
@@ -180,9 +177,9 @@ export default function ManufacturerIntelligencePage() {
                   className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">#{idx + 1} {p.name}</p>
+                    <p className="truncate text-sm font-medium">#{idx + 1} {p.designNumber}</p>
                     <p className="text-xs text-muted-foreground">
-                      {p.designNumber}{p.category ? ` · ${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}{p.weight != null ? ` · ${p.weight}g` : ''}
+                      {p.category ?? ''}{p.subCategory ? ` › ${p.subCategory}` : ''}{p.weight != null ? ` · ${p.weight}g` : ''}
                     </p>
                   </div>
                   <span className="shrink-0 font-semibold tabular-nums">{p.units}</span>
@@ -235,7 +232,7 @@ export default function ManufacturerIntelligencePage() {
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                     {r.products.map((p) => (
                       <span key={p.id} className="text-xs text-muted-foreground">
-                        {p.name} <span className="font-medium text-foreground">({p.units})</span>
+                        {p.designNumber} <span className="font-medium text-foreground">({p.units})</span>
                       </span>
                     ))}
                   </div>

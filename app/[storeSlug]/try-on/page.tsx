@@ -17,7 +17,7 @@ const ARViewport = dynamic(() => import('@/components/ar/ARViewport').then((m) =
 type TryonProduct = {
   id: string;
   designNumber: string;
-  name: string;
+  name?: string | null;
   primaryImageUrl: string | null;
   asset: {
     assetUrl: string;
@@ -80,10 +80,10 @@ function TryOnInner() {
                   <div className="aspect-square bg-[#ece5da]">
                     {p.primaryImageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.primaryImageUrl} alt={p.name} className="h-full w-full object-cover" />
+                      <img src={p.primaryImageUrl} alt={p.designNumber} className="h-full w-full object-cover" />
                     ) : null}
                   </div>
-                  <p className="truncate p-1 text-[10px]">{p.name}</p>
+                  <p className="truncate p-1 text-[10px]">{p.designNumber}</p>
                 </button>
               ))}
             </div>

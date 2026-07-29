@@ -78,7 +78,6 @@ export async function listActiveProducts(filters: { category?: string; search?: 
 // ── Create / update / delete ──────────────────────────────────────────────────
 
 export type CreateProductInput = {
-  name: string;
   category?: string;
   subCategory?: string;
   description?: string;
@@ -88,6 +87,8 @@ export type CreateProductInput = {
   occasionTags?: string[];
   styleTags?: string[];
   minOrderQty?: number;
+  pieces?: number;
+  karigarCode?: string;
   status?: ProductStatus;
 };
 
@@ -97,7 +98,6 @@ export async function createManufacturerProduct(manufacturerId: string, input: C
     data: {
       manufacturerId,
       designNumber,
-      name: input.name,
       category: input.category ?? null,
       subCategory: input.subCategory ?? null,
       description: input.description ?? null,
@@ -107,6 +107,8 @@ export async function createManufacturerProduct(manufacturerId: string, input: C
       occasionTags: input.occasionTags ?? [],
       styleTags: input.styleTags ?? [],
       minOrderQty: input.minOrderQty ?? 1,
+      pieces: input.pieces ?? 1,
+      karigarCode: input.karigarCode ?? null,
       status: input.status ?? 'DRAFT',
     },
   });
@@ -125,7 +127,6 @@ export async function updateManufacturerProduct(
   return prisma.manufacturerProduct.update({
     where: { id },
     data: {
-      ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.category !== undefined ? { category: input.category } : {}),
       ...(input.subCategory !== undefined ? { subCategory: input.subCategory } : {}),
       ...(input.description !== undefined ? { description: input.description } : {}),
@@ -135,6 +136,8 @@ export async function updateManufacturerProduct(
       ...(input.occasionTags !== undefined ? { occasionTags: input.occasionTags } : {}),
       ...(input.styleTags !== undefined ? { styleTags: input.styleTags } : {}),
       ...(input.minOrderQty !== undefined ? { minOrderQty: input.minOrderQty } : {}),
+      ...(input.pieces !== undefined ? { pieces: input.pieces } : {}),
+      ...(input.karigarCode !== undefined ? { karigarCode: input.karigarCode } : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
     },
   });

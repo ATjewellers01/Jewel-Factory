@@ -6,12 +6,12 @@ import { useState } from 'react';
 
 import { useKioskStore } from './StoreContext';
 import { useGuestCart } from '@/hooks/use-guest-cart';
-import { titleCaseName, productMetaLine } from '@/lib/format';
+import { productMetaLine } from '@/lib/format';
 
 export type KioskProduct = {
   id: string;
   designNumber: string;
-  name: string;
+  name?: string | null;
   category: string | null;
   subCategory: string | null;
   purity: string | null;
@@ -29,7 +29,7 @@ export function ProductCard({ product }: { product: KioskProduct }) {
 
   function addToCart(e: React.MouseEvent) {
     e.preventDefault();
-    cart.add({ productId: product.id, name: product.name, imageUrl: img?.secureUrl });
+    cart.add({ productId: product.id, name: product.designNumber, imageUrl: img?.secureUrl });
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   }
@@ -40,7 +40,7 @@ export function ProductCard({ product }: { product: KioskProduct }) {
         <div className="relative aspect-[3/4] overflow-hidden bg-[#ece5da]">
           {img ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={img.secureUrl} alt={product.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+            <img src={img.secureUrl} alt={product.designNumber} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
           ) : <div className="h-full w-full" />}
           {product.hasTryon && (
             <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]">
@@ -52,7 +52,7 @@ export function ProductCard({ product }: { product: KioskProduct }) {
           </span>
         </div>
         <div className="p-3">
-          <p className="truncate text-sm font-semibold group-hover:text-primary">{titleCaseName(product.name)}</p>
+          <p className="truncate text-sm font-semibold group-hover:text-primary">{product.designNumber}</p>
           <p className="truncate text-xs text-muted-foreground">
             {productMetaLine({ category: product.category ?? 'Jewellery', subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams })}
           </p>

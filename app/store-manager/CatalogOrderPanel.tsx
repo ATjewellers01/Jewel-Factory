@@ -11,7 +11,7 @@ import { StarRating } from '@/components/ui/StarRating';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { useStoreManagerKioskCart, useStoreManagerRestockCart } from '@/hooks/use-store-manager-cart';
 import { subCategoriesFor } from '@/lib/categories';
-import { titleCaseName, formatWeight } from '@/lib/format';
+import { formatWeight } from '@/lib/format';
 import { useStoreManager } from './store-manager-context';
 
 type Img = { secureUrl: string; isPrimary: boolean };
@@ -89,12 +89,12 @@ export function CatalogOrderPanel({
 
   const filtered = useMemo(() => {
     const items = (data ?? []).filter((p) =>
-      (!search || p.name.toLowerCase().includes(search.toLowerCase()) || p.designNumber.toLowerCase().includes(search.toLowerCase())) &&
+      (!search || p.designNumber.toLowerCase().includes(search.toLowerCase())) &&
       (!category || p.category === category) &&
       (!subCategory || p.subCategory === subCategory),
     );
     if (sort === 'newest') return [...items].sort((a, b) => b.designNumber.localeCompare(a.designNumber));
-    if (sort === 'name') return [...items].sort((a, b) => a.name.localeCompare(b.name));
+    if (sort === 'name') return [...items].sort((a, b) => a.designNumber.localeCompare(b.designNumber));
     if (sort === 'popularity') {
       return [...items].sort((a, b) => {
         const sa = salesMap[a.id];
@@ -111,7 +111,7 @@ export function CatalogOrderPanel({
   function add(p: Product) {
     orderCart.add({
       productId: p.id,
-      name: p.name,
+      name: p.designNumber,
       designNumber: p.designNumber,
       imageUrl: (p.images.find((i) => i.isPrimary) ?? p.images[0])?.secureUrl,
     });
@@ -181,7 +181,7 @@ export function CatalogOrderPanel({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={l.imageUrl} alt="" className="h-12 w-12 rounded-lg border bg-white object-contain p-0.5" />
                     ) : <div className="h-12 w-12 rounded-lg border bg-muted" />}
-                    <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{titleCaseName(l.name)}</p>{l.designNumber ? <p className="text-xs text-muted-foreground">{l.designNumber}</p> : null}</div>
+                    <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{l.designNumber ?? l.name}</p></div>
                     <div className="flex items-center gap-1">
                       <button onClick={() => setQty(l.productId, l.quantity - 1)} className="rounded border p-1"><Minus className="h-3 w-3" /></button>
                       <span className="w-8 text-center text-sm tabular-nums">{l.quantity}</span>
@@ -223,7 +223,7 @@ export function CatalogOrderPanel({
                 <button type="button" onClick={() => setDetail(p)} className="relative block aspect-[3/4] w-full overflow-hidden rounded-lg bg-[#ece5da] shadow-[0_1px_0_rgba(25,21,17,0.08)] ring-1 ring-black/5 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_18px_40px_rgba(31,24,15,0.16)]" title="View details">
                   {img ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={img.secureUrl} alt={p.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                    <img src={img.secureUrl} alt={p.designNumber} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
                   ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-8 w-8" /></div>}
                   <span className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
                   {p.hasTryon && <span className="metal-sheen absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-semibold text-[#17120b]">AR</span>}
@@ -234,10 +234,10 @@ export function CatalogOrderPanel({
                 </button>
                 <div className="mt-3 space-y-1.5">
                   <button type="button" onClick={() => setDetail(p)} className="flex w-full items-start justify-between gap-2 text-left">
-                    <p className="line-clamp-1 text-sm font-semibold text-[#211c17] hover:text-[#b68a3e]">{titleCaseName(p.name)}</p>
+                    <p className="line-clamp-1 text-sm font-semibold text-[#211c17] hover:text-[#b68a3e]">{p.designNumber}</p>
                     {inCart ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#15803d]" /> : null}
                   </button>
-                    <p className="truncate text-xs text-muted-foreground">{p.designNumber}{p.category ? ` · ${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}{formatWeight(p.weightGrams) ? ` · ${formatWeight(p.weightGrams)}` : ''}</p>
+                    <p className="truncate text-xs text-muted-foreground">{p.category ? `${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}{formatWeight(p.weightGrams) ? ` · ${formatWeight(p.weightGrams)}` : ''}</p>
                     {showPopularity && salesMap[p.id] ? (
                       <div className="flex items-center gap-1.5 pt-0.5">
                         <StarRating count={salesMap[p.id].stars} size="sm" />

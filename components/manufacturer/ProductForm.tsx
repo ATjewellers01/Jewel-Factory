@@ -39,6 +39,8 @@ export type ProductFormData = {
   weightGrams: string;
   purity: string;
   minOrderQty: string;
+  pieces: string;
+  karigarCode: string;
   status: 'DRAFT' | 'ACTIVE';
   designNumber?: string;
   images?: { id: string; secureUrl: string; isPrimary: boolean }[];
@@ -55,7 +57,8 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   const [form, setForm] = useState<ProductFormData>(
     initial ?? {
       name: '', category: '', subCategory: '', description: '',
-      weightGrams: '', purity: '', minOrderQty: '1', status: 'ACTIVE', // new designs are visible by default
+      weightGrams: '', purity: '', minOrderQty: '1', pieces: '1', karigarCode: '',
+      status: 'ACTIVE', // new designs are visible by default
     },
   );
   const [images, setImages] = useState(initial?.images ?? []);
@@ -326,15 +329,6 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   const createIdRef = useRef<string | null>(initial?.id ?? null);
   const creatingRef = useRef<Promise<string | null> | null>(null);
 
-  // Mirrors form.name for handleImageUpload/handleTryonUpload's name-required
-  // guard. Those are called from aiCatalog/aiTransparent inside aiGenerateAll,
-  // which closes over the `form` from whenever the button was clicked — a
-  // setForm() from the earlier "describe" step doesn't update that closure's
-  // `form` (same stale-closure issue createIdRef/creatingRef above works
-  // around for the product id). A ref always reads the latest value instead.
-  const nameRef = useRef(form.name);
-  useEffect(() => { nameRef.current = form.name; }, [form.name]);
-
   async function ensureProductId(): Promise<string | null> {
     if (createIdRef.current) return createIdRef.current;
     if (form.id) { createIdRef.current = form.id; return form.id; }
@@ -357,20 +351,20 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
   function buildPayload() {
     return {
-      name: form.name,
       category: form.category || undefined,
       subCategory: form.subCategory || undefined,
       description: form.description || undefined,
       weightGrams: form.weightGrams ? Number(form.weightGrams) : undefined,
       purity: form.purity || undefined,
       minOrderQty: form.minOrderQty ? Number(form.minOrderQty) : 1,
+      pieces: form.pieces ? Number(form.pieces) : 1,
+      karigarCode: form.karigarCode || undefined,
       status: form.status,
     };
   }
 
   async function handleImageUpload(file: File) {
     setError(null);
-    if (!nameRef.current.trim()) { setError('Enter a design name before uploading photos.'); return; }
     const id = await ensureProductId();
     if (!id) return;
     setUploadingImage(true);
@@ -398,7 +392,6 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
   async function handleTryonUpload(file: File) {
     setError(null);
-    if (!nameRef.current.trim()) { setError('Enter a design name before uploading a try-on asset.'); return; }
     if (file.type !== 'image/png' && !file.name.toLowerCase().endsWith('.png')) {
       setError('Try-on asset must be a transparent PNG.');
       return;
@@ -521,7 +514,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
             )}
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <div>
             <label className="text-xs font-medium text-muted-foreground">Weight (g)</label>
             <Input className="mt-1" type="number" step="0.001" placeholder="12.5" value={form.weightGrams} onChange={set('weightGrams')} />
@@ -532,6 +525,10 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
               <option value="">—</option>
               {PURITIES.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Pieces</label>
+            <Input className="mt-1" type="number" min="1" step="1" placeholder="1" value={form.pieces} onChange={set('pieces')} title="How many physical pieces make up the weight above (e.g. a bangle pair = 2)" />
           </div>
         </div>
       </section>
@@ -630,6 +627,10 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
               <option value="DRAFT">Draft (hidden from stores)</option>
             </select>
           </div>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">Karigar Code <span className="text-[10px] normal-case text-muted-foreground/70">(internal only — never shown to retailers)</span></label>
+          <Input className="mt-1" placeholder="e.g. K-104" value={form.karigarCode} onChange={set('karigarCode')} />
         </div>
       </section>
 

@@ -5,14 +5,14 @@ import Link from 'next/link';
 import { motion } from 'motion/react';
 import { useEffect, useMemo, useState } from 'react';
 
-import { productMetaLine, titleCaseName } from '@/lib/format';
+import { productMetaLine } from '@/lib/format';
 import { useStoreManager } from './store-manager-context';
 
 type Img = { secureUrl: string; isPrimary: boolean };
 type Product = {
   id: string;
   designNumber: string;
-  name: string;
+  name?: string | null;
   category: string | null;
   subCategory: string | null;
   purity: string | null;
@@ -94,7 +94,7 @@ export default function StoreManagerHome() {
           <div className="mb-3 flex items-center justify-between gap-3 border-b border-black/10 pb-2"><span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#9b762f]">Featured piece</span><button onClick={() => setDismissed(true)} className="flex h-7 w-7 items-center justify-center rounded-full text-[#5f574f] hover:bg-black/5" aria-label="Dismiss featured piece"><X className="h-3.5 w-3.5" /></button></div>
           <Link href="/store-manager/kiosk" className="group flex items-center gap-4">
             <span className="h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-[#e9e2d7] ring-1 ring-black/10"><ProductImage product={featured} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" /></span>
-            <span className="min-w-0"><span className="line-clamp-1 text-sm font-semibold text-[#1f1a14]">{titleCaseName(featured.name)}</span><span className="mt-1 block text-xs text-[#6f675e]">{featured.category ?? 'Jewellery'} · {featured.designNumber}</span><span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#b68a3e]">View in catalogue <ArrowRight className="h-3 w-3" /></span></span>
+            <span className="min-w-0"><span className="line-clamp-1 text-sm font-semibold text-[#1f1a14]">{featured.designNumber}</span><span className="mt-1 block text-xs text-[#6f675e]">{featured.category ?? 'Jewellery'}</span><span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#b68a3e]">View in catalogue <ArrowRight className="h-3 w-3" /></span></span>
           </Link>
         </motion.aside>
       ) : null}
@@ -156,12 +156,12 @@ function CollectionTile({ product, large, index }: { product: Product; large?: b
 }
 
 function ProductCard({ product, index, dark }: { product: Product; index: number; dark?: boolean }) {
-  return <motion.article initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ delay: index * 0.04, duration: 0.4 }} className="group"><Link href="/store-manager/kiosk" className="block"><div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-[#ece5da] shadow-[0_1px_0_rgba(25,21,17,0.08)] ring-1 ring-black/5 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_18px_40px_rgba(31,24,15,0.16)]"><ProductImage product={product} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" /><div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/50 to-transparent" />{product.hasTryon ? <span className="metal-sheen absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-semibold text-[#1a1208]">AR</span> : null}<span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-[#f7fff8]/90 px-1.5 py-0.5 text-[9px] font-semibold text-[#15803d]"><Award className="h-2.5 w-2.5" /> BIS</span></div><div className="mt-3 space-y-1.5"><p className={`line-clamp-1 text-sm font-semibold ${dark ? 'text-white' : 'text-[#211c17]'}`}>{titleCaseName(product.name)}</p><p className={`truncate text-xs ${dark ? 'text-white/60' : 'text-[#746b62]'}`}>{productMetaLine({ category: product.category, subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams })}</p></div></Link></motion.article>;
+  return <motion.article initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ delay: index * 0.04, duration: 0.4 }} className="group"><Link href="/store-manager/kiosk" className="block"><div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-[#ece5da] shadow-[0_1px_0_rgba(25,21,17,0.08)] ring-1 ring-black/5 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_18px_40px_rgba(31,24,15,0.16)]"><ProductImage product={product} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" /><div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/50 to-transparent" />{product.hasTryon ? <span className="metal-sheen absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-semibold text-[#1a1208]">AR</span> : null}<span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-[#f7fff8]/90 px-1.5 py-0.5 text-[9px] font-semibold text-[#15803d]"><Award className="h-2.5 w-2.5" /> BIS</span></div><div className="mt-3 space-y-1.5"><p className={`line-clamp-1 text-sm font-semibold ${dark ? 'text-white' : 'text-[#211c17]'}`}>{product.designNumber}</p><p className={`truncate text-xs ${dark ? 'text-white/60' : 'text-[#746b62]'}`}>{productMetaLine({ category: product.category, subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams })}</p></div></Link></motion.article>;
 }
 
 function ProductImage({ product, className }: { product: Product; className: string }) {
   const source = primary(product);
-  return source ? <img src={source} alt={product.name} className={className} /> : null; // eslint-disable-line @next/next/no-img-element
+  return source ? <img src={source} alt={product.designNumber} className={className} /> : null; // eslint-disable-line @next/next/no-img-element
 }
 
 function HeroProduct({ product }: { product: Product }) {

@@ -7,16 +7,17 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
-import { titleCaseName, formatWeight } from '@/lib/format';
+import { formatWeight } from '@/lib/format';
 
 type ProductImage = { id: string; secureUrl: string; isPrimary: boolean };
 type Product = {
   id: string;
   designNumber: string;
-  name: string;
+  name: string | null;
   category: string | null;
   subCategory: string | null;
   weightGrams: string | null;
+  karigarCode: string | null;
   status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
   hasTryon: boolean;
   images: ProductImage[];
@@ -33,6 +34,7 @@ export default function ManufacturerCatalogPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
+  const [karigarCode, setKarigarCode] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
@@ -52,12 +54,17 @@ export default function ManufacturerCatalogPage() {
   const filtered = (products ?? []).filter((p) => {
     const matchSearch =
       !search ||
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.designNumber.toLowerCase().includes(search.toLowerCase());
+      p.designNumber.toLowerCase().includes(search.toLowerCase()) ||
+      (p.name ?? '').toLowerCase().includes(search.toLowerCase());
     const matchCat = !category || p.category === category;
     const matchSub = !subCategory || p.subCategory === subCategory;
-    return matchSearch && matchCat && matchSub;
+    const matchKarigar = !karigarCode || p.karigarCode === karigarCode;
+    return matchSearch && matchCat && matchSub && matchKarigar;
   });
+
+  const karigarOptions = Array.from(
+    new Set((products ?? []).map((p) => p.karigarCode).filter((k): k is string => !!k)),
+  ).sort();
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5">
@@ -74,7 +81,7 @@ export default function ManufacturerCatalogPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Input placeholder="Search by name or design number…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
+        <Input placeholder="Search by design number…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
         <select
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
           value={category}
@@ -93,8 +100,18 @@ export default function ManufacturerCatalogPage() {
             {subCategoriesFor(category).map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         )}
-        {(category || subCategory || search) && (
-          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+        {karigarOptions.length > 0 && (
+          <select
+            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+            value={karigarCode}
+            onChange={(e) => setKarigarCode(e.target.value)}
+          >
+            <option value="">All karigars</option>
+            {karigarOptions.map((k) => <option key={k} value={k}>{k}</option>)}
+          </select>
+        )}
+        {(category || subCategory || search || karigarCode) && (
+          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setKarigarCode(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
         )}
       </div>
 
@@ -128,7 +145,7 @@ export default function ManufacturerCatalogPage() {
                   <div className="relative aspect-[3/4] bg-[#ece5da]">
                     {img ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={img.secureUrl} alt={p.name} className="h-full w-full object-cover" />
+                      <img src={img.secureUrl} alt={p.designNumber} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full items-center justify-center text-muted-foreground/40">
                         <Package className="h-8 w-8" />
@@ -144,9 +161,10 @@ export default function ManufacturerCatalogPage() {
                     </span>
                   </div>
                   <div className="p-3">
-                    <p className="truncate text-sm font-medium">{titleCaseName(p.name)}</p>
-                    <p className="truncate text-xs text-muted-foreground">{p.designNumber}{p.category ? ` · ${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}</p>
+                    <p className="truncate text-sm font-medium">{p.designNumber}</p>
+                    <p className="truncate text-xs text-muted-foreground">{p.category ?? ''}{p.subCategory ? ` › ${p.subCategory}` : ''}</p>
                     {formatWeight(p.weightGrams) && <p className="text-xs text-muted-foreground">{formatWeight(p.weightGrams)}</p>}
+                    {p.karigarCode && <p className="text-xs text-muted-foreground/70">Karigar: {p.karigarCode}</p>}
                   </div>
                 </div>
               </Link>

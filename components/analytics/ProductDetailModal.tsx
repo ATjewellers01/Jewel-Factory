@@ -4,11 +4,10 @@ import { Gem, X } from 'lucide-react';
 import { useEffect } from 'react';
 
 import { StarRating } from '@/components/ui/StarRating';
-import { titleCaseName } from '@/lib/format';
 
 export type AnalyticsProduct = {
   manufacturerProductId: string;
-  productName: string;
+  productName?: string | null;
   designNumber: string | null;
   imageUrl: string | null;
   category: string | null;
@@ -38,7 +37,7 @@ export function ProductDetailModal({ product, onClose }: { product: AnalyticsPro
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label={`${titleCaseName(product.productName)} details`}
+      aria-label={`${product.designNumber ?? 'Product'} details`}
     >
       <div
         className="relative max-h-[calc(100vh-3rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-card shadow-2xl"
@@ -57,7 +56,7 @@ export function ProductDetailModal({ product, onClose }: { product: AnalyticsPro
           <div className="aspect-square overflow-hidden rounded-xl bg-white">
             {product.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={product.imageUrl} alt={product.productName} className="h-full w-full object-contain" />
+              <img src={product.imageUrl} alt={product.designNumber ?? ''} className="h-full w-full object-contain" />
             ) : (
               <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-10 w-10" /></div>
             )}
@@ -69,8 +68,7 @@ export function ProductDetailModal({ product, onClose }: { product: AnalyticsPro
             <p className="text-xs font-semibold uppercase tracking-widest text-primary">
               {product.category ?? 'Jewellery'}{product.subCategory ? ` · ${product.subCategory}` : ''}
             </p>
-            <h2 className="mt-1 font-display text-xl font-medium">{titleCaseName(product.productName)}</h2>
-            {product.designNumber ? <p className="mt-0.5 text-sm text-muted-foreground">Design {product.designNumber}</p> : null}
+            <h2 className="mt-1 font-display text-xl font-medium">{product.designNumber ?? 'Product'}</h2>
           </div>
 
           <div className="overflow-hidden rounded-lg border text-sm">

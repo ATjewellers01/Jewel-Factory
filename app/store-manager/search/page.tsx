@@ -11,7 +11,7 @@ import { useStoreManagerKioskCart } from '@/hooks/use-store-manager-cart';
 import { useStoreManager } from '../store-manager-context';
 
 type Img = { secureUrl: string; isPrimary: boolean };
-type Product = { id: string; designNumber: string; name: string; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
+type Product = { id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
 
 export default function StoreManagerSearchPage() {
   const cameraInput = useRef<HTMLInputElement>(null);
@@ -132,7 +132,7 @@ export default function StoreManagerSearchPage() {
               onClick={() => {
                 kioskCart.add({
                   productId: product.id,
-                  name: product.name,
+                  name: product.designNumber,
                   designNumber: product.designNumber,
                   imageUrl: product.images.find(i => i.isPrimary)?.secureUrl,
                 });

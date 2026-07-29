@@ -5,12 +5,12 @@ import Link from 'next/link';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 
-import { titleCaseName, productMetaLine } from '@/lib/format';
+import { productMetaLine } from '@/lib/format';
 
 export type KioskCardProduct = {
   id: string;
   designNumber: string;
-  name: string;
+  name?: string | null;
   category: string | null;
   subCategory: string | null;
   purity: string | null;
@@ -72,7 +72,7 @@ export function KioskProductCard({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={img}
-            alt={product.name}
+            alt={product.designNumber}
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
             loading="lazy"
           />
@@ -123,7 +123,7 @@ export function KioskProductCard({
       <div className="mt-3 space-y-1">
         <button type="button" onClick={openDetail} className="block w-full text-left">
           <p className="line-clamp-1 text-sm font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
-            {titleCaseName(product.name)}
+            {product.designNumber}
           </p>
         </button>
         <p className="truncate text-xs text-muted-foreground">

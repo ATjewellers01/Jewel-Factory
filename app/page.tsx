@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { PublicFooter } from '@/components/landing/PublicFooter';
 import { PublicNav } from '@/components/landing/PublicNav';
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
-import { titleCaseName, formatWeight } from '@/lib/format';
+import { formatWeight } from '@/lib/format';
 
 const LoginModal = dynamic(
   () => import('@/components/landing/LoginModal').then((module) => module.LoginModal),
@@ -21,7 +21,7 @@ const RegisterPromptModal = dynamic(
 );
 
 type ShowcaseProduct = {
-  id: string; designNumber?: string; name: string;
+  id: string; designNumber?: string; name?: string | null;
   category: string | null; subCategory?: string | null;
   purity?: string | null; weightGrams?: string | null; description?: string | null;
   hasTryon: boolean;
@@ -131,7 +131,7 @@ export default function LandingPage() {
                 className="group absolute left-[6%] top-0 h-[62%] w-[46%] overflow-hidden rounded-2xl bg-[#ece5da] shadow-[0_34px_70px_rgba(31,24,15,0.28)] ring-1 ring-black/5"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={primaryImg(floats[0])} alt={floats[0].name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                <img src={primaryImg(floats[0])} alt={floats[0].designNumber ?? ''} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
               </motion.button>
             )}
             {floats[1] && (
@@ -141,7 +141,7 @@ export default function LandingPage() {
                 className="group absolute right-[4%] top-[14%] h-[52%] w-[40%] overflow-hidden rounded-2xl bg-[#ece5da] shadow-[0_28px_56px_rgba(31,24,15,0.24)] ring-1 ring-black/5"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={primaryImg(floats[1])} alt={floats[1].name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                <img src={primaryImg(floats[1])} alt={floats[1].designNumber ?? ''} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
               </motion.button>
             )}
             {floats[2] && (
@@ -151,7 +151,7 @@ export default function LandingPage() {
                 className="group absolute bottom-0 left-[26%] h-[46%] w-[44%] overflow-hidden rounded-2xl bg-[#ece5da] shadow-[0_28px_56px_rgba(31,24,15,0.24)] ring-1 ring-black/5"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={primaryImg(floats[2])} alt={floats[2].name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                <img src={primaryImg(floats[2])} alt={floats[2].designNumber ?? ''} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
               </motion.button>
             )}
             {floats.length === 0 && (
@@ -220,7 +220,7 @@ export default function LandingPage() {
                       >
                         {img ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={img} alt={p.name} className="aspect-square h-full w-full object-cover" />
+                          <img src={img} alt={p.designNumber ?? ''} className="aspect-square h-full w-full object-cover" />
                         ) : <div className="aspect-square flex items-center justify-center"><Gem className="h-5 w-5 text-muted-foreground/30" /></div>}
                       </motion.div>
                     );
@@ -264,7 +264,7 @@ export default function LandingPage() {
                     <div className="relative aspect-[3/4] overflow-hidden bg-[#ece5da]">
                       {img ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={img} alt={p.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        <img src={img} alt={p.designNumber ?? ''} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
                       ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-8 w-8" /></div>}
                       {p.hasTryon && (
                         <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]">
@@ -273,7 +273,7 @@ export default function LandingPage() {
                       )}
                     </div>
                     <div className="p-3">
-                      <p className="truncate text-sm font-medium group-hover:text-primary">{titleCaseName(p.name)}</p>
+                      <p className="truncate text-sm font-medium group-hover:text-primary">{p.designNumber}</p>
                       {p.category && <p className="truncate text-xs text-muted-foreground">{p.category}</p>}
                     </div>
                   </motion.button>
@@ -332,7 +332,7 @@ export default function LandingPage() {
                 <div className="aspect-square overflow-hidden rounded-xl bg-white">
                   {detail.images[detailImg] ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={detail.images[detailImg].secureUrl} alt={detail.name} onClick={() => setZoom(detail.images[detailImg].secureUrl)} className="h-full w-full cursor-zoom-in object-contain" title="Click to enlarge" />
+                    <img src={detail.images[detailImg].secureUrl} alt={detail.designNumber ?? ''} onClick={() => setZoom(detail.images[detailImg].secureUrl)} className="h-full w-full cursor-zoom-in object-contain" title="Click to enlarge" />
                   ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-10 w-10" /></div>}
                 </div>
                 {detail.images.length > 1 && (
@@ -350,8 +350,7 @@ export default function LandingPage() {
               <div className="space-y-4 p-6">
                 <div className="pr-8">
                   <p className="text-xs font-semibold uppercase tracking-widest text-primary">{detail.category ?? 'Jewellery'}{detail.subCategory ? ` · ${detail.subCategory}` : ''}</p>
-                  <h2 className="mt-1 font-display text-2xl font-medium">{titleCaseName(detail.name)}</h2>
-                  {detail.designNumber && <p className="mt-0.5 text-sm text-muted-foreground">Design {detail.designNumber}</p>}
+                  <h2 className="mt-1 font-display text-2xl font-medium">{detail.designNumber}</h2>
                 </div>
                 <div className="overflow-hidden rounded-xl border text-sm">
                   <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">Metal</span><span className="font-medium">Gold</span></div>

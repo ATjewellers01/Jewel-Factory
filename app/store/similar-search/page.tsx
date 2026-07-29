@@ -9,7 +9,7 @@ import { StoreManagerProductDetailModal } from '@/components/kiosk/StoreManagerP
 import { Button } from '@/components/ui/button';
 
 type Img = { secureUrl: string; isPrimary: boolean };
-type Product = { id: string; designNumber: string; name: string; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
+type Product = { id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
 
 export default function RetailerSimilarSearchPage() {
   const cameraInput = useRef<HTMLInputElement>(null);

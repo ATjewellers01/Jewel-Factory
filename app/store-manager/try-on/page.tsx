@@ -14,7 +14,7 @@ const ARViewport = dynamic(() => import('@/components/ar/ARViewport').then((m) =
 });
 
 type TryonProduct = {
-  id: string; designNumber: string; name: string; primaryImageUrl: string | null;
+  id: string; designNumber: string; name?: string | null; primaryImageUrl: string | null;
   asset: {
     assetUrl: string; jewelleryType: JewelleryType;
     pivotX: number; pivotY: number; xOffset: number; yOffset: number;
@@ -138,7 +138,7 @@ function TryOnInner() {
           <ARViewport ref={viewportRef} fill className="h-full w-full" onCameraAspectRatioChange={updateCameraAspectRatio} />
           {active && (
             <div className="pointer-events-none absolute left-3 top-3 rounded-full bg-black/55 px-3 py-1.5 text-xs text-white backdrop-blur-md">
-              {active.name} · {active.designNumber}
+              {active.designNumber}
             </div>
           )}
         </div>
@@ -165,15 +165,15 @@ function TryOnInner() {
               key={p.id}
               onClick={() => void select(p)}
               className={`flex w-[68px] flex-shrink-0 flex-col items-center gap-1 rounded-xl border p-1.5 text-left transition sm:w-20 ${activeId === p.id ? 'border-[#c9a84c] bg-white/10' : 'border-white/10 bg-white/5 hover:border-white/30'}`}
-              title={p.name}
+              title={p.designNumber}
             >
               <div className="h-12 w-full overflow-hidden rounded-md bg-black/40 sm:h-14">
                 {p.primaryImageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.primaryImageUrl} alt={p.name} className="h-full w-full object-cover" />
+                  <img src={p.primaryImageUrl} alt={p.designNumber} className="h-full w-full object-cover" />
                 ) : null}
               </div>
-              <span className="w-full truncate text-[9px] leading-tight text-white/85">{p.name}</span>
+              <span className="w-full truncate text-[9px] leading-tight text-white/85">{p.designNumber}</span>
             </button>
           ))}
         </div>

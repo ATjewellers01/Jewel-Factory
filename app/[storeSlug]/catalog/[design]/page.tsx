@@ -8,10 +8,10 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useKioskStore } from '@/components/kiosk/StoreContext';
 import { useGuestCart } from '@/hooks/use-guest-cart';
-import { titleCaseName, formatWeight } from '@/lib/format';
+import { formatWeight } from '@/lib/format';
 
 type Product = {
-  id: string; designNumber: string; name: string; category: string | null;
+  id: string; designNumber: string; name?: string | null; category: string | null;
   subCategory: string | null;
   description: string | null; purity: string | null; weightGrams: string | null;
   gemstones: string[]; occasionTags: string[]; hasTryon: boolean;
@@ -47,7 +47,7 @@ export default function KioskProductDetailPage() {
   const imgs = product.images.length ? product.images : [];
 
   function addToCart() {
-    cart.add({ productId: product!.id, name: product!.name, imageUrl: imgs[0]?.secureUrl }, qty);
+    cart.add({ productId: product!.id, name: product!.designNumber, imageUrl: imgs[0]?.secureUrl }, qty);
   }
 
   return (
@@ -59,7 +59,7 @@ export default function KioskProductDetailPage() {
           <div className="aspect-square overflow-hidden rounded-xl bg-[#ece5da]">
             {imgs[activeImg] ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={imgs[activeImg].secureUrl} alt={product.name} className="h-full w-full object-cover" />
+              <img src={imgs[activeImg].secureUrl} alt={product.designNumber} className="h-full w-full object-cover" />
             ) : null}
           </div>
           {imgs.length > 1 && (
@@ -78,8 +78,7 @@ export default function KioskProductDetailPage() {
         <div className="space-y-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-primary">{product.category ?? 'Jewellery'}{product.subCategory ? ` · ${product.subCategory}` : ''}</p>
-            <h1 className="mt-1 text-3xl font-medium tracking-tight">{titleCaseName(product.name)}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Design {product.designNumber}</p>
+            <h1 className="mt-1 text-3xl font-medium tracking-tight">{product.designNumber}</h1>
           </div>
 
           {/* Trust badges */}

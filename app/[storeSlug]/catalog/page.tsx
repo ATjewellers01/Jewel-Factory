@@ -27,7 +27,7 @@ export default function KioskCatalogPage() {
   }, []);
 
   const filtered = (products ?? []).filter((p) =>
-    (!search || p.name.toLowerCase().includes(search.toLowerCase()) || p.designNumber.toLowerCase().includes(search.toLowerCase())) &&
+    (!search || p.designNumber.toLowerCase().includes(search.toLowerCase())) &&
     (!category || p.category === category) &&
     (!subCategory || p.subCategory === subCategory) &&
     (!tryOnOnly || p.hasTryon),
