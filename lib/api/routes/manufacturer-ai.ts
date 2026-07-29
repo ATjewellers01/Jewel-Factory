@@ -58,7 +58,7 @@ async function forward(c: Context<AppEnv>, path: string) {
   // Handle 413 Payload Too Large
   if (res.status === 413) {
     console.error('[ai-proxy] image too large', path, res.status);
-    return sendError(c, 'payload_too_large', 'Image too large. Please use a smaller image (max 3MB).', 413);
+    return sendError(c, 'bad_request', 'Image too large. Please use a smaller image (max 3MB).', 413);
   }
 
   const text = await res.text();
