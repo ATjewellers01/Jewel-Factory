@@ -28,15 +28,26 @@ export default function ManufacturerStoresPage() {
   const { data: badgeLabels, reload: reloadBadgeLabels } = useApi<string[]>('/api/manufacturer/retailer-badge-labels', '/manufacturer/login');
   const [editing, setEditing] = useState<Store | null>(null);
   const [pwStore, setPwStore] = useState<Store | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   async function toggle(s: Store) {
-    await apiSend('PATCH', `/api/manufacturer/stores/${s.id}/active`, { isActive: !s.isActive });
-    void reload();
+    setActionError(null);
+    try {
+      await apiSend('PATCH', `/api/manufacturer/stores/${s.id}/active`, { isActive: !s.isActive });
+      void reload();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Could not update status');
+    }
   }
   async function remove(s: Store) {
     if (!confirm(`Delete purchase manager "${s.name}"? This cannot be undone.`)) return;
-    await apiSend('DELETE', `/api/manufacturer/stores/${s.id}`);
-    void reload();
+    setActionError(null);
+    try {
+      await apiSend('DELETE', `/api/manufacturer/stores/${s.id}`);
+      void reload();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : `Could not delete "${s.name}". Please try again.`);
+    }
   }
 
   return (
@@ -46,6 +57,7 @@ export default function ManufacturerStoresPage() {
         <p className="mt-0.5 text-sm text-muted-foreground">Manage approved purchase managers.</p>
       </div>
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+      {actionError && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{actionError}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
       {data && data.length === 0 && (
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
@@ -110,15 +122,25 @@ function EditModal({
   async function addLabel() {
     const label = newLabel.trim();
     if (!label) return;
-    await apiPost('/api/manufacturer/retailer-badge-labels', { label });
-    setNewLabel('');
-    onBadgeLabelsChanged();
+    setErr(null);
+    try {
+      await apiPost('/api/manufacturer/retailer-badge-labels', { label });
+      setNewLabel('');
+      onBadgeLabelsChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not add badge');
+    }
   }
   async function removeLabel(label: string) {
     if (!confirm(`Remove badge "${label}"? Any purchase manager using it will become unassigned.`)) return;
-    await apiSend('DELETE', `/api/manufacturer/retailer-badge-labels/${encodeURIComponent(label)}`);
-    if (badgeLabel === label) setBadgeLabel('');
-    onBadgeLabelsChanged();
+    setErr(null);
+    try {
+      await apiSend('DELETE', `/api/manufacturer/retailer-badge-labels/${encodeURIComponent(label)}`);
+      if (badgeLabel === label) setBadgeLabel('');
+      onBadgeLabelsChanged();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not remove badge');
+    }
   }
 
   async function save() {
