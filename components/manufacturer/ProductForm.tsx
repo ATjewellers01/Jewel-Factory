@@ -75,6 +75,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   const [aiInstr, setAiInstr] = useState('');                 // regenerate custom instruction
   const [aiBusy, setAiBusy] = useState<string | null>(null);  // 'all' | 'describe' | 'catalog' | 'transparent'
   const [aiError, setAiError] = useState<string | null>(null);
+  const [aiRawZoom, setAiRawZoom] = useState<string | null>(null); // raw image zoom preview
 
   useEffect(() => {
     (async () => {
@@ -87,6 +88,13 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   }, []);
 
   function pickRaw(file: File) {
+    const MAX_IMAGE_SIZE = 3 * 1024 * 1024; // 3MB
+    if (file.size > MAX_IMAGE_SIZE) {
+      setAiError(`Image too large. Max 3MB allowed. Your file: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
+      setAiRaw(null);
+      setAiRawPreview(null);
+      return;
+    }
     setAiError(null);
     setAiRaw(file);
     setAiRawPreview(URL.createObjectURL(file));
@@ -225,14 +233,10 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
       setBusy(false);
 
       // Step 4: Generate catalog image
-      console.log('[ai:generate-all] step 3/4 — catalog image');
+      console.log('[ai:generate-all] step 3/3 — catalog image');
       const catalogOk = await aiCatalog(false);
-      if (!catalogOk) { console.error('[ai:generate-all] aborted at step 3 (catalog) — see [ai:catalog] logs above'); return; }
-
-      // Step 5: Generate try-on PNG
-      console.log('[ai:generate-all] step 4/4 — try-on PNG');
-      const transparentOk = await aiTransparent(false);
-      console.log(transparentOk ? '[ai:generate-all] done' : '[ai:generate-all] step 4 (try-on) failed — see [ai:transparent] logs above');
+      console.log(catalogOk ? '[ai:generate-all] done' : '[ai:generate-all] step 3 (catalog) failed — see [ai:catalog] logs above');
+      // Note: Try-on PNG generation is now manual-only to reduce generation time + costs
     } catch (e) {
       console.error('[ai:generate-all] failed', e);
       setAiError(e instanceof Error ? e.message : 'Generate all failed');
@@ -508,10 +512,10 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
           <div className="flex flex-wrap items-start gap-3">
             {/* Raw photo (only after a category is chosen) */}
             {aiRawPreview ? (
-              <div className="relative h-24 w-24 overflow-hidden rounded-lg border">
+              <div className="relative h-24 w-24 overflow-hidden rounded-lg border cursor-pointer group" onClick={() => setAiRawZoom(aiRawPreview)}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={aiRawPreview} alt="raw" className="h-full w-full object-cover" />
-                <button type="button" onClick={() => { setAiRaw(null); setAiRawPreview(null); }} className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"><X className="h-3 w-3" /></button>
+                <img src={aiRawPreview} alt="raw" className="h-full w-full object-cover group-hover:opacity-75 transition-opacity" title="Click to zoom" />
+                <button type="button" onClick={(e) => { e.stopPropagation(); setAiRaw(null); setAiRawPreview(null); }} className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"><X className="h-3 w-3" /></button>
               </div>
             ) : (
               <button type="button" disabled={!form.category} onClick={() => aiInput.current?.click()} title={!form.category ? 'Pick a category first' : undefined} className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-muted-foreground hover:border-primary/50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
@@ -554,6 +558,17 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
           </div>
           {aiError && <p className="text-sm text-red-600">{aiError}</p>}
           <p className="text-[11px] text-muted-foreground">AI fills the name + description above and the photos below — review and edit anything, then Save. The raw photo is only used for generation (not saved).</p>
+
+          {/* Raw image zoom modal */}
+          {aiRawZoom && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setAiRawZoom(null)}>
+              <div className="relative max-h-[80vh] max-w-2xl overflow-auto" onClick={(e) => e.stopPropagation()}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={aiRawZoom} alt="zoomed raw" className="max-w-full" />
+                <button type="button" onClick={() => setAiRawZoom(null)} className="absolute right-2 top-2 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"><X className="h-5 w-5" /></button>
+              </div>
+            </div>
+          )}
         </section>
       )}
 

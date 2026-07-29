@@ -54,6 +54,13 @@ async function forward(c: Context<AppEnv>, path: string) {
     console.error('[ai-proxy] fetch error', path, detail);
     return sendError(c, 'upstream_failed', `AI service unreachable — ${detail}`, 502);
   }
+
+  // Handle 413 Payload Too Large
+  if (res.status === 413) {
+    console.error('[ai-proxy] image too large', path, res.status);
+    return sendError(c, 'payload_too_large', 'Image too large. Please use a smaller image (max 3MB).', 413);
+  }
+
   const text = await res.text();
   let json: unknown = null;
   try { json = text ? JSON.parse(text) : null; } catch { /* non-JSON upstream */ }
