@@ -152,7 +152,19 @@ export async function setStoreActive(manufacturerId: string, storeId: string, is
 export async function deleteStoreByManufacturer(manufacturerId: string, storeId: string) {
   const store = await prisma.store.findFirst({ where: { id: storeId, manufacturerId }, select: { id: true } });
   if (!store) return false;
-  await prisma.store.delete({ where: { id: storeId } });
+  await prisma.$transaction(async (tx) => {
+    // These are scoped by a plain storeId string with no FK constraint (so
+    // Postgres CASCADE can't clean them up automatically) — delete explicitly
+    // before removing the store. Everything with a real FK to stores
+    // (branches, branch managers, products, b2b/kiosk/custom orders and
+    // their own child rows) cascades via the schema's onDelete: Cascade.
+    await tx.favoriteProduct.deleteMany({ where: { storeId } });
+    await tx.orderMessage.deleteMany({ where: { storeId } });
+    await tx.productView.deleteMany({ where: { storeId } });
+    await tx.tryonEvent.deleteMany({ where: { storeId } });
+    await tx.productSale.deleteMany({ where: { storeId } });
+    await tx.store.delete({ where: { id: storeId } });
+  });
   return true;
 }
 

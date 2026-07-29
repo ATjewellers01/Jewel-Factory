@@ -414,7 +414,7 @@ model TryonAsset {
 model B2bOrder {
   id             String       @id @default(uuid())
   storeId        String       @map("store_id")
-  store          Store        @relation(fields: [storeId], references: [id])
+  store          Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
   manufacturerId String       @map("manufacturer_id")
   manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id])
   branchId       String?      @map("branch_id") // set when a branch's restock raised it
@@ -490,7 +490,7 @@ model KioskOrder {
   manufacturerId String       @map("manufacturer_id")
   manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id])
   storeId        String       @map("store_id")
-  store          Store        @relation(fields: [storeId], references: [id])
+  store          Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
   branchId       String?      @map("branch_id") // which branch raised it (null = legacy)
   branch         Branch?      @relation(fields: [branchId], references: [id])
 
@@ -618,7 +618,7 @@ model CustomDesignOrder {
   manufacturerId String              @map("manufacturer_id")
   manufacturer   Manufacturer        @relation(fields: [manufacturerId], references: [id])
   storeId        String              @map("store_id")
-  store          Store               @relation(fields: [storeId], references: [id])
+  store          Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   // store identity snapshot (no customer PII)
   storeNameSnapshot    String  @map("store_name_snapshot")
