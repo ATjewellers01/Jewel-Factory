@@ -8,7 +8,7 @@ export default function nextConfig(phase: string): NextConfig {
     ...(process.env.DOCKER_BUILD === '1' ? { output: 'standalone' as const } : {}),
     api: {
       bodyParser: {
-        sizeLimit: '10mb',
+        sizeLimit: '20mb',
       },
     },
     images: {

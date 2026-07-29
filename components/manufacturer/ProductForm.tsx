@@ -91,9 +91,9 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   }, []);
 
   function pickRaw(file: File) {
-    const MAX_IMAGE_SIZE = 3 * 1024 * 1024; // 3MB
+    const MAX_IMAGE_SIZE = 15 * 1024 * 1024; // 15MB
     if (file.size > MAX_IMAGE_SIZE) {
-      setAiError(`Image too large. Max 3MB allowed. Your file: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
+      setAiError(`Image too large. Max 15MB allowed. Your file: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
       setAiRaw(null);
       setAiRawPreview(null);
       return;
