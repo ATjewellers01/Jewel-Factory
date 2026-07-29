@@ -4,6 +4,7 @@ import { Loader2, Gem, Heart, ShoppingCart, Check, Minus, Plus, Trash2, Sparkles
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { StoreManagerProductDetailModal } from '@/components/kiosk/StoreManagerProductDetailModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StarRating } from '@/components/ui/StarRating';
@@ -14,7 +15,7 @@ import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 import { formatWeight } from '@/lib/format';
 
 type Img = { secureUrl: string; isPrimary: boolean };
-type Product = { id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null; weightGrams: string | null; hasTryon: boolean; images: Img[] };
+type Product = { id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
 // Sales info across ALL of this retailer's branches, keyed by manufacturerProductId.
 type SalesInfo = { stars: number; unitsLast30d: number };
 
@@ -31,6 +32,7 @@ export default function ManufacturerCatalogBrowsePage() {
   const [notes, setNotes] = useState('');
   const [placing, setPlacing] = useState(false);
   const [salesMap, setSalesMap] = useState<Record<string, SalesInfo>>({});
+  const [detail, setDetail] = useState<Product | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -171,24 +173,25 @@ export default function ManufacturerCatalogBrowsePage() {
             const inCart = cart.items.some((i) => i.productId === p.id);
             return (
               <div key={p.id} className="overflow-hidden rounded-xl border bg-card">
-                <div className="relative aspect-[3/4] bg-[#ece5da]">
+                <button type="button" onClick={() => setDetail(p)} className="relative block aspect-[3/4] w-full bg-[#ece5da]" title="View details">
                   {img ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={img.secureUrl} alt={p.designNumber} className="h-full w-full object-cover" />
                   ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-8 w-8" /></div>}
                   {p.hasTryon && <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]"><Sparkles className="mr-0.5 inline h-2.5 w-2.5" />AR</span>}
-                  <button
-                    type="button"
-                    onClick={() => void favorites.toggle(p.id)}
+                  <span
+                    role="button"
+                    tabIndex={-1}
+                    onClick={(e) => { e.stopPropagation(); void favorites.toggle(p.id); }}
                     className="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-colors hover:bg-black/60"
                     aria-label={favorites.isFavorite(p.id) ? 'Remove from favorites' : 'Add to favorites'}
                   >
                     <Heart className={`h-3.5 w-3.5 ${favorites.isFavorite(p.id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-                  </button>
-                </div>
+                  </span>
+                </button>
                 <div className="p-3 space-y-2">
-                  <div>
-                    <p className="truncate text-sm font-medium">{p.designNumber}</p>
+                  <button type="button" onClick={() => setDetail(p)} className="block w-full text-left">
+                    <p className="truncate text-sm font-medium hover:text-primary">{p.designNumber}</p>
                     <p className="truncate text-xs text-muted-foreground">
                       {p.category ? `${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}{formatWeight(p.weightGrams) ? ` · ${formatWeight(p.weightGrams)}` : ''}
                     </p>
@@ -198,7 +201,7 @@ export default function ManufacturerCatalogBrowsePage() {
                         <span className="text-[10px] text-muted-foreground">{salesMap[p.id].unitsLast30d} sold · 30d</span>
                       </div>
                     ) : null}
-                  </div>
+                  </button>
                   <Button size="sm" variant={inCart ? 'outline' : 'default'} className={`w-full ${inCart ? 'border-green-300 text-green-700' : 'metal-sheen text-[#17120b] font-semibold'}`}
                     onClick={() => cart.add({ productId: p.id, name: p.designNumber, designNumber: p.designNumber, imageUrl: img?.secureUrl })}>
                     {inCart ? <><Check className="mr-1 h-3.5 w-3.5" />In cart</> : <><Plus className="mr-1 h-3.5 w-3.5" />Add</>}
@@ -209,6 +212,28 @@ export default function ManufacturerCatalogBrowsePage() {
           })}
         </div>
       )}
+
+      {detail ? (
+        <StoreManagerProductDetailModal
+          key={detail.id}
+          product={detail}
+          products={data ?? []}
+          onClose={() => setDetail(null)}
+          tryOnBack="/store/manufacturer-catalog"
+          primaryAction={(product) => {
+            const inCart = cart.items.some((i) => i.productId === product.id);
+            const img = product.images.find((i) => i.isPrimary) ?? product.images[0];
+            return (
+              <Button
+                onClick={() => { cart.add({ productId: product.id, name: product.designNumber, designNumber: product.designNumber, imageUrl: img?.secureUrl }); setDetail(null); }}
+                className="metal-sheen flex-1 font-semibold text-[#17120b]"
+              >
+                {inCart ? <><Check className="mr-1.5 h-4 w-4" />In cart</> : <><Plus className="mr-1.5 h-4 w-4" />Add</>}
+              </Button>
+            );
+          }}
+        />
+      ) : null}
     </div>
   );
 }
