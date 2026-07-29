@@ -37,7 +37,7 @@ export function PublicFooter({ onLogin }: { onLogin?: () => void }) {
         <div>
           <Wordmark href="/" size="md" tone="dark" />
           <p className="mt-4 max-w-sm text-sm leading-6 text-white/55">
-            One connected jewellery network for manufacturers, retailers, their branches,
+            One connected jewellery network for manufacturers, purchase managers, their branches,
             and assisted in-store discovery.
           </p>
         </div>
@@ -49,10 +49,10 @@ export function PublicFooter({ onLogin }: { onLogin?: () => void }) {
           </ul>
         </div>
         <div>
-          <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">For retailers</p>
+          <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">For purchase managers</p>
           <ul className="space-y-2.5 text-sm text-white/70">
             <li><Link href="/store/register" className="inline-flex items-center gap-2 transition-colors hover:text-white"><Building2 className="h-3.5 w-3.5 text-[#c9a84c]" /> Join the network</Link></li>
-            <li><Link href="/store/login" className="inline-flex items-center gap-2 transition-colors hover:text-white"><Store className="h-3.5 w-3.5 text-[#c9a84c]" /> Retailer portal</Link></li>
+            <li><Link href="/store/login" className="inline-flex items-center gap-2 transition-colors hover:text-white"><Store className="h-3.5 w-3.5 text-[#c9a84c]" /> Purchase manager portal</Link></li>
           </ul>
         </div>
         <div>

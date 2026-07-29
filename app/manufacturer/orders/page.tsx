@@ -33,14 +33,14 @@ export default function ManufacturerOrdersPage() {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-4">
       <div>
-        <h1 className="text-2xl font-medium tracking-tight">B2B Orders</h1>
+        <h1 className="text-2xl font-medium tracking-tight">Catalog Orders</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">Restock orders placed by stores from your catalog.</p>
       </div>
       {data && data.length > 0 && (
         <OrderFilters
           search={search} onSearch={setSearch}
           status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
-          group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All retailers" groupLabel="Retailer"
+          group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All purchase managers" groupLabel="Purchase manager"
           from={from} to={to} onFrom={setFrom} onTo={setTo}
         />
       )}

@@ -33,7 +33,7 @@ const FEATURES = [
   { icon: Sparkles, title: 'AR virtual try-on', desc: 'Customers see how a piece looks on them, right at the store kiosk.' },
   { icon: Search, title: 'Similar-design search', desc: 'Upload a photo and instantly find matching designs in the catalog by visual similarity.' },
   { icon: ShieldCheck, title: 'Customer privacy', desc: 'Walk-in customer details never leave the store — the manufacturer only sees products.' },
-  { icon: Building2, title: 'Multi-store ready', desc: 'One retailer, many stores — approvals, restock and orders tracked end to end.' },
+  { icon: Building2, title: 'Multi-store ready', desc: 'One purchase manager, many stores — approvals, restock and orders tracked end to end.' },
 ];
 
 const TRUST = [
@@ -102,7 +102,7 @@ export default function LandingPage() {
               Welcome to <span className="text-[#c9a84c]">Jewel Factory</span>
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-muted-foreground lg:mx-0">
-              The B2B platform connecting a gold-jewellery manufacturer to its retailer
+              The B2B platform connecting a gold-jewellery manufacturer to its purchase manager
               network and their in-store customers — catalog, AR try-on, orders and
               approvals, all in one place.
             </p>

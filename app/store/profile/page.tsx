@@ -61,7 +61,7 @@ export default function StoreProfilePage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">
-      <h1 className="text-2xl font-medium tracking-tight">Retailer Profile</h1>
+      <h1 className="text-2xl font-medium tracking-tight">Purchase Manager Profile</h1>
       {savedMsg && <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700">{savedMsg}</div>}
 
       <section className="space-y-3 rounded-xl border bg-card p-4">

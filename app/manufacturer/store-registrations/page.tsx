@@ -27,8 +27,8 @@ export default function StoreRegistrationsPage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4">
       <div>
-        <h1 className="text-2xl font-medium tracking-tight">Retailer Registrations</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Approve retailers to give them access and link them to your catalog.</p>
+        <h1 className="text-2xl font-medium tracking-tight">Purchase Manager Registrations</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">Approve purchase managers to give them access and link them to your catalog.</p>
       </div>
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}

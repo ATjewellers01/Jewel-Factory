@@ -70,7 +70,7 @@ export function RegisterPromptModal() {
           <p className="mt-4 font-display text-xs font-medium uppercase tracking-[0.2em]">
             <span className="text-[#c9a84c]">Jewel</span> <span className="text-foreground">Factory</span>
           </p>
-          <h2 className="mt-1.5 font-display text-2xl font-medium tracking-tight sm:text-[27px]">Become a Retailer</h2>
+          <h2 className="mt-1.5 font-display text-2xl font-medium tracking-tight sm:text-[27px]">Become a Purchase manager</h2>
           <p className="mx-auto mt-2.5 max-w-xs text-sm leading-6 text-muted-foreground">
             Register your jewellery business to browse the full gold catalogue,
             place restock orders, and run your in-store kiosks. Approval is quick.

@@ -138,7 +138,7 @@ export default function ManufacturerCatalogBrowsePage() {
 
       {showCart && (
         <div className="rounded-xl border bg-card p-4 space-y-3">
-          <h2 className="text-sm font-semibold">Your B2B Cart</h2>
+          <h2 className="text-sm font-semibold">Your Catalog Cart</h2>
           {cart.items.length === 0 ? (
             <p className="text-sm text-muted-foreground">Cart is empty.</p>
           ) : (

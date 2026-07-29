@@ -34,7 +34,7 @@ export default function ManufacturerStoresPage() {
     void reload();
   }
   async function remove(s: Store) {
-    if (!confirm(`Delete retailer "${s.name}"? This cannot be undone.`)) return;
+    if (!confirm(`Delete purchase manager "${s.name}"? This cannot be undone.`)) return;
     await apiSend('DELETE', `/api/manufacturer/stores/${s.id}`);
     void reload();
   }
@@ -42,8 +42,8 @@ export default function ManufacturerStoresPage() {
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4">
       <div>
-        <h1 className="text-2xl font-medium tracking-tight">Retailers</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Manage approved retailers.</p>
+        <h1 className="text-2xl font-medium tracking-tight">Purchase managers</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">Manage approved purchase managers.</p>
       </div>
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
@@ -115,7 +115,7 @@ function EditModal({
     onBadgeLabelsChanged();
   }
   async function removeLabel(label: string) {
-    if (!confirm(`Remove badge "${label}"? Any retailer using it will become unassigned.`)) return;
+    if (!confirm(`Remove badge "${label}"? Any purchase manager using it will become unassigned.`)) return;
     await apiSend('DELETE', `/api/manufacturer/retailer-badge-labels/${encodeURIComponent(label)}`);
     if (badgeLabel === label) setBadgeLabel('');
     onBadgeLabelsChanged();

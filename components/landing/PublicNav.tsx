@@ -51,7 +51,7 @@ export function PublicNav({ catalogHref = '/#showcase' }: { catalogHref?: string
         }`}
       >
         <div className="flex h-7 items-center justify-between bg-[#191511] px-4 text-[10px] tracking-[0.08em] text-[#887b62] sm:px-6 lg:px-10">
-          <span className="flex items-center gap-2 uppercase text-[#d5c8a4]"><ShieldCheck className="h-3 w-3 text-[#c9a84c]" /> Retailer-first jewellery network</span>
+          <span className="flex items-center gap-2 uppercase text-[#d5c8a4]"><ShieldCheck className="h-3 w-3 text-[#c9a84c]" /> Purchase manager-first jewellery network</span>
           <span className="hidden sm:inline">Private catalog · Assisted discovery</span>
         </div>
         <div className={`border-b border-black/10 transition-colors ${scrolled ? 'bg-[#fbf8f1]/95 backdrop-blur-xl' : 'bg-[#fbf8f1]/85 backdrop-blur-md'}`}>
@@ -69,7 +69,7 @@ export function PublicNav({ catalogHref = '/#showcase' }: { catalogHref?: string
 
             <div className="flex items-center gap-1.5">
               <button onClick={() => setShowLogin(true)} className="hidden rounded-full px-3 py-2 text-xs font-semibold text-[#62584f] transition-colors hover:bg-black/5 sm:block">Login</button>
-              <Link href="/store/register" className="metal-sheen hidden items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-semibold text-[#17120b] shadow-sm transition-transform hover:scale-[1.02] sm:flex">Join as retailer <ArrowRight className="h-3.5 w-3.5" /></Link>
+              <Link href="/store/register" className="metal-sheen hidden items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-semibold text-[#17120b] shadow-sm transition-transform hover:scale-[1.02] sm:flex">Join as purchase manager <ArrowRight className="h-3.5 w-3.5" /></Link>
               <button className="rounded-full border border-black/10 bg-white/60 p-2.5 text-foreground hover:border-[#c9a84c]/50 hover:bg-white md:hidden" onClick={() => setMenuOpen(true)} aria-label="Open menu"><Menu className="h-5 w-5" /></button>
             </div>
           </div>
@@ -107,9 +107,9 @@ export function PublicNav({ catalogHref = '/#showcase' }: { catalogHref?: string
             <button onClick={() => { setMenuOpen(false); setShowLogin(true); }} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#544b43] hover:bg-black/5"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#eee7da] text-[#a77d31]"><LogIn className="h-4 w-4" /></span> Login</button>
           </nav>
           <div className="border-t border-black/10 bg-white/45 p-4">
-            <p className="mb-3 flex items-center gap-2 px-2 text-xs text-[#80756a]"><Sparkles className="h-3.5 w-3.5 text-[#b68a3e]" /> Built for independent retailers</p>
+            <p className="mb-3 flex items-center gap-2 px-2 text-xs text-[#80756a]"><Sparkles className="h-3.5 w-3.5 text-[#b68a3e]" /> Built for independent purchase managers</p>
             <Link href="/store/register" onClick={() => setMenuOpen(false)} className="metal-sheen block rounded-full px-4 py-3 text-center text-sm font-semibold text-[#17120b]">
-              Join as retailer
+              Join as purchase manager
             </Link>
           </div>
         </aside>

@@ -8,7 +8,7 @@ export default function StoreManagerLoginPage() {
       portal="manager"
       loginPath="/api/branch-manager/login"
       redirectTo="/store-manager"
-      footerLinks={[{ prompt: 'Retailer account?', label: 'Open retailer sign in', href: '/store/login' }]}
+      footerLinks={[{ prompt: 'Purchase manager account?', label: 'Open purchase manager sign in', href: '/store/login' }]}
     />
   );
 }

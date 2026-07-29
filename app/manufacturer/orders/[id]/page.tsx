@@ -57,7 +57,7 @@ export default function ManufacturerOrderDetailPage() {
       </div>
 
       <div className="rounded-xl border bg-card p-4">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Delivery Address (retailer)</p>
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Delivery Address (purchase manager)</p>
         <p className="text-sm">{data.deliveryAddress}</p>
         {data.requirementNote && (
           <div className="mt-2 rounded-md bg-muted/40 p-2">

@@ -66,7 +66,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
             onClick={() => setActiveRole('retailer')}
             className={`min-h-10 rounded-lg px-3 text-sm font-semibold transition-colors ${activeRole === 'retailer' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}
           >
-            Retailer
+            Purchase manager
           </button>
           <button
             type="button"
@@ -86,7 +86,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
                 <Store className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-sm font-semibold">Retailer</p>
+                <p className="text-sm font-semibold">Purchase manager</p>
                 <p className="text-xs text-muted-foreground">Head Office — approvals, stores, orders</p>
               </div>
             </div>
@@ -98,7 +98,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
               loginPath="/api/store/login"
               redirectTo="/store/dashboard"
               forgotHref="/store/forgot-password"
-              footerLinks={[{ prompt: 'New retailer?', label: 'Register here', href: '/store/register' }]}
+              footerLinks={[{ prompt: 'New purchase manager?', label: 'Register here', href: '/store/register' }]}
             />
           </div>
 
@@ -120,7 +120,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
               subtitle=""
               loginPath="/api/branch-manager/login"
               redirectTo="/store-manager"
-              footerLinks={[{ prompt: 'No account?', label: 'Ask your Retailer to add you', href: '/store/login' }]}
+              footerLinks={[{ prompt: 'No account?', label: 'Ask your Purchase manager to add you', href: '/store/login' }]}
             />
           </div>
         </div>

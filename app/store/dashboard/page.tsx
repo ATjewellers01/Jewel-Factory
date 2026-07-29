@@ -42,7 +42,7 @@ export default function StoreDashboardPage() {
           )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Card href="/store/kiosk-orders" icon={ShoppingBag} label="Kiosk Orders" total={data.totalKiosk} pending={data.pendingKiosk} />
-            <Card href="/store/b2b-orders" icon={Package} label="B2B Orders" total={data.totalB2b} pending={data.pendingB2b} />
+            <Card href="/store/b2b-orders" icon={Package} label="Catalog Orders" total={data.totalB2b} pending={data.pendingB2b} />
             <Card href="/store/custom-designs" icon={PencilLine} label="Custom Designs" total={data.totalCustom} pending={data.pendingCustom} />
           </div>
           <section className="grid gap-3 border-t border-[#e6e0d7] pt-6 sm:grid-cols-2">

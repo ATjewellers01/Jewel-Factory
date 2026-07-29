@@ -70,7 +70,7 @@ export default function ManufacturerDashboardPage() {
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#9a7229]">Manufacturing operations</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.025em]">Dashboard</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">Catalog health, open work, and retailer activity.</p>
+          <p className="mt-1.5 text-sm text-muted-foreground">Catalog health, open work, and purchase manager activity.</p>
         </div>
         <Link href="/manufacturer/catalog/new" className="inline-flex items-center gap-2 rounded-xl bg-[#c99d37] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_7px_20px_rgba(174,127,30,0.2)] transition-colors hover:bg-[#b98e30]">
           Add design <ArrowRight className="h-4 w-4" />
@@ -90,15 +90,15 @@ export default function ManufacturerDashboardPage() {
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
             <Stat label="Total Designs" value={data.totalDesigns} icon={Package} href="/manufacturer/catalog" />
             <Stat label="Active" value={data.activeDesigns} icon={Package} href="/manufacturer/catalog" />
-            <Stat label="B2B Pending" value={data.pendingB2b} icon={ShoppingBag} href="/manufacturer/orders" />
+            <Stat label="Catalog Pending" value={data.pendingB2b} icon={ShoppingBag} href="/manufacturer/orders" />
             <Stat label="Kiosk Pending" value={data.pendingKiosk} icon={Users} href="/manufacturer/kiosk-orders" />
             <Stat label="Pending Approval" value={data.pendingRegistrations} icon={ClipboardCheck} href="/manufacturer/store-registrations" />
-            <Stat label="Active Retailers" value={data.activeStores} icon={StoreIcon} href="/manufacturer/stores" />
+            <Stat label="Active Purchase managers" value={data.activeStores} icon={StoreIcon} href="/manufacturer/stores" />
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-[#e5dfd6] bg-white shadow-[0_8px_30px_rgba(52,42,30,0.035)]">
             <div className="flex items-center justify-between border-b border-[#ece6dd] px-5 py-4">
-              <div><p className="text-sm font-semibold">Recent B2B orders</p><p className="mt-0.5 text-xs text-muted-foreground">Latest restock activity from the retailer network.</p></div>
+              <div><p className="text-sm font-semibold">Recent Catalog orders</p><p className="mt-0.5 text-xs text-muted-foreground">Latest restock activity from the purchase manager network.</p></div>
               <Link href="/manufacturer/orders" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#946d28] hover:text-[#75531c]">View all <ArrowRight className="h-3.5 w-3.5" /></Link>
             </div>
             {data.recentB2b.length === 0 ? (

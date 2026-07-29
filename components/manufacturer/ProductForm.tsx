@@ -629,7 +629,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
           </div>
         </div>
         <div>
-          <label className="text-xs font-medium text-muted-foreground">Karigar Code <span className="text-[10px] normal-case text-muted-foreground/70">(internal only — never shown to retailers)</span></label>
+          <label className="text-xs font-medium text-muted-foreground">Karigar Code <span className="text-[10px] normal-case text-muted-foreground/70">(internal only — never shown to purchase managers)</span></label>
           <Input className="mt-1" placeholder="e.g. K-104" value={form.karigarCode} onChange={set('karigarCode')} />
         </div>
       </section>

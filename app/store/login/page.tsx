@@ -1,6 +1,6 @@
 import { PortalLoginScreen } from '@/components/auth/PortalLoginScreen';
 
-export const metadata = { title: 'Retailer Login' };
+export const metadata = { title: 'Purchase Manager Login' };
 
 export default function StoreLoginPage() {
   return (
@@ -10,7 +10,7 @@ export default function StoreLoginPage() {
       redirectTo="/store/dashboard"
       forgotHref="/store/forgot-password"
       footerLinks={[
-        { prompt: 'New retailer?', label: 'Register here', href: '/store/register' },
+        { prompt: 'New purchase manager?', label: 'Register here', href: '/store/register' },
       ]}
     />
   );

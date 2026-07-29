@@ -67,7 +67,7 @@ export default function ManufacturerKioskOrdersPage() {
         <OrderFilters
           search={search} onSearch={setSearch}
           status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
-          group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All retailers" groupLabel="Retailer"
+          group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All purchase managers" groupLabel="Purchase manager"
           from={from} to={to} onFrom={setFrom} onTo={setTo}
         />
       )}
@@ -88,7 +88,7 @@ export default function ManufacturerKioskOrdersPage() {
               <button type="button" onClick={() => toggle(o.id)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30">
                 <div className="grid flex-1 grid-cols-2 gap-x-4 sm:grid-cols-4">
                   <div><p className="text-xs text-muted-foreground">Order</p><p className="text-sm font-medium">{o.orderNumber}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Retailer / Store</p><p className="text-sm font-medium text-primary truncate">{o.storeNameSnapshot}</p><p className="text-xs text-muted-foreground truncate">{o.branchNameSnapshot ?? o.storeCitySnapshot ?? ''}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Purchase manager / Store</p><p className="text-sm font-medium text-primary truncate">{o.storeNameSnapshot}</p><p className="text-xs text-muted-foreground truncate">{o.branchNameSnapshot ?? o.storeCitySnapshot ?? ''}</p></div>
                   <div><p className="text-xs text-muted-foreground">Items</p><p className="text-sm tabular-nums">{o.totalItems}</p></div>
                   <div className="flex items-start"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{o.status.toLowerCase()}</span></div>
                 </div>
@@ -109,7 +109,7 @@ export default function ManufacturerKioskOrdersPage() {
                     </div>
                   )}
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to (retailer address)</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to (purchase manager address)</p>
                     <p className="text-sm">{o.shipToStoreAddress || '—'}</p>
                   </div>
                   {detail?.items && (

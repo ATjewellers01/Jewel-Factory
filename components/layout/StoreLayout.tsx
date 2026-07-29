@@ -19,13 +19,13 @@ const NAV = [
   { label: 'Pending Approvals', href: '/store/pending-approvals', icon: ClipboardCheck, section: 'Operations' },
   { label: 'Manufacturer Catalog', href: '/store/manufacturer-catalog', icon: Gem, section: 'Operations' },
   { label: 'Similar Design Search', href: '/store/similar-search', icon: Search, section: 'Operations' },
-  { label: 'B2B Orders', href: '/store/b2b-orders', icon: Package, section: 'Operations' },
+  { label: 'Catalog Orders', href: '/store/b2b-orders', icon: Package, section: 'Operations' },
   { label: 'Kiosk Orders', href: '/store/kiosk-orders', icon: ShoppingBag, section: 'Operations' },
   { label: 'Custom Designs', href: '/store/custom-designs', icon: PencilLine, section: 'Operations' },
   { label: 'Intelligence', href: '/store/intelligence', icon: Lightbulb, section: 'Insights' },
   // Kiosk PIN is managed per-Store on the Stores (Branches) page.
   { label: 'Stores (Branches)', href: '/store/branches', icon: Building2, section: 'Account' },
-  { label: 'Retailer Profile', href: '/store/profile', icon: StoreIcon, section: 'Account' },
+  { label: 'Purchase Manager Profile', href: '/store/profile', icon: StoreIcon, section: 'Account' },
   { label: 'Settings', href: '/store/settings', icon: Settings, section: 'Account' },
 ];
 
@@ -62,8 +62,8 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
       brandName={storeName}
       brandLogo={store.logoUrl || FALLBACK_STORE_LOGO}
       fallbackLogo={FALLBACK_STORE_LOGO}
-      portalLabel="Retailer portal"
-      roleLabel="Retailer"
+      portalLabel="Purchase manager portal"
+      roleLabel="Purchase manager"
       pageLabel={pageLabel}
       nav={NAV}
       onSignOut={signOut}

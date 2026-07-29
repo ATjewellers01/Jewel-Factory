@@ -43,7 +43,7 @@ export default function StoreB2bOrdersPage() {
     <div className="mx-auto w-full max-w-4xl space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-medium tracking-tight">B2B Orders</h1>
+          <h1 className="text-2xl font-medium tracking-tight">Catalog Orders</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">Restock orders you placed from the manufacturer catalog.</p>
         </div>
         <Link href="/store/manufacturer-catalog"><Button className="metal-sheen text-[#17120b] font-semibold"><Plus className="mr-1.5 h-4 w-4" />New Order</Button></Link>
@@ -60,7 +60,7 @@ export default function StoreB2bOrdersPage() {
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
       {data && data.length === 0 && (
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
-          <Package className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No B2B orders yet.</p>
+          <Package className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No Catalog orders yet.</p>
         </div>
       )}
       {data && data.length > 0 && filtered.length === 0 && (
