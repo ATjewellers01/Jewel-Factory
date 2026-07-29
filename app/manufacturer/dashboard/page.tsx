@@ -92,7 +92,7 @@ export default function ManufacturerDashboardPage() {
             <Stat label="Active" value={data.activeDesigns} icon={Package} href="/manufacturer/catalog" />
             <Stat label="B2B Pending" value={data.pendingB2b} icon={ShoppingBag} href="/manufacturer/orders" />
             <Stat label="Kiosk Pending" value={data.pendingKiosk} icon={Users} href="/manufacturer/kiosk-orders" />
-            <Stat label="Approvals" value={data.pendingRegistrations} icon={ClipboardCheck} href="/manufacturer/store-registrations" />
+            <Stat label="Pending Approval" value={data.pendingRegistrations} icon={ClipboardCheck} href="/manufacturer/store-registrations" />
             <Stat label="Active Retailers" value={data.activeStores} icon={StoreIcon} href="/manufacturer/stores" />
           </div>
 

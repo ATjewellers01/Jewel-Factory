@@ -11,6 +11,9 @@ import {
   resetStorePassword,
   setStoreActive,
   deleteStoreByManufacturer,
+  listRetailerBadgeLabels,
+  addRetailerBadgeLabel,
+  removeRetailerBadgeLabel,
 } from '@/lib/db/stores';
 import { getServerEnv } from '@/lib/env';
 import { sendEmail, storeApprovedEmail } from '@/lib/email';
@@ -66,6 +69,7 @@ const EditBody = z.object({
   city: z.string().optional(),
   phone: z.string().optional(),
   extraBranchAllowance: z.coerce.number().int().min(0).optional(),
+  badgeLabel: z.string().nullable().optional(),
 });
 
 manufacturerStoreRoutes.patch('/stores/:id', zValidator('json', EditBody), async (c) => {
@@ -94,4 +98,20 @@ manufacturerStoreRoutes.delete('/stores/:id', async (c) => {
   const ok = await deleteStoreByManufacturer(c.get('manufacturerId'), c.req.param('id'));
   if (!ok) return sendError(c, 'not_found', 'Store not found', 404);
   return sendData(c, { ok: true });
+});
+
+// ── Retailer badge labels (manufacturer's own custom dropdown) ────────────────
+
+manufacturerStoreRoutes.get('/retailer-badge-labels', async (c) => {
+  return sendData(c, await listRetailerBadgeLabels(c.get('manufacturerId')));
+});
+
+const BadgeLabelBody = z.object({ label: z.string().trim().min(1).max(40) });
+
+manufacturerStoreRoutes.post('/retailer-badge-labels', zValidator('json', BadgeLabelBody), async (c) => {
+  return sendData(c, await addRetailerBadgeLabel(c.get('manufacturerId'), c.req.valid('json').label), 201);
+});
+
+manufacturerStoreRoutes.delete('/retailer-badge-labels/:label', async (c) => {
+  return sendData(c, await removeRetailerBadgeLabel(c.get('manufacturerId'), decodeURIComponent(c.req.param('label'))));
 });

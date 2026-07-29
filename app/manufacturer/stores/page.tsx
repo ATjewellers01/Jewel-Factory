@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useApi, apiSend } from '@/hooks/use-api';
+import { useApi, apiPost, apiSend } from '@/hooks/use-api';
 
 type Store = {
   id: string; name: string; slug: string; email: string;
@@ -13,7 +13,7 @@ type Store = {
   city: string | null; addressStreet: string | null; addressCity: string | null; addressState: string | null;
   addressPincode: string | null; addressLandmark: string | null;
   isActive: boolean; registrationStatus: string; createdAt: Date;
-  extraBranchAllowance: number; branchCount: number; storeManagerCount: number;
+  extraBranchAllowance: number; badgeLabel: string | null; branchCount: number; storeManagerCount: number;
   branches: Array<{
     id: string; name: string; addressCity: string | null; createdAt: Date;
     managerCount: number; hasRestockPin: boolean;
@@ -25,6 +25,7 @@ const FREE_BRANCH_LIMIT = 2;
 
 export default function ManufacturerStoresPage() {
   const { data, error, loading, reload } = useApi<Store[]>('/api/manufacturer/stores', '/manufacturer/login');
+  const { data: badgeLabels, reload: reloadBadgeLabels } = useApi<string[]>('/api/manufacturer/retailer-badge-labels', '/manufacturer/login');
   const [editing, setEditing] = useState<Store | null>(null);
   const [pwStore, setPwStore] = useState<Store | null>(null);
 
@@ -56,7 +57,10 @@ export default function ManufacturerStoresPage() {
           {data.map((s) => (
             <div key={s.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{s.name} <span className="text-xs font-normal text-muted-foreground">/{s.slug}</span></p>
+                <p className="truncate text-sm font-medium">
+                  {s.name} <span className="text-xs font-normal text-muted-foreground">/{s.slug}</span>
+                  {s.badgeLabel && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">{s.badgeLabel}</span>}
+                </p>
                 <p className="truncate text-xs text-muted-foreground">{s.email}{s.city ? ` · ${s.city}` : ''}{s.phone ? ` · ${s.phone}` : ''}</p>
               </div>
               <div className="flex items-center gap-2">
@@ -75,25 +79,54 @@ export default function ManufacturerStoresPage() {
         </div>
       )}
 
-      {editing && <EditModal store={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void reload(); }} />}
+      {editing && (
+        <EditModal
+          store={editing}
+          badgeLabels={badgeLabels ?? []}
+          onBadgeLabelsChanged={() => void reloadBadgeLabels()}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); void reload(); }}
+        />
+      )}
       {pwStore && <PasswordModal store={pwStore} onClose={() => setPwStore(null)} />}
     </div>
   );
 }
 
-function EditModal({ store, onClose, onSaved }: { store: Store; onClose: () => void; onSaved: () => void }) {
+function EditModal({
+  store, badgeLabels, onBadgeLabelsChanged, onClose, onSaved,
+}: {
+  store: Store; badgeLabels: string[]; onBadgeLabelsChanged: () => void; onClose: () => void; onSaved: () => void;
+}) {
   const [form, setForm] = useState({
     name: store.name, email: store.email, city: store.city ?? '', phone: store.phone ?? '',
     extraBranchAllowance: String(store.extraBranchAllowance),
   });
+  const [badgeLabel, setBadgeLabel] = useState(store.badgeLabel ?? '');
+  const [newLabel, setNewLabel] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  async function addLabel() {
+    const label = newLabel.trim();
+    if (!label) return;
+    await apiPost('/api/manufacturer/retailer-badge-labels', { label });
+    setNewLabel('');
+    onBadgeLabelsChanged();
+  }
+  async function removeLabel(label: string) {
+    if (!confirm(`Remove badge "${label}"? Any retailer using it will become unassigned.`)) return;
+    await apiSend('DELETE', `/api/manufacturer/retailer-badge-labels/${encodeURIComponent(label)}`);
+    if (badgeLabel === label) setBadgeLabel('');
+    onBadgeLabelsChanged();
+  }
+
   async function save() {
     setBusy(true); setErr(null);
     const extra = parseInt(form.extraBranchAllowance, 10);
     if (Number.isNaN(extra) || extra < 0) { setErr('Extra stores must be 0 or more.'); setBusy(false); return; }
     try {
-      await apiSend('PATCH', `/api/manufacturer/stores/${store.id}`, { ...form, extraBranchAllowance: extra });
+      await apiSend('PATCH', `/api/manufacturer/stores/${store.id}`, { ...form, extraBranchAllowance: extra, badgeLabel: badgeLabel || null });
       onSaved();
     } catch (e) { setErr(e instanceof Error ? e.message : 'Failed'); } finally { setBusy(false); }
   }
@@ -193,6 +226,31 @@ function EditModal({ store, onClose, onSaved }: { store: Store; onClose: () => v
           <p className="text-[11px] text-muted-foreground">
             Effective limit: {FREE_BRANCH_LIMIT} + {parseInt(form.extraBranchAllowance, 10) || 0} = {FREE_BRANCH_LIMIT + (parseInt(form.extraBranchAllowance, 10) || 0)} stores
           </p>
+        </div>
+
+        {/* Retailer badge */}
+        <div className="space-y-2 border-t pt-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Badge</h3>
+          <select
+            className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+            value={badgeLabel}
+            onChange={(e) => setBadgeLabel(e.target.value)}
+          >
+            <option value="">No badge</option>
+            {badgeLabels.map((label) => <option key={label} value={label}>{label}</option>)}
+          </select>
+          <div className="flex flex-wrap gap-1.5">
+            {badgeLabels.map((label) => (
+              <span key={label} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                {label}
+                <button type="button" onClick={() => removeLabel(label)} className="hover:text-red-600" aria-label={`Delete badge ${label}`}>×</button>
+              </span>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Input placeholder="New badge, e.g. Gold Customer" value={newLabel} onChange={(e) => setNewLabel(e.target.value)} />
+            <Button type="button" variant="outline" onClick={addLabel} disabled={!newLabel.trim()}>Add</Button>
+          </div>
         </div>
 
         {err && <p className="text-sm text-red-600">{err}</p>}

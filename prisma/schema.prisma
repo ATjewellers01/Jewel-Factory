@@ -91,6 +91,9 @@ model Manufacturer {
   email        String   @unique
   passwordHash String   @map("password_hash") // bcrypt
   isActive     Boolean  @default(true) @map("is_active")
+  // Custom badge labels the manufacturer defines themselves (e.g. "Gold Customer",
+  // "Premium") to tag their own retailers with — starts empty, manufacturer adds values.
+  retailerBadgeLabels String[] @default([]) @map("retailer_badge_labels")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -147,6 +150,10 @@ model Store {
   // they contact the manufacturer, who grants extra allowance here (editable,
   // not one-time) — effective limit = 2 + extraBranchAllowance.
   extraBranchAllowance Int @default(0) @map("extra_branch_allowance")
+
+  // Manufacturer-assigned badge (e.g. "Gold Customer", "Premium") — one of the
+  // manufacturer's own retailerBadgeLabels, or null if unassigned.
+  badgeLabel String? @map("badge_label")
 
   managers       StoreManager[]
   branches       Branch[]

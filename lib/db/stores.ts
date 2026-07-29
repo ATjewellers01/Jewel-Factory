@@ -17,6 +17,7 @@ export async function listStoresByManufacturer(manufacturerId: string) {
       isActive: true, registrationStatus: true, createdAt: true,
       // Store management
       extraBranchAllowance: true,
+      badgeLabel: true,
       branches: {
         where: { isActive: true },
         orderBy: { createdAt: 'asc' },
@@ -85,7 +86,7 @@ export async function rejectRegistration(storeId: string) {
 export async function updateStoreByManufacturer(
   manufacturerId: string,
   storeId: string,
-  input: { name?: string; email?: string; city?: string; phone?: string; extraBranchAllowance?: number },
+  input: { name?: string; email?: string; city?: string; phone?: string; extraBranchAllowance?: number; badgeLabel?: string | null },
 ) {
   const store = await prisma.store.findFirst({ where: { id: storeId, manufacturerId }, select: { id: true } });
   if (!store) return null;
@@ -97,9 +98,36 @@ export async function updateStoreByManufacturer(
       ...(input.city !== undefined ? { city: input.city } : {}),
       ...(input.phone !== undefined ? { phone: input.phone } : {}),
       ...(input.extraBranchAllowance !== undefined ? { extraBranchAllowance: input.extraBranchAllowance } : {}),
+      ...(input.badgeLabel !== undefined ? { badgeLabel: input.badgeLabel } : {}),
     },
-    select: { id: true, name: true, email: true, city: true, phone: true, extraBranchAllowance: true },
+    select: { id: true, name: true, email: true, city: true, phone: true, extraBranchAllowance: true, badgeLabel: true },
   });
+}
+
+// ── Manufacturer's own custom badge labels (e.g. "Gold Customer", "Premium") ──
+
+export async function listRetailerBadgeLabels(manufacturerId: string): Promise<string[]> {
+  const m = await prisma.manufacturer.findUnique({ where: { id: manufacturerId }, select: { retailerBadgeLabels: true } });
+  return m?.retailerBadgeLabels ?? [];
+}
+
+export async function addRetailerBadgeLabel(manufacturerId: string, label: string): Promise<string[]> {
+  const m = await prisma.manufacturer.findUnique({ where: { id: manufacturerId }, select: { retailerBadgeLabels: true } });
+  const existing = m?.retailerBadgeLabels ?? [];
+  if (existing.includes(label)) return existing;
+  const updated = [...existing, label];
+  await prisma.manufacturer.update({ where: { id: manufacturerId }, data: { retailerBadgeLabels: updated } });
+  return updated;
+}
+
+export async function removeRetailerBadgeLabel(manufacturerId: string, label: string): Promise<string[]> {
+  const m = await prisma.manufacturer.findUnique({ where: { id: manufacturerId }, select: { retailerBadgeLabels: true } });
+  const updated = (m?.retailerBadgeLabels ?? []).filter((l) => l !== label);
+  await prisma.manufacturer.update({ where: { id: manufacturerId }, data: { retailerBadgeLabels: updated } });
+  // Unassign this badge from any retailer currently using it, so a deleted label
+  // never lingers as an orphaned badgeLabel value on a store.
+  await prisma.store.updateMany({ where: { manufacturerId, badgeLabel: label }, data: { badgeLabel: null } });
+  return updated;
 }
 
 export async function resetStorePassword(manufacturerId: string, storeId: string, newPassword: string) {
