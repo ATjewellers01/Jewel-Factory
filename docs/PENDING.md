@@ -1,6 +1,6 @@
 # Jewel Factory — Pending Work
 
-**Updated 2026-07-24.** `retailer-multistore` is now merged into `master` — code is
+**Updated 2026-07-30.** `retailer-multistore` is now merged into `master` — code is
 on `master`. Production is live on **AWS EC2** (RDS + pgvector + S3/CloudFront +
 Docker), see `AWS_MIGRATION.md`; whether Render is still serving traffic alongside
 it is unconfirmed. Tick karte jao.
@@ -11,7 +11,29 @@ Related docs: `HANDOVER.md` (client setup) · `DATABASE.md` (schema) ·
 
 ---
 
-## -1. This session's fixes (2026-07-24)
+## -2. This session's work (2026-07-30) — 11-item client punch list
+
+**All 11 items done, committed, pushed to `origin/master` + `teamai/feature/sales-analytics`.
+NOT YET deployed to AWS as of this write-up — see the one open item below.**
+
+- [x] Design name removed everywhere (design number is the sole identifier now)
+- [x] Karigar Code + Pieces fields on Add/Edit Design (Karigar Code manufacturer-only, structurally omitted from every retailer/store-manager query)
+- [x] Manual "Generate Try-On" button (independent of "Generate all") + per-catalog-image quick-generate in edit mode
+- [x] Retailer gets a product detail modal on `/store/manufacturer-catalog` (was static cards)
+- [x] Similar-search: top 5 + "Show more" pagination (Store Manager + Retailer)
+- [x] Retailer similar-search gets Add-to-Cart (previously a no-op)
+- [x] Server-backed Favorites (Retailer + Store Manager, scoped separately) + heart toggle + Favorites panel next to Cart
+- [x] Cart-time remarks — audited, already existed via `requirementNote`, no change needed
+- [x] Manufacturer-defined retailer badges (custom labels, assign per retailer) + dashboard "Approvals" → "Pending Approval"
+- [x] Registration overhaul: 2 steps (was 3, manager step removed), pincode-first address (India Post API auto-fill), no manual password (mobile number = password after approval), field renames + validators
+- [x] Cascade-delete fix — deleting a retailer previously threw a FK violation for any retailer with order history; now fully cleans up (see `DATABASE.md` migration 13)
+- [x] Display-text rename: "B2B order"→"Catalog order", "Custom order"→"Customised order", "Retailer"→"Purchase manager" (UI text only — routes/DB/enums unchanged, see `CLAUDE.md` Terminology note)
+- [x] Raw AI photo upload limit 3MB → 15MB
+
+**Open:**
+- [ ] **AWS EC2 container needs rebuild + redeploy** to pick up all of the above + apply 4 new migrations (`product_karigar_pieces_nullable_name`, `favorite_products`, `retailer_badges`, `retailer_delete_cascade`). Latest commit: `7ccc362` (rename batch) — see git log on `master` for the full list of this session's commits. Exact AWS rebuild command still not documented here (same gap noted below in §3) — ask whoever owns the deploy script/CI, or reuse the Docker build+restart steps from a prior session if you have them.
+
+## -1. Previous session's fixes (2026-07-24)
 - [x] **Manufacturer Intelligence 500s fixed** — BigInt-from-`SUM()` not being converted to `Number` before `JSON.stringify` in `lib/db/analytics-queries.ts` (3 functions). Pushed to `origin/master` + `teamai/feature/sales-analytics`.
 - [ ] **AWS EC2 container needs rebuild + redeploy** to pick up the above fix — pushing to git does NOT update the running Docker container by itself. Exact rebuild command not identified this session — ask Abhay or find the deploy script/CI config.
 - [x] **Retailer sidebar "Analytics" link hidden** (page kept, not deleted — it's reachable directly at `/store/analytics`).

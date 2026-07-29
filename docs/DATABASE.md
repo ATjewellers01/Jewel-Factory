@@ -23,6 +23,11 @@ Hierarchy baad me add hui, isliye table naam UI naam se alag hain:
 
 > Code me "store" ka matlab **Retailer** hai, dukaan nahi. Dukaan = `branch`.
 
+> **Display-text rename (2026-07-30):** UI me ab "Retailer" har jagah **"Purchase manager"** dikhta hai
+> (sirf display text — code/DB/routes/enum values sab "Retailer"/"store" hi rahenge). Isi tarah
+> "B2B order" → "Catalog order", "Custom order" → "Customised order" (UI text only, `B2bOrder`/
+> `CustomDesignOrder` models aur `OrderKind.B2B`/`OrderKind.CUSTOM` enums unchanged).
+
 ---
 
 ## Hierarchy (kaun kis se juda)
@@ -44,8 +49,8 @@ Customer ka koi table nahi — walk-in, PII store nahi hota.
 ### AUTH / IDENTITY
 | Table | Kya |
 |---|---|
-| `manufacturers` | Global admin. email + bcrypt password. |
-| `stores` (**Retailer**) | slug (kiosk), email+password, registration_status (PENDING/APPROVED/REJECTED), branding (logo/tagline), fixed HO address, kiosk_pin_hash. |
+| `manufacturers` | Global admin. email + bcrypt password. **retailer_badge_labels** (naya — String[], manufacturer khud custom badge labels banata hai e.g. "Gold Customer", har store pe `badge_label` se assign hota hai). |
+| `stores` (**Retailer** — UI: "Purchase manager") | slug (kiosk), email+password (**no password set at registration since 2026-07-30** — placeholder hash until approval sets it to the mobile number), registration_status (PENDING/APPROVED/REJECTED), branding (logo/tagline), fixed HO address, kiosk_pin_hash, extra_branch_allowance, **badge_label** (naya, manufacturer-assigned custom badge). |
 | `store_managers` (**legacy/inert** — old HO Manager, role removed) | store_id, email+password. Unique (store_id, email). Table remains for historical approver references; no login/creation. |
 | `branches` (**Store**) | retailer_id, name, fixed address, phone, **restock_pin_hash**, is_active. |
 | `branch_managers` (**Store Manager**) | branch_id, email+password. Unique (branch_id, email). |
@@ -54,9 +59,10 @@ Customer ka koi table nahi — walk-in, PII store nahi hota.
 ### MANUFACTURER CATALOG (global, gold-only, no price)
 | Table | Kya |
 |---|---|
-| `manufacturer_products` | design_number (JF-XXXX unique), name, category, sub_category, weight, purity, has_tryon, status (DRAFT/ACTIVE/ARCHIVED). |
+| `manufacturer_products` | design_number (JF-XXXX unique, **sole display identifier**), **name (nullable, deprecated — design name removed 2026-07-30, unused by new products)**, category, sub_category, weight, purity, **pieces** (kitne physical pieces = weight, e.g. bangle pair = 2), **karigar_code** (manufacturer-internal only — kabhi retailer/store-manager ko dikhta nahi, structurally `omit`ted in every public query), has_tryon, status (DRAFT/ACTIVE/ARCHIVED). |
 | `manufacturer_product_images` | product_id, cloudinary url, is_primary, sort. |
 | `manufacturer_product_embeddings` | product_id, qdrant_point_id — photo-search index. |
+| `favorite_products` | **(naya, 2026-07-30)** store_id + branch_id (null = Retailer ka apna favorite, set = us Store Manager ka) + manufacturer_product_id. Unique (store_id, branch_id, manufacturer_product_id). Retailer aur Store Manager ka favorites list kabhi share nahi hota. |
 
 ### STORE RETAIL CATALOG (B2B delivery pe materialize)
 | Table | Kya |
@@ -107,12 +113,20 @@ Customer ka koi table nahi — walk-in, PII store nahi hota.
 | 3 | `20260715120000_b2b_item_image` | b2b_order_items image + design snapshots. |
 | 4 | `20260717000000_branch_hierarchy` | **branches + branch_managers** tables; orders pe branch_id + requirement_note; kiosk/custom PII nullable. |
 | 5 | `20260718000000_order_messages` | **order_messages** table + enums; kiosk/b2b/custom pe completed_at. |
+| 6 | `20260722000000_add_analytics_indexes` | Analytics query performance ke liye indexes. |
+| 7 | `20260722010000_custom_design_weight_range` | Custom design request pe weight range columns. |
+| 8 | `20260722090000_pgvector` | `manufacturer_product_embeddings.embedding vector(512)` column — pgvector similar-search. |
+| 9 | `20260724000000_extra_branch_allowance` | `stores.extra_branch_allowance`. |
+| 10 | `20260730000000_product_karigar_pieces_nullable_name` | `manufacturer_products.name` DROP NOT NULL; adds `pieces` + `karigar_code`. |
+| 11 | `20260730010000_favorite_products` | **favorite_products** table. |
+| 12 | `20260730020000_retailer_badges` | `manufacturers.retailer_badge_labels` + `stores.badge_label`. |
+| 13 | `20260730030000_retailer_delete_cascade` | `b2b_orders`/`kiosk_orders`/`custom_design_orders` FK to stores: RESTRICT → CASCADE (retailer delete was silently broken for any retailer with order history). |
 
-Sab hand-authored + **idempotent** (IF NOT EXISTS / DROP NOT NULL) — partial re-run safe.
+Sab hand-authored + **idempotent** (IF NOT EXISTS / DROP NOT NULL / DROP CONSTRAINT IF EXISTS) — partial re-run safe.
 
 ### Fresh DB
 ```bash
-pnpm db:deploy   # migrations 1→5, poora schema
+pnpm db:deploy   # migrations 1→13, poora schema
 pnpm db:seed     # manufacturer + 14 categories
 ```
 
@@ -134,3 +148,4 @@ pnpm migrate:branches     # har retailer me default "Main Store" branch + purane
 - Manufacturer: global catalog.
 - `order_messages`: `storeId` se scoped — Head Office (Retailer) aur Store Manager sirf apne orders ke messages dekh sakte.
 - Customer PII kabhi manufacturer tak nahi jaata.
+- **Retailer delete (manufacturer action) ab poori tarah cascade karta hai** — `deleteStoreByManufacturer` (`lib/db/stores.ts`) transaction me: FK-cascading tables (branches, branch_managers, products, custom_design_requests, ab b2b/kiosk/custom orders bhi) automatically delete hote hain; jo tables sirf plain `storeId` string se scoped hain (koi FK nahi — `favorite_products`, `order_messages`, `product_views`, `tryon_events`, `product_sales`) unko explicitly delete kiya jaata hai store delete se pehle.
