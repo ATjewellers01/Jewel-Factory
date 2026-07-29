@@ -32,7 +32,7 @@ const CATEGORY_TO_JEWELLERY_TYPE: Record<string, (typeof JEWELLERY_TYPES)[number
 
 export type ProductFormData = {
   id?: string;
-  name: string;
+  name?: string;
   category: string;
   subCategory: string;
   description: string;
@@ -122,7 +122,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   // Describe: fill name + description (editable). Returns the new name (so the
   // "generate all" flow can pass it to catalog/transparent without waiting for
   // React state to update).
-  async function aiDescribe(withInstr = false): Promise<{ designName: string; description: string } | null> {
+  async function aiDescribe(withInstr = false): Promise<{ description: string } | null> {
     if (!aiRaw) { setAiError('Choose a raw photo first.'); return null; }
     setAiBusy('describe'); setAiError(null);
     try {
@@ -130,10 +130,10 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
       fd.append('category', form.category); fd.append('subCategory', form.subCategory);
       fd.append('weight', form.weightGrams); fd.append('purity', form.purity);
       const res = await fetch('/api/manufacturer/ai/describe', { method: 'POST', credentials: 'same-origin', body: fd });
-      const json = (await res.json()) as { data?: { designName: string; description: string }; error?: { message: string } };
+      const json = (await res.json()) as { data?: { description: string }; error?: { message: string } };
       console.log('[ai:describe]', res.status, json);
       if (!res.ok || !json.data) throw new Error(`Describe failed (HTTP ${res.status}): ${json.error?.message ?? 'no details returned'}`);
-      setForm((p) => ({ ...p, name: json.data!.designName || p.name, description: json.data!.description || p.description }));
+      setForm((p) => ({ ...p, description: json.data!.description || p.description }));
       return json.data;
     } catch (e) {
       console.error('[ai:describe] failed', e);
@@ -182,27 +182,23 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
     } finally { setAiBusy(null); }
   }
 
-  // Generate everything at once: name/desc → create product (design number) → images.
+  // Generate everything at once: description → create product → catalog image → try-on PNG.
   async function aiGenerateAll() {
     if (!aiRaw) { setAiError('Choose a raw photo first.'); return; }
     setAiBusy('all'); setAiError(null);
     console.log('[ai:generate-all] start');
     try {
-      // Step 1: AI generates name + description
+      // Step 1: AI generates description
       console.log('[ai:generate-all] step 1/4 — describe');
       const described = await aiDescribe(false);
       if (!described) {
         console.error('[ai:generate-all] aborted at step 1 (describe) — see [ai:describe] logs above');
         setAiBusy(null);
-        return; // describe failed, error already set
+        return;
       }
 
-      // Step 2: Update form with the new name + description. Read both explicitly
-      // off `described` (NOT form.description) — `form` here is the stale closure
-      // from before aiDescribe's setForm() ran, so spreading it would silently
-      // overwrite the description aiDescribe just fetched back to empty (the same
-      // stale-closure class of bug as the image-upload one fixed earlier).
-      const updatedForm = { ...form, name: form.name.trim() || described.designName, description: described.description || form.description };
+      // Step 2: Update form with description. Read explicitly off `described` to avoid stale closure issues.
+      const updatedForm = { ...form, description: described.description || form.description };
       setForm(updatedForm);
 
       // Step 3: Create product immediately (generates design number) before images
@@ -212,7 +208,6 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: updatedForm.name,
           category: updatedForm.category || undefined,
           subCategory: updatedForm.subCategory || undefined,
           description: updatedForm.description || undefined,
@@ -233,10 +228,17 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
       setBusy(false);
 
       // Step 4: Generate catalog image
-      console.log('[ai:generate-all] step 3/3 — catalog image');
+      console.log('[ai:generate-all] step 3/4 — catalog image');
       const catalogOk = await aiCatalog(false);
-      console.log(catalogOk ? '[ai:generate-all] done' : '[ai:generate-all] step 3 (catalog) failed — see [ai:catalog] logs above');
-      // Note: Try-on PNG generation is now manual-only to reduce generation time + costs
+      if (!catalogOk) {
+        console.error('[ai:generate-all] step 3 (catalog) failed — see [ai:catalog] logs above');
+        return;
+      }
+
+      // Step 5: Generate try-on PNG
+      console.log('[ai:generate-all] step 4/4 — try-on PNG');
+      const tryonOk = await aiTransparent(false);
+      console.log(tryonOk ? '[ai:generate-all] done' : '[ai:generate-all] step 4 (try-on) failed — see [ai:transparent] logs above');
     } catch (e) {
       console.error('[ai:generate-all] failed', e);
       setAiError(e instanceof Error ? e.message : 'Generate all failed');
@@ -570,7 +572,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
               <p className="text-xs text-muted-foreground">Generate (edit anything after):</p>
               <div className="flex flex-wrap gap-2">
                 <Button type="button" size="sm" disabled={!aiRaw || !!aiBusy} onClick={() => aiDescribe(false)} className="metal-sheen text-[#17120b] font-semibold">
-                  {aiBusy === 'describe' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Name + Description</>}
+                  {aiBusy === 'describe' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Description</>}
                 </Button>
                 <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy} onClick={() => aiCatalog(false)}>
                   {aiBusy === 'catalog' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Catalog image</>}
@@ -592,8 +594,8 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
                 <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiTransparent(true)} title="Regenerate try-on with this instruction">
                   <RefreshCw className="mr-1 h-3.5 w-3.5" />Try-on
                 </Button>
-                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiDescribe(true)} title="Rewrite name/description with this instruction">
-                  <RefreshCw className="mr-1 h-3.5 w-3.5" />Text
+                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiDescribe(true)} title="Regenerate description with this instruction">
+                  <RefreshCw className="mr-1 h-3.5 w-3.5" />Description
                 </Button>
               </div>
             </div>
@@ -614,12 +616,8 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         </section>
       )}
 
-      {/* Name + remaining fields (after AI generate) */}
+      {/* Min Order Qty + Status fields */}
       <section className="space-y-3">
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">Design Name *</label>
-          <Input className="mt-1" placeholder="e.g. Lotus Jhumka Set" value={form.name} onChange={set('name')} />
-        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="text-xs font-medium text-muted-foreground">Min Order Qty</label>
@@ -635,13 +633,9 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         </div>
       </section>
 
-      {/* Photos — placed AFTER the details so the design name exists before the
-          first upload creates the product (empty name → 400 on create). */}
+      {/* Photos */}
       <section className="space-y-2">
         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Catalog Photos</label>
-        {!form.name.trim() && (
-          <p className="text-xs text-muted-foreground">Enter a design name above to upload photos.</p>
-        )}
         <div className="flex flex-wrap gap-3">
           {images.map((img) => (
             <div key={img.id} className="flex flex-col gap-2">
@@ -658,7 +652,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
                   variant="outline"
                   size="sm"
                   onClick={() => generateTryOnFromImage(img.secureUrl)}
-                  disabled={!form.name.trim() || !!aiBusy}
+                  disabled={!!aiBusy}
                   className="h-7 w-full text-[11px]"
                   title="Generate AR try-on from this image"
                 >
@@ -671,8 +665,8 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
           <button
             type="button"
             onClick={() => imageInput.current?.click()}
-            disabled={uploadingImage || !form.name.trim()}
-            title={!form.name.trim() ? 'Enter a design name first' : undefined}
+            disabled={uploadingImage || !form.id}
+            title={!form.id ? 'Save the product first to upload photos' : undefined}
             className="flex h-24 w-24 flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-muted-foreground hover:border-primary/50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-input disabled:hover:text-muted-foreground"
           >
             {uploadingImage ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
@@ -685,9 +679,6 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
       {/* AR Try-On */}
       <section className="space-y-2 rounded-xl border p-4">
         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">AR Try-On (transparent PNG)</label>
-        {!form.name.trim() && !tryon && (
-          <p className="text-xs text-muted-foreground">Enter a design name above to upload a try-on asset.</p>
-        )}
         {tryon ? (
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -707,7 +698,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
                 {JEWELLERY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
-            <Button type="button" variant="outline" size="sm" disabled={uploadingTryon || !form.name.trim()} title={!form.name.trim() ? 'Enter a design name first' : undefined} onClick={() => tryonInput.current?.click()}>
+            <Button type="button" variant="outline" size="sm" disabled={uploadingTryon || !form.id} title={!form.id ? 'Save the product first to upload try-on' : undefined} onClick={() => tryonInput.current?.click()}>
               {uploadingTryon ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />}
               Upload PNG
             </Button>
@@ -717,8 +708,8 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
                 variant="outline"
                 size="sm"
                 onClick={() => aiTransparent(false)}
-                disabled={!aiRaw || !!aiBusy || !form.name.trim()}
-                title={!aiRaw ? 'Upload a raw photo in the AI panel first' : !form.name.trim() ? 'Enter a design name first' : undefined}
+                disabled={!aiRaw || !!aiBusy}
+                title={!aiRaw ? 'Upload a raw photo in the AI panel first' : undefined}
               >
                 {aiBusy === 'transparent' ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />}
                 Generate Try-On
