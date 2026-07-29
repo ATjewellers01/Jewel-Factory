@@ -72,8 +72,8 @@ export default function StoreProfilePage() {
           <Field label="Store phone" value={store.phone ?? ''} onChange={(v) => set('phone', v)} />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Owner name" value={store.ownerName ?? ''} onChange={(v) => set('ownerName', v)} />
-          <Field label="Owner phone" value={store.ownerPhone ?? ''} onChange={(v) => set('ownerPhone', v)} />
+          <Field label="Person name" value={store.ownerName ?? ''} onChange={(v) => set('ownerName', v)} />
+          <Field label="Mobile number" value={store.ownerPhone ?? ''} onChange={(v) => set('ownerPhone', v)} />
         </div>
         <h2 className="pt-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Fixed Delivery Address (manufacturer ships here)</h2>
         <Field label="Street" value={store.addressStreet ?? ''} onChange={(v) => set('addressStreet', v)} />

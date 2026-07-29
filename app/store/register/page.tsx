@@ -6,18 +6,15 @@ import {
   Check,
   CheckCircle2,
   Clock3,
-  Eye,
-  EyeOff,
   Loader2,
   LockKeyhole,
   MapPin,
   Store,
   Upload,
-  UserRound,
   X,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { PortalLoginScreen } from '@/components/auth/PortalLoginScreen';
 import { Wordmark } from '@/components/landing/Wordmark';
@@ -26,43 +23,40 @@ import { Input } from '@/components/ui/input';
 
 interface FormState {
   name: string;
-  ownerName: string;
-  ownerPhone: string;
+  personName: string;
+  mobileNumber: string;
   email: string;
-  password: string;
   logoUrl: string;
+  addressPincode: string;
   addressStreet: string;
   addressCity: string;
   addressState: string;
-  addressPincode: string;
   addressLandmark: string;
-  managerName: string;
-  managerEmail: string;
-  managerPassword: string;
-  managerPhone: string;
 }
 
 const INITIAL: FormState = {
-  name: '', ownerName: '', ownerPhone: '', email: '', password: '', logoUrl: '',
-  addressStreet: '', addressCity: '', addressState: '', addressPincode: '', addressLandmark: '',
-  managerName: '', managerEmail: '', managerPassword: '', managerPhone: '',
+  name: '', personName: '', mobileNumber: '', email: '', logoUrl: '',
+  addressPincode: '', addressStreet: '', addressCity: '', addressState: '', addressLandmark: '',
 };
 
 const STEPS = [
   { number: 1, label: 'Business', icon: Store },
   { number: 2, label: 'Address', icon: MapPin },
-  { number: 3, label: 'Manager', icon: UserRound },
 ] as const;
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2;
+
+// name: letters + spaces only. mobile: exactly 10 digits. business name: letters,
+// numbers, spaces and common punctuation (no validator too strict to reject real names).
+const NAME_RE = /^[A-Za-z ]{2,}$/;
+const MOBILE_RE = /^[6-9]\d{9}$/;
+const BUSINESS_NAME_RE = /^[A-Za-z0-9 &.,'-]{2,}$/;
 
 const fieldClass = 'h-12 rounded-xl border-[#ded5ca] bg-white/85 px-4 text-sm font-normal normal-case tracking-normal text-[#2b2119] shadow-none transition-[border-color,box-shadow,background] placeholder:font-normal placeholder:normal-case placeholder:tracking-normal placeholder:text-[#aaa095] focus-visible:border-[#b98a35] focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#c9a84c]/15';
 const labelClass = 'grid gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#756b62]';
 
 export default function StoreRegisterPage() {
   const [form, setForm] = useState<FormState>(INITIAL);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showManagerPassword, setShowManagerPassword] = useState(false);
   const [step, setStep] = useState<Step>(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,11 +65,37 @@ export default function StoreRegisterPage() {
   const [logoError, setLogoError] = useState<string | null>(null);
   const logoInput = useRef<HTMLInputElement>(null);
   const [success, setSuccess] = useState(false);
+  const [pincodeLookup, setPincodeLookup] = useState<'idle' | 'loading' | 'found' | 'not-found'>('idle');
 
   const set = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
   };
+
+  // Auto-fill city/state from the PIN code (India Post API) once 6 digits are entered.
+  useEffect(() => {
+    const pin = form.addressPincode.trim();
+    if (!/^\d{6}$/.test(pin)) { setPincodeLookup('idle'); return; }
+    let cancelled = false;
+    setPincodeLookup('loading');
+    (async () => {
+      try {
+        const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+        const json = (await res.json()) as Array<{ Status: string; PostOffice: Array<{ District: string; State: string }> | null }>;
+        if (cancelled) return;
+        const po = json[0]?.PostOffice?.[0];
+        if (json[0]?.Status === 'Success' && po) {
+          setForm((prev) => ({ ...prev, addressCity: po.District, addressState: po.State }));
+          setPincodeLookup('found');
+        } else {
+          setPincodeLookup('not-found');
+        }
+      } catch {
+        if (!cancelled) setPincodeLookup('not-found');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [form.addressPincode]);
 
   /**
    * Upload the logo straight to S3 via a presigned PUT. The sign route is public
@@ -126,19 +146,19 @@ export default function StoreRegisterPage() {
 
   function validate(target: Step): string | null {
     if (target === 1) {
-      if (!form.name.trim() || !form.ownerName.trim() || !form.ownerPhone.trim() || !form.email.trim()) {
+      if (!form.name.trim() || !form.personName.trim() || !form.mobileNumber.trim() || !form.email.trim()) {
         return 'Complete all required business details to continue.';
       }
+      if (!BUSINESS_NAME_RE.test(form.name.trim())) return 'Business name can only contain letters, numbers, spaces and & . , \' -';
+      if (!NAME_RE.test(form.personName.trim())) return 'Person name can only contain letters and spaces.';
+      if (!MOBILE_RE.test(form.mobileNumber.trim())) return 'Enter a valid 10-digit mobile number.';
       if (!/^\S+@\S+\.\S+$/.test(form.email)) return 'Enter a valid business email address.';
-      if (form.password.length < 6) return 'Your password must be at least 6 characters.';
     }
-    if (target === 2 && (!form.addressStreet.trim() || !form.addressCity.trim() || !form.addressState.trim() || !form.addressPincode.trim())) {
+    if (target === 2 && (!form.addressPincode.trim() || !form.addressStreet.trim() || !form.addressCity.trim() || !form.addressState.trim())) {
       return 'Complete the fixed delivery address to continue.';
     }
-    if (target === 3) {
-      if (!form.managerName.trim() || !form.managerEmail.trim()) return 'Complete all required manager details.';
-      if (!/^\S+@\S+\.\S+$/.test(form.managerEmail)) return 'Enter a valid manager email address.';
-      if (form.managerPassword.length < 6) return 'The manager password must be at least 6 characters.';
+    if (target === 2 && !/^\d{6}$/.test(form.addressPincode.trim())) {
+      return 'Enter a valid 6-digit PIN code.';
     }
     return null;
   }
@@ -147,14 +167,14 @@ export default function StoreRegisterPage() {
     const message = validate(step);
     if (message) return setError(message);
     setError(null);
-    setStep((current) => Math.min(3, current + 1) as Step);
+    setStep((current) => Math.min(2, current + 1) as Step);
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (step < 3) return nextStep();
-    for (const target of [1, 2, 3] as const) {
+    if (step < 2) return nextStep();
+    for (const target of [1, 2] as const) {
       const message = validate(target);
       if (message) {
         setStep(target);
@@ -216,7 +236,7 @@ export default function StoreRegisterPage() {
               <span className="inline-flex items-center gap-1.5 text-xs text-[#8a8178]"><Clock3 className="h-3.5 w-3.5 text-[#ad8438]" /> About 3 minutes</span>
             </div>
 
-            <nav className="my-5 grid grid-cols-3" aria-label="Application progress">
+            <nav className="my-5 grid grid-cols-2" aria-label="Application progress">
               {STEPS.map(({ number, label, icon: Icon }, index) => {
                 const complete = step > number;
                 const active = step === number;
@@ -245,18 +265,11 @@ export default function StoreRegisterPage() {
                   <p className="-mt-3 text-sm leading-6 text-[#7b7269]">Use the Head Office details you want associated with every branch.</p>
                   <label className={labelClass}>Business name <Input autoFocus autoComplete="organization" placeholder="e.g. Mehta Jewellers" value={form.name} onChange={set('name')} className={fieldClass} /></label>
                   <div className="grid gap-5 lg:grid-cols-2">
-                    <label className={labelClass}>Owner name <Input autoComplete="name" placeholder="Full name" value={form.ownerName} onChange={set('ownerName')} className={fieldClass} /></label>
-                    <label className={labelClass}>Owner phone <Input type="tel" autoComplete="tel" inputMode="tel" placeholder="Contact number" value={form.ownerPhone} onChange={set('ownerPhone')} className={fieldClass} /></label>
+                    <label className={labelClass}>Person name <Input autoComplete="name" placeholder="Full name" value={form.personName} onChange={set('personName')} className={fieldClass} /></label>
+                    <label className={labelClass}>Mobile number <Input type="tel" autoComplete="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number" value={form.mobileNumber} onChange={set('mobileNumber')} className={fieldClass} /></label>
                   </div>
                   <label className={labelClass}>Business email <Input type="email" autoComplete="email" inputMode="email" placeholder="Used to sign in" value={form.email} onChange={set('email')} className={fieldClass} /></label>
-                  <label className={labelClass}>Create password
-                    <span className="relative">
-                      <Input type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="At least 6 characters" value={form.password} onChange={set('password')} className={`${fieldClass} pr-12`} />
-                      <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[#8d8379] hover:bg-[#f2ede5] hover:text-[#2b2119]" aria-label={showPassword ? 'Hide password' : 'Show password'}>
-                        {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                      </button>
-                    </span>
-                  </label>
+                  <p className="flex items-center gap-2 rounded-xl bg-[#f4f0e8] px-4 py-3 text-xs leading-5 text-[#746b62]"><LockKeyhole className="h-4 w-4 shrink-0 text-[#a77d31]" /> No password to set — after approval, sign in with this email and mobile number.</p>
                   <div className={labelClass}>
                     <span className="flex items-center justify-between">
                       Store logo <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
@@ -307,36 +320,20 @@ export default function StoreRegisterPage() {
                 <fieldset className="space-y-5">
                   <legend className="font-display text-[1.35rem] tracking-tight">Where should orders arrive?</legend>
                   <p className="-mt-3 text-sm leading-6 text-[#7b7269]">Approved orders are shipped to this fixed Head Office address.</p>
-                  <label className={labelClass}>Street address <Input autoFocus autoComplete="street-address" placeholder="Building, street and area" value={form.addressStreet} onChange={set('addressStreet')} className={fieldClass} /></label>
+                  <label className={labelClass}>
+                    <span className="flex items-center justify-between">
+                      Pincode
+                      {pincodeLookup === 'loading' && <span className="inline-flex items-center gap-1 font-normal normal-case tracking-normal text-[#a39a91]"><Loader2 className="h-3 w-3 animate-spin" />Looking up…</span>}
+                      {pincodeLookup === 'not-found' && <span className="font-normal normal-case tracking-normal text-red-600">PIN not found — enter city/state manually</span>}
+                    </span>
+                    <Input autoFocus autoComplete="postal-code" inputMode="numeric" maxLength={6} placeholder="6-digit PIN code" value={form.addressPincode} onChange={set('addressPincode')} className={fieldClass} />
+                  </label>
                   <div className="grid gap-5 lg:grid-cols-2">
                     <label className={labelClass}>City <Input autoComplete="address-level2" placeholder="City" value={form.addressCity} onChange={set('addressCity')} className={fieldClass} /></label>
                     <label className={labelClass}>State <Input autoComplete="address-level1" placeholder="State" value={form.addressState} onChange={set('addressState')} className={fieldClass} /></label>
                   </div>
-                  <div className="grid gap-5 lg:grid-cols-2">
-                    <label className={labelClass}>Pincode <Input autoComplete="postal-code" inputMode="numeric" placeholder="Postal code" value={form.addressPincode} onChange={set('addressPincode')} className={fieldClass} /></label>
-                    <label className={labelClass}><span className="flex items-center justify-between">Landmark <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span></span><Input placeholder="Nearby landmark" value={form.addressLandmark} onChange={set('addressLandmark')} className={fieldClass} /></label>
-                  </div>
-                </fieldset>
-              )}
-
-              {step === 3 && (
-                <fieldset className="space-y-5">
-                  <legend className="font-display text-[1.35rem] tracking-tight">Create the first manager account</legend>
-                  <p className="-mt-3 text-sm leading-6 text-[#7b7269]">This manager will operate your first store after approval.</p>
-                  <div className="grid gap-5 lg:grid-cols-2">
-                    <label className={labelClass}>Manager name <Input autoFocus autoComplete="name" placeholder="Full name" value={form.managerName} onChange={set('managerName')} className={fieldClass} /></label>
-                    <label className={labelClass}><span className="flex items-center justify-between">Manager phone <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span></span><Input type="tel" autoComplete="tel" inputMode="tel" placeholder="Contact number" value={form.managerPhone} onChange={set('managerPhone')} className={fieldClass} /></label>
-                  </div>
-                  <label className={labelClass}>Manager email <Input type="email" autoComplete="off" inputMode="email" placeholder="Used for manager sign in" value={form.managerEmail} onChange={set('managerEmail')} className={fieldClass} /></label>
-                  <label className={labelClass}>Manager password
-                    <span className="relative">
-                      <Input type={showManagerPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="At least 6 characters" value={form.managerPassword} onChange={set('managerPassword')} className={`${fieldClass} pr-12`} />
-                      <button type="button" onClick={() => setShowManagerPassword((value) => !value)} className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[#8d8379] hover:bg-[#f2ede5] hover:text-[#2b2119]" aria-label={showManagerPassword ? 'Hide manager password' : 'Show manager password'}>
-                        {showManagerPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                      </button>
-                    </span>
-                  </label>
-                  <p className="flex items-center gap-2 rounded-xl bg-[#f4f0e8] px-4 py-3 text-xs leading-5 text-[#746b62]"><LockKeyhole className="h-4 w-4 shrink-0 text-[#a77d31]" /> Passwords are encrypted and never included in approval emails.</p>
+                  <label className={labelClass}>Street address <Input autoComplete="street-address" placeholder="Building, street and area" value={form.addressStreet} onChange={set('addressStreet')} className={fieldClass} /></label>
+                  <label className={labelClass}><span className="flex items-center justify-between">Landmark <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span></span><Input placeholder="Nearby landmark" value={form.addressLandmark} onChange={set('addressLandmark')} className={fieldClass} /></label>
                 </fieldset>
               )}
             </section>
@@ -349,7 +346,7 @@ export default function StoreRegisterPage() {
                   <ArrowLeft className="h-4 w-4" /> Back
                 </Button>
               )}
-              {step < 3 ? (
+              {step < 2 ? (
                 <Button key="continue" type="button" onClick={nextStep} className="metal-sheen h-12 flex-1 rounded-xl border-0 font-semibold text-[#17120b] shadow-[0_10px_25px_rgba(166,119,45,0.18)] transition-transform hover:-translate-y-0.5">
                   Continue <ArrowRight className="h-4 w-4" />
                 </Button>

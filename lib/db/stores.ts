@@ -56,6 +56,10 @@ export async function listPendingRegistrations() {
 export async function approveRegistration(manufacturerId: string, storeId: string) {
   const store = await prisma.store.findFirst({ where: { id: storeId, registrationStatus: 'PENDING' } });
   if (!store) return null;
+  // Login credentials are set on approval: email (already the username) +
+  // mobile number as the password — no password was collected at registration.
+  const mobileNumber = store.ownerPhone ?? store.phone;
+  const passwordHash = mobileNumber ? await hashPassword(mobileNumber) : store.passwordHash;
   const updated = await prisma.store.update({
     where: { id: storeId },
     data: {
@@ -63,6 +67,7 @@ export async function approveRegistration(manufacturerId: string, storeId: strin
       registrationReviewedAt: new Date(),
       manufacturerId,
       isActive: true,
+      passwordHash,
     },
     // Return the fields the approval email needs.
     select: {

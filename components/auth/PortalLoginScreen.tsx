@@ -77,9 +77,9 @@ const portalContent = {
   'retailer-registration': {
     eyebrow: 'Retailer partnership',
     title: 'Join the Jewel Factory network.',
-    description: 'Share your Head Office details, delivery address, and first store manager for review.',
+    description: 'Share your Head Office details and delivery address for review.',
     loginTitle: 'Start your application',
-    loginDescription: 'Three short steps. Your progress stays here as you continue.',
+    loginDescription: 'Two short steps. Your progress stays here as you continue.',
     accessLabel: 'Retailer application',
     documentTitle: 'Retailer Registration',
     leftFooter: 'Submitted securely for manufacturer review',
@@ -88,7 +88,7 @@ const portalContent = {
     features: [
       { icon: Building2, text: 'Share your business and delivery details' },
       { icon: ClipboardCheck, text: 'Submit once for manufacturer review' },
-      { icon: Users, text: 'Create your first store manager account' },
+      { icon: Users, text: 'Sign in with your email and mobile number once approved' },
     ],
   },
 } as const;

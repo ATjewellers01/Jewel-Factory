@@ -1,6 +1,7 @@
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { deleteCookie, setCookie } from 'hono/cookie';
+import crypto from 'node:crypto';
 import { z } from 'zod';
 
 import { prisma } from '@/lib/prisma';
@@ -88,22 +89,24 @@ storeAuthRoutes.get('/me', storeGuard, async (c) => {
 
 // ── Self-registration (public, pending manufacturer approval) ─────────────────
 
+// name: letters + spaces. mobile: 10-digit Indian number. business name: letters,
+// numbers, spaces and common punctuation. Mirrors the frontend's validators —
+// re-checked server-side since the client can't be trusted.
+const NAME_RE = /^[A-Za-z ]{2,}$/;
+const MOBILE_RE = /^[6-9]\d{9}$/;
+const BUSINESS_NAME_RE = /^[A-Za-z0-9 &.,'-]{2,}$/;
+
 const RegisterBody = z.object({
-  name: z.string().min(2),
+  name: z.string().min(2).regex(BUSINESS_NAME_RE, 'Business name has invalid characters'),
   email: z.string().email(),
-  password: z.string().min(6),
-  ownerName: z.string().min(2),
-  ownerPhone: z.string().min(7),
+  personName: z.string().min(2).regex(NAME_RE, 'Person name must be letters only'),
+  mobileNumber: z.string().regex(MOBILE_RE, 'Enter a valid 10-digit mobile number'),
   logoUrl: z.preprocess(emptyToUndef, z.string().url().optional()),
+  addressPincode: z.string().regex(/^\d{6}$/, 'Enter a valid 6-digit PIN code'),
   addressStreet: z.string().min(3),
   addressCity: z.string().min(2),
   addressState: z.string().min(2),
-  addressPincode: z.string().min(4),
   addressLandmark: z.preprocess(emptyToUndef, z.string().optional()),
-  managerName: z.string().min(2),
-  managerEmail: z.string().email(),
-  managerPassword: z.string().min(6),
-  managerPhone: z.preprocess(emptyToUndef, z.string().optional()),
 });
 
 // POST /api/store/register
@@ -115,10 +118,10 @@ storeAuthRoutes.post('/register', zValidator('json', RegisterBody), async (c) =>
   if (existing) return sendError(c, 'conflict', 'Email already registered', 409);
 
   const slug = await uniqueStoreSlug(slugify(body.name));
-  const [storeHash, managerHash] = await Promise.all([
-    hashPassword(body.password),
-    hashPassword(body.managerPassword),
-  ]);
+  // No password is set at registration — the retailer signs in with email +
+  // mobile number once approved (see approveRegistration in lib/db/stores.ts,
+  // which hashes the mobile number as the password on approval).
+  const placeholderHash = await hashPassword(crypto.randomUUID());
 
   try {
     const store = await prisma.store.create({
@@ -126,26 +129,19 @@ storeAuthRoutes.post('/register', zValidator('json', RegisterBody), async (c) =>
         name: body.name,
         slug,
         email,
-        passwordHash: storeHash,
+        passwordHash: placeholderHash,
         registrationStatus: 'PENDING',
         registrationSubmittedAt: new Date(),
         isActive: false,
-        ownerName: body.ownerName,
-        ownerPhone: body.ownerPhone,
+        ownerName: body.personName,
+        ownerPhone: body.mobileNumber,
+        phone: body.mobileNumber,
         logoUrl: body.logoUrl as string | undefined,
         addressStreet: body.addressStreet,
         addressCity: body.addressCity,
         addressState: body.addressState,
         addressPincode: body.addressPincode,
         addressLandmark: body.addressLandmark as string | undefined,
-        managers: {
-          create: {
-            name: body.managerName,
-            email: body.managerEmail.toLowerCase().trim(),
-            passwordHash: managerHash,
-            phone: body.managerPhone as string | undefined,
-          },
-        },
       },
       select: { id: true, name: true, slug: true, registrationStatus: true },
     });

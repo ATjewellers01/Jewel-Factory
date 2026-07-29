@@ -244,7 +244,7 @@ export function storeApprovedEmail(opts: {
         <td style="padding:16px 18px;">
           <p style="margin:0 0 4px;color:#9a927e;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Retailer login</p>
           <p style="margin:0;color:${INK};font-size:14px;font-weight:600;">${ownerEmail}</p>
-          <p style="margin:8px 0 0;color:#9a927e;font-size:12px;">Use the password you set during registration.</p>
+          <p style="margin:8px 0 0;color:#9a927e;font-size:12px;">Sign in using this email and your registered mobile number as the password.</p>
         </td>
       </tr>
     </table>

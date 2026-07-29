@@ -139,16 +139,16 @@ function EditModal({
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact Info (Editable)</h3>
           <Input placeholder="Business Name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
           <Input placeholder="Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
-          <Input placeholder="Phone" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+          <Input placeholder="Mobile Number" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
           <Input placeholder="City" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
         </div>
 
         {/* Read-only owner info */}
         <div className="space-y-2 border-b pb-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Owner Details (Read-only)</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Person Details (Read-only)</h3>
           <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
             <p><span className="text-muted-foreground">Name:</span> <span className="font-medium">{store.ownerName || '—'}</span></p>
-            <p><span className="text-muted-foreground">Phone:</span> <span className="font-medium">{store.ownerPhone || '—'}</span></p>
+            <p><span className="text-muted-foreground">Mobile:</span> <span className="font-medium">{store.ownerPhone || '—'}</span></p>
           </div>
         </div>
 
