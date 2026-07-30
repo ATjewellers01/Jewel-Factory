@@ -115,18 +115,44 @@ export default function ManufacturerCatalogBrowsePage() {
             <div className="space-y-2">
               {favorites.entries.map((f) => {
                 const img = f.manufacturerProduct.images.find((i) => i.isPrimary) ?? f.manufacturerProduct.images[0];
-                const inCart = cart.items.some((i) => i.productId === f.manufacturerProductId);
+                const inCartQty = cart.items.find((i) => i.productId === f.manufacturerProductId)?.quantity ?? 0;
+                const fullProduct = (data ?? []).find((p) => p.id === f.manufacturerProductId);
                 return (
                   <div key={f.id} className="flex items-center gap-3">
-                    {img ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={img.secureUrl} alt="" className="h-12 w-12 rounded-lg border bg-white object-contain p-0.5" />
-                    ) : <div className="h-12 w-12 rounded-lg border bg-muted" />}
-                    <div className="flex-1 min-w-0"><p className="truncate text-sm">{f.manufacturerProduct.designNumber}</p></div>
-                    <Button size="sm" variant={inCart ? 'outline' : 'default'} className={inCart ? 'border-green-300 text-green-700' : 'metal-sheen text-[#17120b] font-semibold'}
-                      onClick={() => cart.add({ productId: f.manufacturerProductId, name: f.manufacturerProduct.designNumber, designNumber: f.manufacturerProduct.designNumber, imageUrl: img?.secureUrl })}>
-                      {inCart ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => fullProduct && setDetail(fullProduct)}
+                      disabled={!fullProduct}
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
+                    >
+                      {img ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={img.secureUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
+                      ) : <div className="h-12 w-12 shrink-0 rounded-lg border bg-muted" />}
+                      <p className={`truncate text-sm ${fullProduct ? 'hover:text-primary' : ''}`}>{f.manufacturerProduct.designNumber}</p>
+                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => (inCartQty <= 1 ? cart.remove(f.manufacturerProductId) : cart.setQty(f.manufacturerProductId, inCartQty - 1))}
+                        disabled={inCartQty === 0}
+                        className="rounded border p-1 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="w-6 text-center text-sm tabular-nums">{inCartQty}</span>
+                      <button
+                        onClick={() => {
+                          if (inCartQty === 0) {
+                            cart.add({ productId: f.manufacturerProductId, name: f.manufacturerProduct.designNumber, designNumber: f.manufacturerProduct.designNumber, imageUrl: img?.secureUrl });
+                          } else {
+                            cart.setQty(f.manufacturerProductId, inCartQty + 1);
+                          }
+                        }}
+                        className="rounded border p-1"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
                     <button onClick={() => void favorites.toggle(f.manufacturerProductId)} className="text-muted-foreground hover:text-red-600"><Heart className="h-4 w-4 fill-red-500 text-red-500" /></button>
                   </div>
                 );
@@ -144,17 +170,28 @@ export default function ManufacturerCatalogBrowsePage() {
           ) : (
             <>
               <div className="space-y-2">
-                {cart.items.map((i) => (
-                  <div key={i.productId} className="flex items-center gap-3">
-                    <div className="flex-1 min-w-0"><p className="truncate text-sm">{i.name}</p><p className="text-xs text-muted-foreground">{i.designNumber}</p></div>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => cart.setQty(i.productId, i.quantity - 1)} className="rounded border p-1"><Minus className="h-3 w-3" /></button>
-                      <span className="w-8 text-center text-sm tabular-nums">{i.quantity}</span>
-                      <button onClick={() => cart.setQty(i.productId, i.quantity + 1)} className="rounded border p-1"><Plus className="h-3 w-3" /></button>
+                {cart.items.map((i) => {
+                  const fullProduct = (data ?? []).find((p) => p.id === i.productId);
+                  return (
+                    <div key={i.productId} className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => fullProduct && setDetail(fullProduct)}
+                        disabled={!fullProduct}
+                        className="min-w-0 flex-1 text-left disabled:cursor-default"
+                      >
+                        <p className={`truncate text-sm ${fullProduct ? 'hover:text-primary' : ''}`}>{i.name}</p>
+                        <p className="text-xs text-muted-foreground">{i.designNumber}</p>
+                      </button>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => (i.quantity <= 1 ? cart.remove(i.productId) : cart.setQty(i.productId, i.quantity - 1))} className="rounded border p-1"><Minus className="h-3 w-3" /></button>
+                        <span className="w-8 text-center text-sm tabular-nums">{i.quantity}</span>
+                        <button onClick={() => cart.setQty(i.productId, i.quantity + 1)} className="rounded border p-1"><Plus className="h-3 w-3" /></button>
+                      </div>
+                      <button onClick={() => cart.remove(i.productId)} className="text-muted-foreground hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
                     </div>
-                    <button onClick={() => cart.remove(i.productId)} className="text-muted-foreground hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <textarea placeholder="Notes for manufacturer (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[60px]" />
               <p className="text-xs text-muted-foreground">Ships to your fixed store address.</p>

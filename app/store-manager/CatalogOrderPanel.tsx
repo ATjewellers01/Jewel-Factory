@@ -183,21 +183,31 @@ export function CatalogOrderPanel({
           ) : (
             <>
               <div className="space-y-2">
-                {cart.map((l) => (
-                  <div key={l.productId} className="flex items-center gap-3">
-                    {l.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={l.imageUrl} alt="" className="h-12 w-12 rounded-lg border bg-white object-contain p-0.5" />
-                    ) : <div className="h-12 w-12 rounded-lg border bg-muted" />}
-                    <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{l.designNumber ?? l.name}</p></div>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => setQty(l.productId, l.quantity - 1)} className="rounded border p-1"><Minus className="h-3 w-3" /></button>
-                      <span className="w-8 text-center text-sm tabular-nums">{l.quantity}</span>
-                      <button onClick={() => setQty(l.productId, l.quantity + 1)} className="rounded border p-1"><Plus className="h-3 w-3" /></button>
+                {cart.map((l) => {
+                  const fullProduct = (data ?? []).find((p) => p.id === l.productId);
+                  return (
+                    <div key={l.productId} className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => fullProduct && setDetail(fullProduct)}
+                        disabled={!fullProduct}
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
+                      >
+                        {l.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={l.imageUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
+                        ) : <div className="h-12 w-12 shrink-0 rounded-lg border bg-muted" />}
+                        <p className={`truncate text-sm font-medium ${fullProduct ? 'hover:text-[#b68a3e]' : ''}`}>{l.designNumber ?? l.name}</p>
+                      </button>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setQty(l.productId, l.quantity - 1)} className="rounded border p-1"><Minus className="h-3 w-3" /></button>
+                        <span className="w-8 text-center text-sm tabular-nums">{l.quantity}</span>
+                        <button onClick={() => setQty(l.productId, l.quantity + 1)} className="rounded border p-1"><Plus className="h-3 w-3" /></button>
+                      </div>
+                      <button onClick={() => setQty(l.productId, 0)} className="text-muted-foreground hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
                     </div>
-                    <button onClick={() => setQty(l.productId, 0)} className="text-muted-foreground hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Requirement / note (goes to Head Office)</label>
@@ -228,16 +238,44 @@ export function CatalogOrderPanel({
               ) : (
                 favorites.entries.map((f) => {
                   const img = f.manufacturerProduct.images.find((i) => i.isPrimary) ?? f.manufacturerProduct.images[0];
+                  const inCartQty = cart.find((l) => l.productId === f.manufacturerProductId)?.quantity ?? 0;
+                  const fullProduct = (data ?? []).find((p) => p.id === f.manufacturerProductId);
                   return (
                     <div key={f.id} className="flex items-center gap-3">
-                      {img ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={img.secureUrl} alt="" className="h-12 w-12 rounded-lg border bg-white object-contain p-0.5" />
-                      ) : <div className="h-12 w-12 rounded-lg border bg-muted" />}
-                      <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{f.manufacturerProduct.designNumber}</p></div>
-                      <Button size="sm" variant="outline" onClick={() => { orderCart.add({ productId: f.manufacturerProductId, name: f.manufacturerProduct.designNumber, designNumber: f.manufacturerProduct.designNumber, imageUrl: img?.secureUrl }); }}>
-                        <Plus className="h-3.5 w-3.5" />
-                      </Button>
+                      <button
+                        type="button"
+                        onClick={() => fullProduct && setDetail(fullProduct)}
+                        disabled={!fullProduct}
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
+                      >
+                        {img ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={img.secureUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
+                        ) : <div className="h-12 w-12 shrink-0 rounded-lg border bg-muted" />}
+                        <p className={`truncate text-sm font-medium ${fullProduct ? 'hover:text-[#b68a3e]' : ''}`}>{f.manufacturerProduct.designNumber}</p>
+                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setQty(f.manufacturerProductId, inCartQty - 1)}
+                          disabled={inCartQty === 0}
+                          className="rounded border p-1 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <span className="w-6 text-center text-sm tabular-nums">{inCartQty}</span>
+                        <button
+                          onClick={() => {
+                            if (inCartQty === 0) {
+                              orderCart.add({ productId: f.manufacturerProductId, name: f.manufacturerProduct.designNumber, designNumber: f.manufacturerProduct.designNumber, imageUrl: img?.secureUrl });
+                            } else {
+                              setQty(f.manufacturerProductId, inCartQty + 1);
+                            }
+                          }}
+                          className="rounded border p-1"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
                       <button onClick={() => void favorites.toggle(f.manufacturerProductId)} className="text-muted-foreground hover:text-red-600"><Heart className="h-4 w-4 fill-red-500 text-red-500" /></button>
                     </div>
                   );
