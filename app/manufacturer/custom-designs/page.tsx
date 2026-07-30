@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useApi, apiSend } from '@/hooks/use-api';
 import { CUSTOM_ORDER_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
@@ -14,6 +15,7 @@ type Order = {
   category: string; weightGramsMin: string | null; weightGramsMax: string | null; purity: string | null;
   referenceImageUrl: string | null; designNotes: string | null;
   status: string; trackingNumber: string | null; createdAt: string;
+  karigarCode: string | null;
 };
 
 function formatWeightRange(min: string | null, max: string | null): string {
@@ -41,17 +43,34 @@ export default function ManufacturerCustomDesignsPage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [zoomUrl, setZoomUrl] = useState<string | null>(null);
+  const [karigarFilter, setKarigarFilter] = useState('');
+  const [karigarDraft, setKarigarDraft] = useState<Record<string, string>>({});
+  const [savingKarigar, setSavingKarigar] = useState<string | null>(null);
 
   const retailerOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((o) => o.storeNameSnapshot)), [data]);
+  const karigarOptions = useMemo(() => [...new Set((data ?? []).map((o) => o.karigarCode).filter((k): k is string => !!k))].sort(), [data]);
   const filtered = useMemo(
-    () => (data ?? []).filter((o) => matchOrder(o, { search, status, searchLabel: o.category, branch: retailer, branchName: o.storeNameSnapshot, from, to })),
-    [data, search, status, retailer, from, to],
+    () => (data ?? []).filter((o) =>
+      matchOrder(o, { search, status, searchLabel: o.category, branch: retailer, branchName: o.storeNameSnapshot, from, to }) &&
+      (!karigarFilter || o.karigarCode === karigarFilter),
+    ),
+    [data, search, status, retailer, from, to, karigarFilter],
   );
 
   async function advance(id: string, status: string) {
     setBusy(id);
     try { await apiSend('PATCH', `/api/manufacturer/custom-designs/${id}`, { status }); void reload(); }
     catch (e) { alert(e instanceof Error ? e.message : 'Failed'); } finally { setBusy(null); }
+  }
+
+  async function saveKarigarCode(id: string) {
+    const value = (karigarDraft[id] ?? '').trim();
+    setSavingKarigar(id);
+    try {
+      await apiSend('PATCH', `/api/manufacturer/custom-designs/${id}/karigar-code`, { karigarCode: value || null });
+      void reload();
+    } catch (e) { alert(e instanceof Error ? e.message : 'Could not save karigar code'); }
+    finally { setSavingKarigar(null); }
   }
 
   return (
@@ -61,12 +80,20 @@ export default function ManufacturerCustomDesignsPage() {
         <p className="mt-0.5 text-sm text-muted-foreground">Sanitized from stores — no customer data. Ship to the store address.</p>
       </div>
       {data && data.length > 0 && (
-        <OrderFilters
-          search={search} onSearch={setSearch} searchPlaceholder="Search by order ID / category…"
-          status={status} onStatus={setStatus} statusOptions={CUSTOM_ORDER_STATUS_OPTIONS}
-          group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All purchase managers" groupLabel="Purchase manager"
-          from={from} to={to} onFrom={setFrom} onTo={setTo}
-        />
+        <div className="space-y-2">
+          <OrderFilters
+            search={search} onSearch={setSearch} searchPlaceholder="Search by order ID / category…"
+            status={status} onStatus={setStatus} statusOptions={CUSTOM_ORDER_STATUS_OPTIONS}
+            group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All purchase managers" groupLabel="Purchase manager"
+            from={from} to={to} onFrom={setFrom} onTo={setTo}
+          />
+          {karigarOptions.length > 0 && (
+            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={karigarFilter} onChange={(e) => setKarigarFilter(e.target.value)}>
+              <option value="">All karigars</option>
+              {karigarOptions.map((k) => <option key={k} value={k}>{k}</option>)}
+            </select>
+          )}
+        </div>
       )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
@@ -87,7 +114,10 @@ export default function ManufacturerCustomDesignsPage() {
                   <div><p className="text-xs text-muted-foreground">Order</p><p className="text-sm font-medium">{o.orderNumber}</p></div>
                   <div><p className="text-xs text-muted-foreground">Store</p><p className="text-sm font-medium text-primary truncate">{o.storeNameSnapshot}</p></div>
                   <div><p className="text-xs text-muted-foreground">Category</p><p className="text-sm">{o.category}</p></div>
-                  <div className="flex items-start"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{o.status.replace('_', ' ').toLowerCase()}</span></div>
+                  <div className="flex items-start gap-1.5">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{o.status.replace('_', ' ').toLowerCase()}</span>
+                    {o.karigarCode && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Karigar: {o.karigarCode}</span>}
+                  </div>
                 </div>
                 {expanded === o.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
               </button>
@@ -97,6 +127,20 @@ export default function ManufacturerCustomDesignsPage() {
                     {formatWeightRange(o.weightGramsMin, o.weightGramsMax) && <div><p className="text-xs text-muted-foreground">Weight</p><p>{formatWeightRange(o.weightGramsMin, o.weightGramsMax)}</p></div>}
                     {o.purity && <div><p className="text-xs text-muted-foreground">Purity</p><p>{o.purity}</p></div>}
                     {o.trackingNumber && <div><p className="text-xs text-muted-foreground">Tracking</p><p className="font-mono text-xs">{o.trackingNumber}</p></div>}
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Karigar Code</p>
+                    <div className="mt-1 flex gap-2">
+                      <Input
+                        placeholder="e.g. K-104"
+                        value={karigarDraft[o.id] ?? o.karigarCode ?? ''}
+                        onChange={(e) => setKarigarDraft((prev) => ({ ...prev, [o.id]: e.target.value }))}
+                        className="h-9 max-w-[160px] text-sm"
+                      />
+                      <Button size="sm" variant="outline" disabled={savingKarigar === o.id} onClick={() => saveKarigarCode(o.id)}>
+                        {savingKarigar === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
+                      </Button>
+                    </div>
                   </div>
                   <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to (store address)</p><p className="text-sm">{o.storeAddressSnapshot}</p></div>
                   {o.designNotes && <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Design Notes</p><p className="text-sm">{o.designNotes}</p></div>}

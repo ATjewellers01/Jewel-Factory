@@ -6,7 +6,7 @@ import {
   getB2bOrdersByManufacturer, getB2bOrderForManufacturer, advanceB2bOrderStatus,
   getKioskOrdersByManufacturer, getKioskOrderForManufacturer, advanceKioskOrderStatus,
 } from '@/lib/db/orders';
-import { listCustomOrdersByManufacturer, advanceCustomOrderStatus } from '@/lib/db/custom-design';
+import { listCustomOrdersByManufacturer, advanceCustomOrderStatus, setCustomOrderKarigarCode } from '@/lib/db/custom-design';
 import { getStoreById } from '@/lib/db/store-read';
 import { sendData, sendError } from '../envelope';
 import { manufacturerGuard, type AppEnv } from '../guards';
@@ -94,6 +94,15 @@ manufacturerOrderRoutes.get('/custom-designs', async (c) => {
 manufacturerOrderRoutes.patch('/custom-designs/:id', zValidator('json', CustomStatusBody), async (c) => {
   const { status, trackingNumber } = c.req.valid('json');
   const ok = await advanceCustomOrderStatus(c.get('manufacturerId'), c.req.param('id'), status as CustomOrderStatus, trackingNumber);
+  if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
+  return sendData(c, { ok: true });
+});
+
+const KarigarCodeBody = z.object({ karigarCode: z.string().trim().max(60).nullable() });
+
+manufacturerOrderRoutes.patch('/custom-designs/:id/karigar-code', zValidator('json', KarigarCodeBody), async (c) => {
+  const { karigarCode } = c.req.valid('json');
+  const ok = await setCustomOrderKarigarCode(c.get('manufacturerId'), c.req.param('id'), karigarCode || null);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, { ok: true });
 });

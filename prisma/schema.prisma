@@ -633,6 +633,10 @@ model CustomDesignOrder {
   status         CustomOrderStatus @default(PENDING)
   orderNumber    String            @unique @map("order_number") // CD-YYYYMMDD-XXXX
   trackingNumber String?           @map("tracking_number")
+  // Manually assigned by the manufacturer after reviewing the request — there's
+  // no existing catalog product for a custom design, so this can't be looked up
+  // like ManufacturerProduct.karigarCode; the manufacturer sets it directly.
+  karigarCode    String?           @map("karigar_code")
   createdAt      DateTime          @default(now()) @map("created_at")
   updatedAt      DateTime          @updatedAt @map("updated_at")
 

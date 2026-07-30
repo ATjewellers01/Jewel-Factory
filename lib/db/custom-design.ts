@@ -145,7 +145,7 @@ export async function listCustomOrdersByManufacturer(manufacturerId: string) {
     select: {
       id: true, orderNumber: true, storeNameSnapshot: true, storeAddressSnapshot: true,
       category: true, weightGramsMin: true, weightGramsMax: true, purity: true, referenceImageUrl: true, designNotes: true,
-      status: true, trackingNumber: true, createdAt: true,
+      status: true, trackingNumber: true, karigarCode: true, createdAt: true,
     },
   });
 }
@@ -162,5 +162,14 @@ export async function advanceCustomOrderStatus(
     where: { id },
     data: { status, ...(trackingNumber ? { trackingNumber } : {}) },
   });
+  return true;
+}
+
+// Manually assigned by the manufacturer — custom orders have no existing
+// catalog product to look a karigar code up from.
+export async function setCustomOrderKarigarCode(manufacturerId: string, id: string, karigarCode: string | null) {
+  const o = await prisma.customDesignOrder.findFirst({ where: { id, manufacturerId }, select: { id: true } });
+  if (!o) return false;
+  await prisma.customDesignOrder.update({ where: { id }, data: { karigarCode } });
   return true;
 }

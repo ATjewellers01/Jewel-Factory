@@ -6,10 +6,14 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
+import { ManufacturerOrderItemModal, type OrderItemProduct } from '@/components/orders/ManufacturerOrderItemModal';
 import { Button } from '@/components/ui/button';
 import { useApi, apiSend } from '@/hooks/use-api';
 
-type Item = { id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; productDesignSnapshot: string | null; quantity: number };
+type Item = {
+  id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; productDesignSnapshot: string | null; quantity: number;
+  manufacturerProduct: OrderItemProduct | null;
+};
 type Order = {
   id: string; orderNumber: string; status: string; totalItems: number; deliveryAddress: string;
   notes: string | null; requirementNote: string | null; branchNameSnapshot: string | null;
@@ -30,6 +34,7 @@ export default function ManufacturerOrderDetailPage() {
   const [busy, setBusy] = useState(false);
   const [tracking, setTracking] = useState('');
   const [zoomItem, setZoomItem] = useState<Item | null>(null);
+  const [productModal, setProductModal] = useState<OrderItemProduct | null>(null);
 
   async function advance(status: string) {
     setBusy(true);
@@ -73,22 +78,31 @@ export default function ManufacturerOrderDetailPage() {
         <div className="border-b bg-muted/40 px-4 py-3"><p className="text-sm font-medium">Items ({data.totalItems})</p></div>
         <div className="divide-y">
           {data.items.map((i) => (
-            <div key={i.id} className="flex items-center gap-3 px-4 py-3">
+            <button
+              key={i.id}
+              type="button"
+              onClick={() => i.manufacturerProduct && setProductModal(i.manufacturerProduct)}
+              disabled={!i.manufacturerProduct}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 disabled:cursor-default disabled:hover:bg-transparent"
+            >
               {i.productImageSnapshot ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={i.productImageSnapshot}
                   alt={i.productNameSnapshot ?? ''}
-                  className="h-20 w-20 flex-shrink-0 rounded-lg border bg-white object-contain p-1 cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => setZoomItem(i)}
+                  className="h-20 w-20 shrink-0 rounded-lg border bg-white object-contain p-1 cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={(e) => { e.stopPropagation(); setZoomItem(i); }}
                 />
-              ) : <div className="h-20 w-20 flex-shrink-0 rounded-lg border bg-muted" />}
+              ) : <div className="h-20 w-20 shrink-0 rounded-lg border bg-muted" />}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{i.productNameSnapshot ?? 'Product'}</p>
                 {i.productDesignSnapshot && <p className="text-xs text-muted-foreground">{i.productDesignSnapshot}</p>}
+                {i.manufacturerProduct?.karigarCode && (
+                  <span className="mt-0.5 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Karigar: {i.manufacturerProduct.karigarCode}</span>
+                )}
               </div>
               <span className="text-sm tabular-nums text-muted-foreground">× {i.quantity}</span>
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -113,6 +127,8 @@ export default function ManufacturerOrderDetailPage() {
           onClose={() => setZoomItem(null)}
         />
       )}
+
+      {productModal && <ManufacturerOrderItemModal product={productModal} onClose={() => setProductModal(null)} />}
     </div>
   );
 }

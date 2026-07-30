@@ -8,7 +8,7 @@ import { OrderFilters } from '@/components/orders/OrderFilters';
 import { useApi } from '@/hooks/use-api';
 import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
-type Order = { id: string; orderNumber: string; status: string; totalItems: number; createdAt: string; storeName: string | null; storeCity: string | null };
+type Order = { id: string; orderNumber: string; status: string; totalItems: number; createdAt: string; storeName: string | null; storeCity: string | null; karigarCodes?: string[] };
 
 const STATUS: Record<string, string> = {
   PENDING: 'bg-yellow-100 text-yellow-800', CONFIRMED: 'bg-blue-100 text-blue-800',
@@ -23,11 +23,16 @@ export default function ManufacturerOrdersPage() {
   const [retailer, setRetailer] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [karigarFilter, setKarigarFilter] = useState('');
 
   const retailerOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((o) => o.storeName)), [data]);
+  const karigarOptions = useMemo(() => [...new Set((data ?? []).flatMap((o) => o.karigarCodes ?? []))].sort(), [data]);
   const filtered = useMemo(
-    () => (data ?? []).filter((o) => matchOrder(o, { search, status, branch: retailer, branchName: o.storeName, from, to })),
-    [data, search, status, retailer, from, to],
+    () => (data ?? []).filter((o) =>
+      matchOrder(o, { search, status, branch: retailer, branchName: o.storeName, from, to }) &&
+      (!karigarFilter || (o.karigarCodes ?? []).includes(karigarFilter)),
+    ),
+    [data, search, status, retailer, from, to, karigarFilter],
   );
 
   return (
@@ -37,12 +42,20 @@ export default function ManufacturerOrdersPage() {
         <p className="mt-0.5 text-sm text-muted-foreground">Restock orders placed by stores from your catalog.</p>
       </div>
       {data && data.length > 0 && (
-        <OrderFilters
-          search={search} onSearch={setSearch}
-          status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
-          group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All purchase managers" groupLabel="Purchase manager"
-          from={from} to={to} onFrom={setFrom} onTo={setTo}
-        />
+        <div className="space-y-2">
+          <OrderFilters
+            search={search} onSearch={setSearch}
+            status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
+            group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All purchase managers" groupLabel="Purchase manager"
+            from={from} to={to} onFrom={setFrom} onTo={setTo}
+          />
+          {karigarOptions.length > 0 && (
+            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={karigarFilter} onChange={(e) => setKarigarFilter(e.target.value)}>
+              <option value="">All karigars</option>
+              {karigarOptions.map((k) => <option key={k} value={k}>{k}</option>)}
+            </select>
+          )}
+        </div>
       )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}

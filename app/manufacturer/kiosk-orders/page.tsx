@@ -4,18 +4,23 @@ import { Loader2, Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
+import { ManufacturerOrderItemModal, type OrderItemProduct } from '@/components/orders/ManufacturerOrderItemModal';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { useApi, apiSend } from '@/hooks/use-api';
 import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
 // Manufacturer view: NO customer PII, NO amount. Ships to store address.
-type Item = { id: string; productNameSnapshot: string; productImageSnapshot: string | null; categorySnapshot: string | null; quantity: number };
+type Item = {
+  id: string; productNameSnapshot: string; productImageSnapshot: string | null; categorySnapshot: string | null; quantity: number;
+  product: OrderItemProduct | null;
+};
 type Order = {
   id: string; orderNumber: string; status: string; totalItems: number;
   storeNameSnapshot: string; storeCitySnapshot: string | null;
   branchNameSnapshot: string | null; requirementNote: string | null;
   shipToStoreAddress: string; createdAt: string; items?: Item[];
+  karigarCodes?: string[];
 };
 
 const STATUS: Record<string, string> = {
@@ -36,11 +41,20 @@ export default function ManufacturerKioskOrdersPage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [zoomItem, setZoomItem] = useState<Item | null>(null);
+  const [productModal, setProductModal] = useState<OrderItemProduct | null>(null);
+  const [karigarFilter, setKarigarFilter] = useState('');
 
   const retailerOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((o) => o.storeNameSnapshot)), [data]);
+  const karigarOptions = useMemo(
+    () => [...new Set((data ?? []).flatMap((o) => o.karigarCodes ?? []))].sort(),
+    [data],
+  );
   const filtered = useMemo(
-    () => (data ?? []).filter((o) => matchOrder(o, { search, status, branch: retailer, branchName: o.storeNameSnapshot, from, to })),
-    [data, search, status, retailer, from, to],
+    () => (data ?? []).filter((o) =>
+      matchOrder(o, { search, status, branch: retailer, branchName: o.storeNameSnapshot, from, to }) &&
+      (!karigarFilter || (o.karigarCodes ?? []).includes(karigarFilter)),
+    ),
+    [data, search, status, retailer, from, to, karigarFilter],
   );
 
   async function toggle(id: string) {
@@ -64,12 +78,20 @@ export default function ManufacturerKioskOrdersPage() {
         <p className="mt-0.5 text-sm text-muted-foreground">Guest orders from store kiosks. Ship to the store address shown.</p>
       </div>
       {data && data.length > 0 && (
-        <OrderFilters
-          search={search} onSearch={setSearch}
-          status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
-          group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All purchase managers" groupLabel="Purchase manager"
-          from={from} to={to} onFrom={setFrom} onTo={setTo}
-        />
+        <div className="space-y-2">
+          <OrderFilters
+            search={search} onSearch={setSearch}
+            status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
+            group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All purchase managers" groupLabel="Purchase manager"
+            from={from} to={to} onFrom={setFrom} onTo={setTo}
+          />
+          {karigarOptions.length > 0 && (
+            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={karigarFilter} onChange={(e) => setKarigarFilter(e.target.value)}>
+              <option value="">All karigars</option>
+              {karigarOptions.map((k) => <option key={k} value={k}>{k}</option>)}
+            </select>
+          )}
+        </div>
       )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
@@ -117,19 +139,30 @@ export default function ManufacturerKioskOrdersPage() {
                       <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Items</p>
                       <div className="space-y-2">
                         {detail.items.map((it) => (
-                          <div key={it.id} className="flex items-center gap-3">
+                          <button
+                            key={it.id}
+                            type="button"
+                            onClick={() => it.product && setProductModal(it.product)}
+                            disabled={!it.product}
+                            className="flex w-full items-center gap-3 rounded-lg text-left hover:bg-black/5 disabled:cursor-default disabled:hover:bg-transparent"
+                          >
                             {it.productImageSnapshot ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 src={it.productImageSnapshot}
                                 alt={it.productNameSnapshot}
-                                className="h-20 w-20 flex-shrink-0 rounded-lg border bg-white object-contain p-1 cursor-pointer hover:shadow-md transition-shadow"
-                                onClick={() => setZoomItem(it)}
+                                className="h-20 w-20 shrink-0 rounded-lg border bg-white object-contain p-1 cursor-pointer hover:shadow-md transition-shadow"
+                                onClick={(e) => { e.stopPropagation(); setZoomItem(it); }}
                               />
-                            ) : <div className="h-20 w-20 flex-shrink-0 rounded-lg border bg-muted" />}
-                            <span className="flex-1 text-sm font-medium">{it.productNameSnapshot}</span>
+                            ) : <div className="h-20 w-20 shrink-0 rounded-lg border bg-muted" />}
+                            <span className="flex-1">
+                              <span className="block text-sm font-medium">{it.productNameSnapshot}</span>
+                              {it.product?.karigarCode && (
+                                <span className="mt-0.5 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Karigar: {it.product.karigarCode}</span>
+                              )}
+                            </span>
                             <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
-                          </div>
+                          </button>
                         ))}
                       </div>
                     </div>
@@ -154,6 +187,8 @@ export default function ManufacturerKioskOrdersPage() {
           onClose={() => setZoomItem(null)}
         />
       )}
+
+      {productModal && <ManufacturerOrderItemModal product={productModal} onClose={() => setProductModal(null)} />}
     </div>
   );
 }

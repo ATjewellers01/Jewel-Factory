@@ -169,17 +169,52 @@ export async function updateKioskRequirementNote(storeId: string, id: string, no
 
 // Manufacturer view (approved only) — customer PII stripped in the route layer.
 export async function getKioskOrdersByManufacturer(manufacturerId: string) {
-  return prisma.kioskOrder.findMany({
+  const orders = await prisma.kioskOrder.findMany({
     where: { manufacturerId, pendingStoreApproval: false, forwardedToManufacturer: true },
     orderBy: { createdAt: 'desc' },
+    include: { items: { select: { manufacturerProductId: true } } },
   });
+  const allIds = [...new Set(orders.flatMap((o) => o.items.map((i) => i.manufacturerProductId).filter((x): x is string => !!x)))];
+  const karigarByProductId = allIds.length
+    ? new Map(
+        (await prisma.manufacturerProduct.findMany({ where: { id: { in: allIds } }, select: { id: true, karigarCode: true } }))
+          .map((p) => [p.id, p.karigarCode]),
+      )
+    : new Map<string, string | null>();
+  return orders.map(({ items, ...o }) => ({
+    ...o,
+    karigarCodes: [...new Set(items.map((i) => i.manufacturerProductId && karigarByProductId.get(i.manufacturerProductId)).filter((x): x is string => !!x))],
+  }));
 }
 
 export async function getKioskOrderForManufacturer(manufacturerId: string, id: string) {
-  return prisma.kioskOrder.findFirst({
+  const order = await prisma.kioskOrder.findFirst({
     where: { id, manufacturerId, forwardedToManufacturer: true },
     include: { items: true, history: { orderBy: { createdAt: 'asc' } } },
   });
+  if (!order) return null;
+  return { ...order, items: await hydrateItemsWithProduct(order.items) };
+}
+
+// Manufacturer-only: join order-item snapshots (manufacturerProductId, no FK)
+// back to the live ManufacturerProduct for karigarCode + full spec detail.
+// karigarCode is manufacturer-internal — this join is only ever used on
+// manufacturer-facing routes, never retailer/store-manager ones.
+async function hydrateItemsWithProduct<T extends { manufacturerProductId: string | null }>(
+  items: T[],
+): Promise<Array<T & { product: null | { karigarCode: string | null; category: string | null; subCategory: string | null; weightGrams: unknown; purity: string | null; description: string | null; designNumber: string; images: { secureUrl: string; isPrimary: boolean }[] } }>> {
+  const ids = [...new Set(items.map((i) => i.manufacturerProductId).filter((x): x is string => !!x))];
+  if (ids.length === 0) return items.map((i) => ({ ...i, product: null }));
+  const products = await prisma.manufacturerProduct.findMany({
+    where: { id: { in: ids } },
+    select: {
+      id: true, karigarCode: true, category: true, subCategory: true, weightGrams: true,
+      purity: true, description: true, designNumber: true,
+      images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], select: { secureUrl: true, isPrimary: true } },
+    },
+  });
+  const byId = new Map(products.map((p) => [p.id, p]));
+  return items.map((i) => ({ ...i, product: i.manufacturerProductId ? byId.get(i.manufacturerProductId) ?? null : null }));
 }
 
 export async function advanceKioskOrderStatus(manufacturerId: string, id: string, status: OrderStatus, trackingNumber?: string) {
@@ -283,16 +318,34 @@ export async function getB2bOrdersByManufacturer(manufacturerId: string) {
   const rows = await prisma.b2bOrder.findMany({
     where: { manufacturerId, pendingManagerApproval: false },
     orderBy: { createdAt: 'desc' },
-    include: { store: { select: { name: true, city: true } } },
+    include: {
+      store: { select: { name: true, city: true } },
+      items: { select: { manufacturerProduct: { select: { karigarCode: true } } } },
+    },
   });
-  return rows.map((o) => ({ ...o, storeName: o.store?.name ?? null, storeCity: o.store?.city ?? null }));
+  return rows.map(({ items, ...o }) => ({
+    ...o,
+    storeName: o.store?.name ?? null,
+    storeCity: o.store?.city ?? null,
+    karigarCodes: [...new Set(items.map((i) => i.manufacturerProduct.karigarCode).filter((x): x is string => !!x))],
+  }));
 }
 
 export async function getB2bOrderForManufacturer(manufacturerId: string, id: string) {
   const o = await prisma.b2bOrder.findFirst({
     where: { id, manufacturerId, pendingManagerApproval: false },
     include: {
-      items: true,
+      items: {
+        include: {
+          manufacturerProduct: {
+            select: {
+              id: true, karigarCode: true, category: true, subCategory: true, weightGrams: true,
+              purity: true, description: true, designNumber: true,
+              images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], select: { secureUrl: true, isPrimary: true } },
+            },
+          },
+        },
+      },
       history: { orderBy: { createdAt: 'asc' } },
       store: { select: { name: true, city: true } },
     },
