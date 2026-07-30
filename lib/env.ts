@@ -16,6 +16,11 @@ const ServerEnvSchema = z.object({
   // falls back to MANAGER_SECRET at use-site. Set a distinct value in production.
   BRANCH_MANAGER_SECRET: z.string().min(32).optional(),
   COOKIE_TTL_SECONDS: z.coerce.number().default(28800),
+  // Longer TTL for the mobile client's bearer token (decision #2). The browser
+  // cookie keeps COOKIE_TTL_SECONDS; this is used only when issuing/verifying a
+  // token presented by the native app, so an 8h hard logout doesn't hit mid-shift
+  // on a shop floor. Default 7 days. Optional — falls back to this default.
+  MOBILE_TOKEN_TTL_SECONDS: z.coerce.number().default(604800),
 
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),

@@ -9,7 +9,7 @@ import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { titleCaseName } from '@/lib/format';
-import { SM_STATUS_OPTIONS, inDateRange } from '@/lib/order-filters';
+import { SM_STATUS_OPTIONS, inDateRange, statusOf, bucketOf, customBucketOf } from '@/lib/order-filters';
 
 type Item = { id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; quantity: number };
 type BaseOrder = {
@@ -49,26 +49,8 @@ export default function MyOrdersPage() {
   );
 }
 
-function statusOf(o: BaseOrder): { label: string; cls: string } {
-  if (o.completedAt) return { label: 'Completed', cls: 'bg-green-100 text-green-800' };
-  if (o.pendingStoreApproval || o.pendingManagerApproval) return { label: 'Pending (Head Office)', cls: 'bg-yellow-100 text-yellow-800' };
-  return { label: 'Approved', cls: 'bg-blue-100 text-blue-800' };
-}
-
-// Derived filter bucket for kiosk/b2b orders (no raw enum shown to the Store Manager).
-function bucketOf(o: BaseOrder): 'COMPLETED' | 'PENDING' | 'APPROVED' {
-  if (o.completedAt) return 'COMPLETED';
-  if (o.pendingStoreApproval || o.pendingManagerApproval) return 'PENDING';
-  return 'APPROVED';
-}
-
-// Derived filter bucket for custom requests.
-function customBucketOf(r: CustomOrder): 'COMPLETED' | 'PENDING' | 'REJECTED' | 'APPROVED' {
-  if (r.completedAt) return 'COMPLETED';
-  if (r.status === 'PENDING') return 'PENDING';
-  if (r.status === 'REJECTED') return 'REJECTED';
-  return 'APPROVED';
-}
+// statusOf / bucketOf / customBucketOf were extracted to lib/order-filters.ts so
+// the mobile client can transcribe one readable source (decision #7).
 
 function OrderList({ kind, endpoint }: { kind: Kind; endpoint: string }) {
   const { data, loading, error, reload } = useApi<BaseOrder[]>(endpoint, '/store-manager/login');

@@ -66,7 +66,10 @@ branchManagerRoutes.post('/login', zValidator('json', LoginBody), async (c) => {
   });
   setCookie(c, BRANCH_MANAGER_COOKIE, token, cookieOptions(env.COOKIE_TTL_SECONDS, env.NODE_ENV === 'production'));
 
-  return sendData(c, { id: bm.id, name: bm.name, email: bm.email, branchId: bm.branch.id });
+  // Mobile client: the app stores this token in SecureStore and sends it as
+  // `Authorization: Bearer <token>`. The browser keeps using the cookie above.
+  // `token` is the SAME HMAC credential the cookie holds — not a new credential.
+  return sendData(c, { id: bm.id, name: bm.name, email: bm.email, branchId: bm.branch.id, token });
 });
 
 // POST /api/branch-manager/logout
@@ -255,7 +258,11 @@ branchManagerRoutes.get('/restock/lock-status', branchManagerGuard, async (c) =>
   const branch = await prisma.branch.findUnique({ where: { id: c.get('branchId') }, select: { id: true, restockPinHash: true } });
   if (!branch) return sendError(c, 'not_found', 'Branch not found', 404);
   if (!branch.restockPinHash) return sendData(c, { requiresPin: false, unlocked: true });
-  const unlocked = await verifyRestockCookie(getCookie(c, RESTOCK_COOKIE), branch.id, { secret: env.STORE_SECRET, ttlSeconds: env.COOKIE_TTL_SECONDS });
+  // Cookie for the browser, or the `X-Restock-Token` header for the mobile client.
+  // The mobile app stores the restock token SEPARATELY from the login token, so
+  // clearing the restock unlock never signs the user out.
+  const restockToken = getCookie(c, RESTOCK_COOKIE) ?? c.req.header('x-restock-token');
+  const unlocked = await verifyRestockCookie(restockToken, branch.id, { secret: env.STORE_SECRET, ttlSeconds: env.COOKIE_TTL_SECONDS });
   return sendData(c, { requiresPin: true, unlocked });
 });
 
@@ -270,7 +277,9 @@ branchManagerRoutes.post('/restock/unlock', branchManagerGuard, zValidator('json
   if (!ok) return sendError(c, 'unauthorized', 'Incorrect PIN', 401);
   const token = await issueRestockCookie(branch.id, { secret: env.STORE_SECRET, ttlSeconds: env.COOKIE_TTL_SECONDS });
   setCookie(c, RESTOCK_COOKIE, token, cookieOptions(env.COOKIE_TTL_SECONDS, env.NODE_ENV === 'production'));
-  return sendData(c, { ok: true });
+  // Mobile client: store this restock token separately (keyed by branchId) and send
+  // it back on `GET /restock/lock-status` as `X-Restock-Token`.
+  return sendData(c, { ok: true, token });
 });
 
 // ── Set/clear the branch restock PIN (store manager can manage it too) ────────

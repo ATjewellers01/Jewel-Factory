@@ -41,6 +41,44 @@ export const SM_STATUS_OPTIONS = [
   { value: 'COMPLETED', label: 'Completed' },
 ];
 
+// ── Derived Store-Manager buckets (extraction of logic that used to live inline
+// in app/store-manager/my-orders/page.tsx:52-71). Moved here so web and mobile
+// share one readable source (decision #7). Behaviour is byte-for-byte identical:
+// `completedAt` is tested FIRST in both, so a DELIVERED-and-completed order reads
+// "Completed", and a DELIVERED-but-not-completed order reads "Approved" (intended).
+type SmOrder = {
+  completedAt?: string | null;
+  pendingStoreApproval?: boolean;
+  pendingManagerApproval?: boolean;
+};
+
+type SmCustom = {
+  completedAt?: string | null;
+  status: string;
+};
+
+/** Label + badge colour for a kiosk/b2b order in the Store Manager's view. */
+export function statusOf(o: SmOrder): { label: string; cls: string } {
+  if (o.completedAt) return { label: 'Completed', cls: 'bg-green-100 text-green-800' };
+  if (o.pendingStoreApproval || o.pendingManagerApproval) return { label: 'Pending (Head Office)', cls: 'bg-yellow-100 text-yellow-800' };
+  return { label: 'Approved', cls: 'bg-blue-100 text-blue-800' };
+}
+
+/** Derived filter bucket for kiosk/b2b orders (no raw enum shown to the SM). */
+export function bucketOf(o: SmOrder): 'COMPLETED' | 'PENDING' | 'APPROVED' {
+  if (o.completedAt) return 'COMPLETED';
+  if (o.pendingStoreApproval || o.pendingManagerApproval) return 'PENDING';
+  return 'APPROVED';
+}
+
+/** Derived filter bucket for custom requests. APPROVED and FORWARDED → APPROVED. */
+export function customBucketOf(r: SmCustom): 'COMPLETED' | 'PENDING' | 'REJECTED' | 'APPROVED' {
+  if (r.completedAt) return 'COMPLETED';
+  if (r.status === 'PENDING') return 'PENDING';
+  if (r.status === 'REJECTED') return 'REJECTED';
+  return 'APPROVED';
+}
+
 /** Build a de-duplicated, sorted dropdown option list from a set of names. */
 export function uniqueBranchOptions(names: (string | null | undefined)[]): { value: string; label: string }[] {
   const set = new Set<string>();
