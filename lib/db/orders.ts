@@ -338,13 +338,13 @@ async function fulfillB2bOrder(orderId: string) {
         newIds.push(existing.id);
         continue;
       }
-      const slug = `${slugify(mp.name)}-${mp.designNumber.toLowerCase()}`;
+      const slug = `${slugify(mp.name ?? mp.designNumber)}-${mp.designNumber.toLowerCase()}`;
       const created = await tx.product.create({
         data: {
           storeId: order.storeId,
           manufacturerProductId: mp.id,
           slug,
-          name: mp.name,
+          name: mp.name ?? mp.designNumber,
           category: mp.category,
           description: mp.description,
           purity: mp.purity,
