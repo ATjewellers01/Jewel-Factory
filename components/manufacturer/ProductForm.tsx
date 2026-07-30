@@ -231,17 +231,10 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
       setBusy(false);
 
       // Step 4: Generate catalog image
-      console.log('[ai:generate-all] step 3/4 — catalog image');
+      console.log('[ai:generate-all] step 3/3 — catalog image');
       const catalogOk = await aiCatalog(false);
-      if (!catalogOk) {
-        console.error('[ai:generate-all] step 3 (catalog) failed — see [ai:catalog] logs above');
-        return;
-      }
-
-      // Step 5: Generate try-on PNG
-      console.log('[ai:generate-all] step 4/4 — try-on PNG');
-      const tryonOk = await aiTransparent(false);
-      console.log(tryonOk ? '[ai:generate-all] done' : '[ai:generate-all] step 4 (try-on) failed — see [ai:transparent] logs above');
+      console.log(catalogOk ? '[ai:generate-all] done' : '[ai:generate-all] step 3 (catalog) failed — see [ai:catalog] logs above');
+      // Note: Try-on PNG generation is manual-only (Generate Try-On button in the AR section below).
     } catch (e) {
       console.error('[ai:generate-all] failed', e);
       setAiError(e instanceof Error ? e.message : 'Generate all failed');
@@ -572,9 +565,6 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
                 </Button>
                 <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy} onClick={() => aiCatalog(false)}>
                   {aiBusy === 'catalog' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Catalog image</>}
-                </Button>
-                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy} onClick={() => aiTransparent(false)}>
-                  {aiBusy === 'transparent' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Try-on PNG ({tryonType})</>}
                 </Button>
                 <Button type="button" size="sm" disabled={!aiRaw || !!aiBusy} onClick={aiGenerateAll} className="bg-primary text-primary-foreground hover:bg-primary/90">
                   {aiBusy === 'all' ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Generating…</> : <><Wand2 className="mr-1 h-3.5 w-3.5" />Generate all</>}
