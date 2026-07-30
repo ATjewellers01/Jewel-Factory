@@ -331,7 +331,7 @@ export async function getManufacturerRetailerSales(
     ORDER BY s.name, total_units DESC
   `;
 
-  return results.map((r) => ({ ...r, total_units: Number(r.total_units) || 0 }));
+  return results.map((r) => ({ ...r, name: r.name ?? 'Unknown', total_units: Number(r.total_units) || 0 }));
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -376,7 +376,7 @@ export async function getManufacturerCategoryWeightBreakdown(
     ORDER BY mp.category, mp.sub_category, mp.weight_grams
   `;
 
-  return results.map((r) => ({ ...r, total_units: Number(r.total_units) || 0 }));
+  return results.map((r) => ({ ...r, name: r.name ?? 'Unknown', total_units: Number(r.total_units) || 0 }));
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -425,5 +425,5 @@ export async function getManufacturerTopProducts(
     LIMIT ${limit}
   `;
 
-  return results.map((r) => ({ ...r, total_units: Number(r.total_units) || 0 }));
+  return results.map((r) => ({ ...r, name: r.name ?? 'Unknown', total_units: Number(r.total_units) || 0 }));
 }

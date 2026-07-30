@@ -210,7 +210,7 @@ analyticsRouter.get(
           totalUnits,
           topProducts: topProducts.map((p) => ({
             id: p.id as string,
-            name: p.name as string,
+            name: (p.name as string | null) ?? (p.design_number as string | null) ?? 'Unknown',
             designNumber: p.design_number as string | null,
             category: p.category as string | null,
             units: Number(p.total_units) || 0,
