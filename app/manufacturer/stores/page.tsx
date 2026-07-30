@@ -29,6 +29,27 @@ export default function ManufacturerStoresPage() {
   const [editing, setEditing] = useState<Store | null>(null);
   const [pwStore, setPwStore] = useState<Store | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'' | 'active' | 'inactive'>('');
+  const [badgeFilter, setBadgeFilter] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
+  const [storeCountFilter, setStoreCountFilter] = useState<'' | 'zero' | 'has'>('');
+
+  const cityOptions = Array.from(new Set((data ?? []).map((s) => s.city).filter((c): c is string => !!c))).sort();
+
+  const filtered = (data ?? []).filter((s) => {
+    const matchSearch = !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.email.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = !statusFilter || (statusFilter === 'active' ? s.isActive : !s.isActive);
+    const matchBadge = !badgeFilter || s.badgeLabel === badgeFilter;
+    const matchCity = !cityFilter || s.city === cityFilter;
+    const matchStoreCount = !storeCountFilter || (storeCountFilter === 'zero' ? s.branchCount === 0 : s.branchCount > 0);
+    return matchSearch && matchStatus && matchBadge && matchCity && matchStoreCount;
+  });
+
+  const hasActiveFilters = !!(search || statusFilter || badgeFilter || cityFilter || storeCountFilter);
+  function clearFilters() {
+    setSearch(''); setStatusFilter(''); setBadgeFilter(''); setCityFilter(''); setStoreCountFilter('');
+  }
 
   async function toggle(s: Store) {
     setActionError(null);
@@ -59,14 +80,51 @@ export default function ManufacturerStoresPage() {
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {actionError && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{actionError}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
+
+      {data && data.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Input placeholder="Search by name or email…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
+          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          {badgeLabels && badgeLabels.length > 0 && (
+            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={badgeFilter} onChange={(e) => setBadgeFilter(e.target.value)}>
+              <option value="">All badges</option>
+              {badgeLabels.map((label) => <option key={label} value={label}>{label}</option>)}
+            </select>
+          )}
+          {cityOptions.length > 0 && (
+            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={cityFilter} onChange={(e) => setCityFilter(e.target.value)}>
+              <option value="">All cities</option>
+              {cityOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          )}
+          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={storeCountFilter} onChange={(e) => setStoreCountFilter(e.target.value as typeof storeCountFilter)}>
+            <option value="">Any store count</option>
+            <option value="has">Has stores</option>
+            <option value="zero">No stores yet</option>
+          </select>
+          {hasActiveFilters && (
+            <button type="button" onClick={clearFilters} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+          )}
+        </div>
+      )}
+
       {data && data.length === 0 && (
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
           <StoreIcon className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No stores yet. Approve registrations to add stores.</p>
         </div>
       )}
-      {data && data.length > 0 && (
+      {data && data.length > 0 && filtered.length === 0 && (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
+          <StoreIcon className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No purchase managers match these filters.</p>
+        </div>
+      )}
+      {filtered.length > 0 && (
         <div className="rounded-xl border bg-card overflow-hidden divide-y">
-          {data.map((s) => (
+          {filtered.map((s) => (
             <div key={s.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">
