@@ -4,11 +4,15 @@ import { CheckCircle2, XCircle, Loader2, ClipboardCheck, Store, Pencil, Save, Me
 import { useState } from 'react';
 
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
+import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/orders/OrderItemDetailModal';
 import { Button } from '@/components/ui/button';
 import { useApi, apiPost, apiSend } from '@/hooks/use-api';
 import { OrderChat } from '@/components/orders/OrderChat';
 
-type Item = { id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; quantity: number };
+type Item = {
+  id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; quantity: number;
+  product: OrderItemProductSafe | null;
+};
 type KioskOrder = { id: string; orderNumber: string; customerName: string | null; branchNameSnapshot: string | null; requirementNote: string | null; totalItems: number; pickupStore: boolean; createdAt: string; items: Item[] };
 type B2bOrder = { id: string; orderNumber: string; branchNameSnapshot: string | null; requirementNote: string | null; totalItems: number; createdAt: string; items: Item[] };
 
@@ -80,6 +84,7 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
   const [saving, setSaving] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [zoomItem, setZoomItem] = useState<Item | null>(null);
+  const [productModal, setProductModal] = useState<OrderItemProductSafe | null>(null);
 
   async function saveNote() {
     setSaving(true);
@@ -138,18 +143,24 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
       {items.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-3 border-t pt-3">
           {items.map((it) => (
-            <div key={it.id} className="flex items-center gap-2">
+            <button
+              key={it.id}
+              type="button"
+              onClick={() => it.product && setProductModal(it.product)}
+              disabled={!it.product}
+              className="flex items-center gap-2 rounded-lg text-left hover:bg-black/5 disabled:cursor-default disabled:hover:bg-transparent"
+            >
               {it.productImageSnapshot ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={it.productImageSnapshot}
                   alt={it.productNameSnapshot ?? ''}
                   className="h-16 w-16 rounded-lg border bg-white object-contain p-1 cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => setZoomItem(it)}
+                  onClick={(e) => { e.stopPropagation(); setZoomItem(it); }}
                 />
               ) : <div className="h-16 w-16 rounded-lg border bg-muted" />}
               <span className="text-sm">{it.productNameSnapshot ?? 'Product'} × {it.quantity}</span>
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -162,6 +173,8 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
           onClose={() => setZoomItem(null)}
         />
       )}
+
+      {productModal && <OrderItemDetailModal product={productModal} onClose={() => setProductModal(null)} />}
     </div>
   );
 }

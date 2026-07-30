@@ -49,7 +49,7 @@ export function CatalogOrderPanel({
   const restockCart = useStoreManagerRestockCart(manager.branch.id);
   const orderCart = showPopularity ? restockCart : kioskCart;
   const { data, loading, error } = useApi<Product[]>('/api/branch-manager/catalog', '/store-manager/login');
-  const favorites = useFavorites('/api/branch-manager/favorites');
+  const favorites = useFavorites('/api/branch-manager/favorites', showPopularity ? 'RESTOCK' : 'KIOSK');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');

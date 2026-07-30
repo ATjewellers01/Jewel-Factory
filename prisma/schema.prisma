@@ -684,17 +684,28 @@ model OrderMessage {
 // branchId) both save favorites scoped to their own account/branch — never
 // shared between them, even though a Store Manager's storeId equals the
 // retailer's id (branchManagerGuard sets storeId = retailerId for tenancy).
+// A Store Manager ALSO gets separate Kiosk vs Restock favorite lists via
+// `kind` (KIOSK/RESTOCK) — Kiosk is customer-facing browsing, Restock is the
+// manager's own reordering, so the two shouldn't share saved items. The
+// Retailer's own favorites (branchId=null) always use kind=KIOSK (the only
+// value that applies — Retailer has no Kiosk/Restock distinction).
 model FavoriteProduct {
   id                    String              @id @default(uuid())
   storeId               String              @map("store_id") // retailer id — tenancy scope
   branchId              String?             @map("branch_id") // set when saved by a Store Manager; null = Retailer's own favorite
+  kind                  FavoriteKind         @default(KIOSK)
   manufacturerProductId String              @map("manufacturer_product_id")
   manufacturerProduct   ManufacturerProduct @relation(fields: [manufacturerProductId], references: [id], onDelete: Cascade)
   createdAt             DateTime            @default(now()) @map("created_at")
 
-  @@unique([storeId, branchId, manufacturerProductId])
-  @@index([storeId, branchId])
+  @@unique([storeId, branchId, kind, manufacturerProductId])
+  @@index([storeId, branchId, kind])
   @@map("favorite_products")
+}
+
+enum FavoriteKind {
+  KIOSK
+  RESTOCK
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

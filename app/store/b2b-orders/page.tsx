@@ -6,11 +6,15 @@ import { useMemo, useState } from 'react';
 
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderFilters } from '@/components/orders/OrderFilters';
+import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/orders/OrderItemDetailModal';
 import { Button } from '@/components/ui/button';
 import { useApi } from '@/hooks/use-api';
 import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
-type Item = { id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; productDesignSnapshot: string | null; quantity: number };
+type Item = {
+  id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; productDesignSnapshot: string | null; quantity: number;
+  product: OrderItemProductSafe | null;
+};
 type Order = {
   id: string; orderNumber: string; status: string; totalItems: number;
   branchNameSnapshot: string | null;
@@ -32,6 +36,7 @@ export default function StoreB2bOrdersPage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [zoomItem, setZoomItem] = useState<Item | null>(null);
+  const [productModal, setProductModal] = useState<OrderItemProductSafe | null>(null);
 
   const branchOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((o) => o.branchNameSnapshot)), [data]);
   const filtered = useMemo(
@@ -86,14 +91,20 @@ export default function StoreB2bOrdersPage() {
                   <p className="mb-1.5 text-xs uppercase tracking-wider text-muted-foreground">Items</p>
                   <div className="space-y-2">
                     {o.items.map((it) => (
-                      <div key={it.id} className="flex items-center gap-3">
+                      <button
+                        key={it.id}
+                        type="button"
+                        onClick={() => it.product && setProductModal(it.product)}
+                        disabled={!it.product}
+                        className="flex w-full items-center gap-3 rounded-lg text-left hover:bg-black/5 disabled:cursor-default disabled:hover:bg-transparent"
+                      >
                         {it.productImageSnapshot ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={it.productImageSnapshot}
                             alt={it.productNameSnapshot ?? ''}
                             className="h-20 w-20 flex-shrink-0 rounded-lg border bg-white object-contain p-1 cursor-pointer hover:shadow-md transition-shadow"
-                            onClick={() => setZoomItem(it)}
+                            onClick={(e) => { e.stopPropagation(); setZoomItem(it); }}
                           />
                         ) : <div className="h-20 w-20 flex-shrink-0 rounded-lg border bg-muted" />}
                         <div className="min-w-0 flex-1">
@@ -101,7 +112,7 @@ export default function StoreB2bOrdersPage() {
                           {it.productDesignSnapshot && <p className="text-xs text-muted-foreground">{it.productDesignSnapshot}</p>}
                         </div>
                         <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -120,6 +131,8 @@ export default function StoreB2bOrdersPage() {
           onClose={() => setZoomItem(null)}
         />
       )}
+
+      {productModal && <OrderItemDetailModal product={productModal} onClose={() => setProductModal(null)} />}
     </div>
   );
 }

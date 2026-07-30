@@ -6,12 +6,16 @@ import { useMemo, useState } from 'react';
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderChat } from '@/components/orders/OrderChat';
 import { OrderFilters } from '@/components/orders/OrderFilters';
+import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/orders/OrderItemDetailModal';
 import { Button } from '@/components/ui/button';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { titleCaseName } from '@/lib/format';
 import { SM_STATUS_OPTIONS, inDateRange } from '@/lib/order-filters';
 
-type Item = { id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; quantity: number };
+type Item = {
+  id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; quantity: number;
+  product: OrderItemProductSafe | null;
+};
 type BaseOrder = {
   id: string; orderNumber: string; status?: string; totalItems?: number;
   pendingStoreApproval?: boolean; pendingManagerApproval?: boolean;
@@ -27,7 +31,7 @@ type CustomOrder = {
 type Kind = 'kiosk' | 'b2b' | 'custom';
 const TABS: { key: Kind; label: string; endpoint: string }[] = [
   { key: 'kiosk', label: 'Kiosk', endpoint: '/api/branch-manager/my-orders/kiosk' },
-  { key: 'custom', label: 'Custom', endpoint: '/api/branch-manager/my-orders/custom' },
+  { key: 'custom', label: 'Customised', endpoint: '/api/branch-manager/my-orders/custom' },
   { key: 'b2b', label: 'Restock', endpoint: '/api/branch-manager/my-orders/b2b' },
 ];
 
@@ -80,6 +84,7 @@ function OrderList({ kind, endpoint }: { kind: Kind; endpoint: string }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [zoomItem, setZoomItem] = useState<Item | null>(null);
+  const [productModal, setProductModal] = useState<OrderItemProductSafe | null>(null);
 
   const filtered = useMemo(() => (data ?? []).filter((o) => {
     if (search.trim() && !o.orderNumber.toLowerCase().includes(search.trim().toLowerCase())) return false;
@@ -120,19 +125,25 @@ function OrderList({ kind, endpoint }: { kind: Kind; endpoint: string }) {
               <div className="border-t bg-muted/10 px-4 pb-4 pt-3 space-y-3">
                 <div className="space-y-2">
                   {o.items?.map((it) => (
-                    <div key={it.id} className="flex items-center gap-3">
+                    <button
+                      key={it.id}
+                      type="button"
+                      onClick={() => it.product && setProductModal(it.product)}
+                      disabled={!it.product}
+                      className="flex w-full items-center gap-3 rounded-lg text-left hover:bg-black/5 disabled:cursor-default disabled:hover:bg-transparent"
+                    >
                       {it.productImageSnapshot ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={it.productImageSnapshot}
                           alt=""
-                          className="h-14 w-14 rounded-lg border bg-white object-contain p-0.5 cursor-pointer hover:shadow-md transition-shadow"
-                          onClick={() => setZoomItem(it)}
+                          className="h-14 w-14 shrink-0 rounded-lg border bg-white object-contain p-0.5 cursor-pointer hover:shadow-md transition-shadow"
+                          onClick={(e) => { e.stopPropagation(); setZoomItem(it); }}
                         />
-                      ) : <div className="h-14 w-14 rounded-lg border bg-muted" />}
+                      ) : <div className="h-14 w-14 shrink-0 rounded-lg border bg-muted" />}
                       <span className="flex-1 text-sm">{titleCaseName(it.productNameSnapshot ?? 'Product')}</span>
                       <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -158,6 +169,8 @@ function OrderList({ kind, endpoint }: { kind: Kind; endpoint: string }) {
           onClose={() => setZoomItem(null)}
         />
       )}
+
+      {productModal && <OrderItemDetailModal product={productModal} onClose={() => setProductModal(null)} />}
     </div>
   );
 }

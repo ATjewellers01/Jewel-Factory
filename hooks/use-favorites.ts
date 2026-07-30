@@ -20,8 +20,17 @@ export type FavoriteEntry = {
   };
 };
 
-/** Server-backed favorites — basePath is `/api/store/favorites` (Retailer) or `/api/branch-manager/favorites` (Store Manager). */
-export function useFavorites(basePath: string) {
+/**
+ * Server-backed favorites — basePath is `/api/store/favorites` (Retailer) or
+ * `/api/branch-manager/favorites` (Store Manager). Pass `kind` for Store
+ * Manager pages that need separate Kiosk vs Restock favorite lists (the
+ * Retailer route ignores it — it only ever has one list).
+ */
+export function useFavorites(basePath: string, kind?: 'KIOSK' | 'RESTOCK') {
+  const query = kind ? `${basePath.includes('?') ? '&' : '?'}kind=${kind}` : '';
+  const listUrl = `${basePath}${query}`;
+  const itemUrl = (productId: string) => `${basePath}/${productId}${query}`;
+
   const [ids, setIds] = useState<Set<string>>(new Set());
   const [entries, setEntries] = useState<FavoriteEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +38,7 @@ export function useFavorites(basePath: string) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(basePath, { cache: 'no-store', credentials: 'same-origin' });
+      const res = await fetch(listUrl, { cache: 'no-store', credentials: 'same-origin' });
       const json = (await res.json()) as { data?: FavoriteEntry[] };
       const list = json.data ?? [];
       setEntries(list);
@@ -37,7 +46,7 @@ export function useFavorites(basePath: string) {
     } catch { /* non-critical */ } finally {
       setLoading(false);
     }
-  }, [basePath]);
+  }, [listUrl]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -51,8 +60,8 @@ export function useFavorites(basePath: string) {
       return next;
     });
     try {
-      if (wasFavorite) await apiSend('DELETE', `${basePath}/${productId}`);
-      else await apiPost(`${basePath}/${productId}`);
+      if (wasFavorite) await apiSend('DELETE', itemUrl(productId));
+      else await apiPost(itemUrl(productId));
       void load();
     } catch {
       // revert optimistic update on failure
@@ -62,7 +71,8 @@ export function useFavorites(basePath: string) {
         return next;
       });
     }
-  }, [basePath, ids, load]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [basePath, kind, ids, load]);
 
   return { entries, isFavorite, toggle, loading, count: ids.size, reload: load };
 }

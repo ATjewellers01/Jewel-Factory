@@ -1,5 +1,5 @@
 import { zValidator } from '@hono/zod-validator';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { getCookie, deleteCookie, setCookie } from 'hono/cookie';
 import { z } from 'zod';
 
@@ -113,18 +113,24 @@ branchManagerRoutes.get('/catalog/:id', branchManagerGuard, async (c) => {
   return sendData(c, product);
 });
 
-// ── Favorites (this Store Manager's own — scoped by branchId) ─────────────────
+// ── Favorites (this Store Manager's own — scoped by branchId + kind) ──────────
+// ?kind=KIOSK|RESTOCK selects which list; Kiosk and Restock have separate
+// saved-items lists even though they're the same branch/manager.
+function favoriteKind(c: Context<AppEnv>): 'KIOSK' | 'RESTOCK' {
+  return c.req.query('kind') === 'RESTOCK' ? 'RESTOCK' : 'KIOSK';
+}
+
 branchManagerRoutes.get('/favorites', branchManagerGuard, async (c) => {
-  return sendData(c, await listFavorites(c.get('storeId'), c.get('branchId')));
+  return sendData(c, await listFavorites(c.get('storeId'), c.get('branchId'), favoriteKind(c)));
 });
 
 branchManagerRoutes.post('/favorites/:productId', branchManagerGuard, async (c) => {
-  await addFavorite(c.get('storeId'), c.get('branchId'), c.req.param('productId'));
+  await addFavorite(c.get('storeId'), c.get('branchId'), c.req.param('productId'), favoriteKind(c));
   return sendData(c, { ok: true }, 201);
 });
 
 branchManagerRoutes.delete('/favorites/:productId', branchManagerGuard, async (c) => {
-  await removeFavorite(c.get('storeId'), c.get('branchId'), c.req.param('productId'));
+  await removeFavorite(c.get('storeId'), c.get('branchId'), c.req.param('productId'), favoriteKind(c));
   return sendData(c, { ok: true });
 });
 

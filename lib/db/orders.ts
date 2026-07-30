@@ -90,18 +90,21 @@ export async function getKioskOrderPublic(id: string) {
 }
 
 export async function getKioskOrdersByStore(storeId: string, pendingOnly = false) {
-  return prisma.kioskOrder.findMany({
+  const orders = await prisma.kioskOrder.findMany({
     where: { storeId, ...(pendingOnly ? { pendingStoreApproval: true, status: { not: 'CANCELLED' } } : {}) },
     orderBy: { createdAt: 'desc' },
     include: { items: true },
   });
+  return Promise.all(orders.map(async (o) => ({ ...o, items: await hydrateItemsForStoreManager(o.items) })));
 }
 
 export async function getKioskOrderForStore(storeId: string, id: string) {
-  return prisma.kioskOrder.findFirst({
+  const order = await prisma.kioskOrder.findFirst({
     where: { id, storeId },
     include: { items: true, history: { orderBy: { createdAt: 'asc' } } },
   });
+  if (!order) return null;
+  return { ...order, items: await hydrateItemsForStoreManager(order.items) };
 }
 
 export async function approveKioskOrder(storeId: string, id: string, approvedById: string | null) {
@@ -130,19 +133,44 @@ export async function rejectKioskOrder(storeId: string, id: string) {
 }
 
 // Store Manager: kiosk/B2B orders for THIS branch (their own orders view).
+// Store-manager-facing product hydration — never includes karigarCode (that's
+// manufacturer-internal only; see hydrateItemsWithProduct for the
+// manufacturer-side equivalent that does include it). Uses `select` (a
+// whitelist) rather than `omit`, so karigarCode structurally can't leak here
+// regardless of future field additions to ManufacturerProduct.
+async function hydrateItemsForStoreManager<T extends { manufacturerProductId: string | null }>(
+  items: T[],
+) {
+  const ids = [...new Set(items.map((i) => i.manufacturerProductId).filter((x): x is string => !!x))];
+  const products = ids.length
+    ? await prisma.manufacturerProduct.findMany({
+        where: { id: { in: ids } },
+        select: {
+          id: true, category: true, subCategory: true, weightGrams: true,
+          purity: true, description: true, designNumber: true, hasTryon: true,
+          images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], select: { secureUrl: true, isPrimary: true } },
+        },
+      })
+    : [];
+  const byId = new Map(products.map((p) => [p.id, p]));
+  return items.map((i) => ({ ...i, product: i.manufacturerProductId ? byId.get(i.manufacturerProductId) ?? null : null }));
+}
+
 export async function getKioskOrdersByBranch(branchId: string) {
-  return prisma.kioskOrder.findMany({
+  const orders = await prisma.kioskOrder.findMany({
     where: { branchId },
     orderBy: { createdAt: 'desc' },
     include: { items: true },
   });
+  return Promise.all(orders.map(async (o) => ({ ...o, items: await hydrateItemsForStoreManager(o.items) })));
 }
 export async function getB2bOrdersByBranch(branchId: string) {
-  return prisma.b2bOrder.findMany({
+  const orders = await prisma.b2bOrder.findMany({
     where: { branchId },
     orderBy: { createdAt: 'desc' },
     include: { items: true },
   });
+  return Promise.all(orders.map(async (o) => ({ ...o, items: await hydrateItemsForStoreManager(o.items) })));
 }
 
 // Store Manager marks a kiosk/B2B order Completed (piece reached customer/store).
@@ -244,9 +272,15 @@ export async function placeB2bOrder(input: {
   deliveryAddress: string;
   notes?: string;
   requirementNote?: string | null;
+  // Store-Manager-originated orders need the Retailer (Head Office) to approve
+  // (defaults true). The Retailer's own direct catalog order has no one above
+  // it to approve, so its route passes false — pre-approved, goes straight to
+  // the manufacturer queue.
+  pendingManagerApproval?: boolean;
   items: { manufacturerProductId: string; quantity: number; productNameSnapshot?: string; productImageSnapshot?: string; productDesignSnapshot?: string }[];
 }) {
   const totalItems = input.items.reduce((s, i) => s + i.quantity, 0);
+  const preApproved = input.pendingManagerApproval === false;
   return prisma.b2bOrder.create({
     data: {
       storeId: input.storeId,
@@ -258,6 +292,7 @@ export async function placeB2bOrder(input: {
       notes: input.notes ?? null,
       requirementNote: input.requirementNote ?? null,
       totalItems,
+      ...(preApproved ? { pendingManagerApproval: false, managerApprovedAt: new Date() } : {}),
       items: {
         create: input.items.map((i) => ({
           manufacturerProductId: i.manufacturerProductId,
@@ -267,25 +302,28 @@ export async function placeB2bOrder(input: {
           productDesignSnapshot: i.productDesignSnapshot ?? null,
         })),
       },
-      history: { create: { status: 'PENDING', note: 'Order placed' } },
+      history: { create: { status: 'PENDING', note: preApproved ? 'Order placed (auto-approved — placed directly by Retailer)' : 'Order placed' } },
     },
     select: { id: true, orderNumber: true },
   });
 }
 
 export async function getB2bOrdersByStore(storeId: string, pendingOnly = false) {
-  return prisma.b2bOrder.findMany({
+  const orders = await prisma.b2bOrder.findMany({
     where: { storeId, ...(pendingOnly ? { pendingManagerApproval: true, status: { not: 'CANCELLED' } } : {}) },
     orderBy: { createdAt: 'desc' },
     include: { items: true },
   });
+  return Promise.all(orders.map(async (o) => ({ ...o, items: await hydrateItemsForStoreManager(o.items) })));
 }
 
 export async function getB2bOrderForStore(storeId: string, id: string) {
-  return prisma.b2bOrder.findFirst({
+  const order = await prisma.b2bOrder.findFirst({
     where: { id, storeId },
     include: { items: true, history: { orderBy: { createdAt: 'asc' } } },
   });
+  if (!order) return null;
+  return { ...order, items: await hydrateItemsForStoreManager(order.items) };
 }
 
 export async function approveB2bOrder(storeId: string, id: string, approvedById: string | null) {

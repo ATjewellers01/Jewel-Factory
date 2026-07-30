@@ -51,7 +51,10 @@ storeCatalogRoutes.delete('/favorites/:productId', storeGuard, async (c) => {
   return sendData(c, { ok: true });
 });
 
-// Place a B2B order (goes to manager approval first).
+// Place a B2B order directly as the Retailer (Head Office) — no approval
+// step needed since there's no one above the Retailer in this flow; it's
+// pre-approved and goes straight to the manufacturer. (Store-Manager-placed
+// orders, via /api/branch-manager, still need the Retailer's approval.)
 const OrderBody = z.object({
   notes: z.string().optional(),
   items: z
@@ -94,6 +97,7 @@ storeCatalogRoutes.post('/orders', storeGuard, zValidator('json', OrderBody), as
     manufacturerId: store.manufacturerId,
     deliveryAddress: formatStoreAddress(store),
     notes: body.notes,
+    pendingManagerApproval: false,
     items: body.items.map((i) => {
       const p = byId.get(i.manufacturerProductId)!;
       return {

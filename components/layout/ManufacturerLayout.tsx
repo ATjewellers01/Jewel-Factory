@@ -22,7 +22,7 @@ const NAV = [
   { label: 'Catalog', href: '/manufacturer/catalog', icon: Package, section: 'Catalog & orders' },
   { label: 'Catalog Orders', href: '/manufacturer/orders', icon: ShoppingBag, section: 'Catalog & orders' },
   { label: 'Kiosk Orders', href: '/manufacturer/kiosk-orders', icon: Users, section: 'Catalog & orders' },
-  { label: 'Custom Designs', href: '/manufacturer/custom-designs', icon: PencilLine, section: 'Catalog & orders' },
+  { label: 'Customised Designs', href: '/manufacturer/custom-designs', icon: PencilLine, section: 'Catalog & orders' },
   { label: 'Purchase managers', href: '/manufacturer/stores', icon: StoreIcon, section: 'Purchase manager network' },
   { label: 'Purchase Manager Registrations', href: '/manufacturer/store-registrations', icon: ClipboardCheck, section: 'Purchase manager network' },
 ];
