@@ -438,7 +438,6 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
   async function save() {
     setError(null);
-    if (!form.name.trim()) { setError('Design name is required.'); return; }
     setBusy(true);
     try {
       const id = await ensureProductId();
