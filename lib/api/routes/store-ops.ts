@@ -115,6 +115,13 @@ storeOpsRoutes.patch('/b2b-orders/:id/note', zValidator('json', NoteBody), async
 storeOpsRoutes.get('/custom-designs', async (c) => {
   return sendData(c, await listCustomRequests(c.get('storeId')));
 });
+// Pending-only variant, mirroring /kiosk-orders/pending and /b2b-orders/pending.
+// listCustomRequests has no pending filter, so fetch all and filter PENDING here
+// (same as the mobile client's §4.3 v1 workaround) — no DB query changed.
+storeOpsRoutes.get('/custom-designs/pending', async (c) => {
+  const all = await listCustomRequests(c.get('storeId'));
+  return sendData(c, all.filter((r) => r.status === 'PENDING'));
+});
 storeOpsRoutes.post('/custom-designs/:id/approve', async (c) => {
   const req = await getCustomRequestForStore(c.get('storeId'), c.req.param('id'));
   if (!req) return sendError(c, 'not_found', 'Request not found', 404);

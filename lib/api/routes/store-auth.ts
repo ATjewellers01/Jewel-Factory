@@ -62,7 +62,10 @@ storeAuthRoutes.post('/login', zValidator('json', LoginBody), async (c) => {
   });
   setCookie(c, STORE_COOKIE, token, cookieOptions(env.COOKIE_TTL_SECONDS, env.NODE_ENV === 'production'));
 
-  return sendData(c, { id: store.id, name: store.name, slug: store.slug, email: store.email });
+  // Mobile client: the app stores this token in SecureStore and sends it as
+  // `Authorization: Bearer <token>`. The browser keeps using the cookie above.
+  // `token` is the SAME HMAC credential the cookie holds — not a new credential.
+  return sendData(c, { id: store.id, name: store.name, slug: store.slug, email: store.email, token });
 });
 
 // POST /api/store/logout
