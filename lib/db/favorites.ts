@@ -1,3 +1,5 @@
+import { Prisma } from '@prisma/client';
+
 import { prisma } from '@/lib/prisma';
 
 // Favorites are scoped by (storeId, branchId). branchId is null for a
@@ -19,11 +21,20 @@ export async function listFavorites(storeId: string, branchId: string | null) {
 }
 
 export async function addFavorite(storeId: string, branchId: string | null, manufacturerProductId: string) {
-  return prisma.favoriteProduct.upsert({
-    where: { storeId_branchId_manufacturerProductId: { storeId, branchId, manufacturerProductId } },
-    create: { storeId, branchId, manufacturerProductId },
-    update: {},
-  });
+  // Prisma's compound-unique `where` shape rejects `null` for a nullable field
+  // (even though the column itself allows it), so upsert-by-compound-key isn't
+  // usable here — check-then-create instead. Races just hit the real unique
+  // index and no-op via P2002, which we swallow (already-favorited is fine).
+  const existing = await prisma.favoriteProduct.findFirst({ where: { storeId, branchId, manufacturerProductId } });
+  if (existing) return existing;
+  try {
+    return await prisma.favoriteProduct.create({ data: { storeId, branchId, manufacturerProductId } });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      return prisma.favoriteProduct.findFirstOrThrow({ where: { storeId, branchId, manufacturerProductId } });
+    }
+    throw e;
+  }
 }
 
 export async function removeFavorite(storeId: string, branchId: string | null, manufacturerProductId: string) {
