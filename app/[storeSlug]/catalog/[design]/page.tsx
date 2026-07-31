@@ -47,7 +47,10 @@ export default function KioskProductDetailPage() {
   const imgs = product.images.length ? product.images : [];
 
   function addToCart() {
-    cart.add({ productId: product!.id, name: product!.designNumber, imageUrl: imgs[0]?.secureUrl }, qty);
+    cart.add({
+      productId: product!.id, name: product!.designNumber, imageUrl: imgs[0]?.secureUrl,
+      category: product!.category, subCategory: product!.subCategory, weightGrams: product!.weightGrams,
+    }, qty);
   }
 
   return (

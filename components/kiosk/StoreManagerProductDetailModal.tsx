@@ -139,6 +139,7 @@ export function StoreManagerProductDetailModal({
                         ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-5 w-5" /></div>}
                       </div>
                       <p className="mt-1 truncate text-[11px] group-hover:text-primary">{candidate.designNumber}</p>
+                      <p className="truncate text-[10px] text-muted-foreground">{productMetaLine({ category: candidate.category, subCategory: candidate.subCategory, weight: candidate.weightGrams })}</p>
                     </button>
                   );
                 })}

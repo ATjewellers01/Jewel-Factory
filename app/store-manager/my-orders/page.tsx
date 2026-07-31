@@ -123,7 +123,16 @@ function OrderList({ kind, endpoint }: { kind: Kind; endpoint: string }) {
                           onClick={(e) => { e.stopPropagation(); setZoomItem(it); }}
                         />
                       ) : <div className="h-14 w-14 shrink-0 rounded-lg border bg-muted" />}
-                      <span className="flex-1 text-sm">{titleCaseName(it.productNameSnapshot ?? 'Product')}</span>
+                      <span className="flex-1">
+                        <span className="block text-sm">{it.product?.designNumber ?? titleCaseName(it.productNameSnapshot ?? 'Product')}</span>
+                        {it.product && (
+                          <span className="block text-xs text-muted-foreground">
+                            {it.product.category ?? '—'}
+                            {it.product.subCategory ? ` › ${it.product.subCategory}` : ''}
+                            {it.product.weightGrams != null ? ` · ${it.product.weightGrams}g` : ''}
+                          </span>
+                        )}
+                      </span>
                       <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
                     </button>
                   ))}

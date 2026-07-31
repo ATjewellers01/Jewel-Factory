@@ -159,7 +159,16 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
                   onClick={(e) => { e.stopPropagation(); setZoomItem(it); }}
                 />
               ) : <div className="h-16 w-16 rounded-lg border bg-muted" />}
-              <span className="text-sm">{it.productNameSnapshot ?? 'Product'} × {it.quantity}</span>
+              <span>
+                <span className="block text-sm">{it.product?.designNumber ?? it.productNameSnapshot ?? 'Product'} × {it.quantity}</span>
+                {it.product && (
+                  <span className="block text-xs text-muted-foreground">
+                    {it.product.category ?? '—'}
+                    {it.product.subCategory ? ` › ${it.product.subCategory}` : ''}
+                    {it.product.weightGrams != null ? ` · ${it.product.weightGrams}g` : ''}
+                  </span>
+                )}
+              </span>
             </button>
           ))}
         </div>

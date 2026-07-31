@@ -88,7 +88,14 @@ export default function KioskCheckoutPage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={i.imageUrl} alt={i.name} className="h-12 w-12 flex-shrink-0 rounded-lg border object-cover" />
                 ) : <div className="h-12 w-12 flex-shrink-0 rounded-lg border bg-muted" />}
-                <div className="flex-1 min-w-0"><p className="truncate text-sm font-medium">{i.name}</p></div>
+                <div className="flex-1 min-w-0">
+                  <p className="truncate text-sm font-medium">{i.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {i.category ?? '—'}
+                    {i.subCategory ? ` › ${i.subCategory}` : ''}
+                    {i.weightGrams != null ? ` · ${i.weightGrams}g` : ''}
+                  </p>
+                </div>
                 {/* Quantity stepper */}
                 <div className="flex flex-shrink-0 items-center gap-1">
                   <button type="button" onClick={() => cart.setQty(i.productId, i.quantity - 1)} disabled={i.quantity <= 1}

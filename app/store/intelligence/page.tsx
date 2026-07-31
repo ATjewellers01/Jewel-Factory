@@ -188,7 +188,7 @@ function BranchBreakdown() {
                     className="flex w-full items-center justify-between gap-3 rounded-lg -mx-2 px-2 py-1.5 text-left transition-colors hover:bg-muted/60"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{p.productName}</p>
+                      <p className="truncate text-sm font-medium">{p.designNumber ?? p.productName}</p>
                       <p className="text-xs text-muted-foreground">
                         {p.category}{p.subCategory ? ` › ${p.subCategory}` : ''}{p.weight != null ? ` · ${p.weight}g` : ''}
                       </p>

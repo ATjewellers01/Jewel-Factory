@@ -160,7 +160,7 @@ export function CatalogOrderPanel({
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-black/10 pb-4">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <button onClick={() => setMobileFilters((value) => !value)} className="flex items-center gap-2 rounded-lg border border-black/15 bg-white/50 px-3 py-2 text-sm lg:hidden"><SlidersHorizontal className="h-4 w-4" /> Filters</button>
-            <div className="relative w-full max-w-sm"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8174]" /><Input placeholder="Search by name or design number…" value={search} onChange={(event) => setSearch(event.target.value)} className="rounded-lg border-black/15 bg-white/50 pl-9" /></div>
+            <div className="relative w-full max-w-sm"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8174]" /><Input placeholder="Search by design number…" value={search} onChange={(event) => setSearch(event.target.value)} className="rounded-lg border-black/15 bg-white/50 pl-9" /></div>
             <span className="hidden text-sm text-[#746b62] sm:inline">{loading ? 'Loading…' : `${filtered.length} designs`}</span>
           </div>
           <div className="relative"><SortAsc className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8174]" /><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="h-9 rounded-lg border border-black/15 bg-white/50 pl-9 pr-8 text-sm">{showPopularity && <option value="popularity">Best sellers</option>}<option value="relevance">Relevance</option><option value="newest">Newest first</option><option value="name">Name</option></select></div>
@@ -197,7 +197,14 @@ export function CatalogOrderPanel({
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={l.imageUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
                         ) : <div className="h-12 w-12 shrink-0 rounded-lg border bg-muted" />}
-                        <p className={`truncate text-sm font-medium ${fullProduct ? 'hover:text-[#b68a3e]' : ''}`}>{l.designNumber ?? l.name}</p>
+                        <span className="min-w-0">
+                          <span className={`block truncate text-sm font-medium ${fullProduct ? 'hover:text-[#b68a3e]' : ''}`}>{l.designNumber ?? l.name}</span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {fullProduct?.category ?? '—'}
+                            {fullProduct?.subCategory ? ` › ${fullProduct.subCategory}` : ''}
+                            {fullProduct?.weightGrams != null ? ` · ${fullProduct.weightGrams}g` : ''}
+                          </span>
+                        </span>
                       </button>
                       <div className="flex items-center gap-1">
                         <button onClick={() => setQty(l.productId, l.quantity - 1)} className="rounded border p-1"><Minus className="h-3 w-3" /></button>
@@ -252,7 +259,14 @@ export function CatalogOrderPanel({
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={img.secureUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
                         ) : <div className="h-12 w-12 shrink-0 rounded-lg border bg-muted" />}
-                        <p className={`truncate text-sm font-medium ${fullProduct ? 'hover:text-[#b68a3e]' : ''}`}>{f.manufacturerProduct.designNumber}</p>
+                        <span className="min-w-0">
+                          <span className={`block truncate text-sm font-medium ${fullProduct ? 'hover:text-[#b68a3e]' : ''}`}>{f.manufacturerProduct.designNumber}</span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {f.manufacturerProduct.category ?? '—'}
+                            {f.manufacturerProduct.subCategory ? ` › ${f.manufacturerProduct.subCategory}` : ''}
+                            {f.manufacturerProduct.weightGrams != null ? ` · ${f.manufacturerProduct.weightGrams}g` : ''}
+                          </span>
+                        </span>
                       </button>
                       <div className="flex items-center gap-1">
                         <button

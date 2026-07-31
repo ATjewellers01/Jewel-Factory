@@ -86,9 +86,9 @@ export function ImageZoomModal({ isOpen, images, productName, designNumber, onCl
 
         {/* Product details */}
         <div className="border-t bg-white px-6 py-4 rounded-b-2xl space-y-2">
-          {productName && (
+          {productName && !designNumber && (
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider">Product Name</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Product</p>
               <p className="text-sm font-semibold text-foreground">{productName}</p>
             </div>
           )}

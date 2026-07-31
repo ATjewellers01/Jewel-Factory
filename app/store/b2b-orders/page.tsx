@@ -108,8 +108,12 @@ export default function StoreB2bOrdersPage() {
                           />
                         ) : <div className="h-20 w-20 flex-shrink-0 rounded-lg border bg-muted" />}
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">{it.productNameSnapshot ?? 'Product'}</p>
-                          {it.productDesignSnapshot && <p className="text-xs text-muted-foreground">{it.productDesignSnapshot}</p>}
+                          <p className="truncate text-sm font-medium">{it.product?.designNumber ?? it.productDesignSnapshot ?? it.productNameSnapshot ?? 'Product'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {it.product?.category ?? '—'}
+                            {it.product?.subCategory ? ` › ${it.product.subCategory}` : ''}
+                            {it.product?.weightGrams != null ? ` · ${it.product.weightGrams}g` : ''}
+                          </p>
                         </div>
                         <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
                       </button>

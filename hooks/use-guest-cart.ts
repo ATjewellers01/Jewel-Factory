@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 
 const KEY = 'jf_guest_cart';
 
-export type GuestCartItem = { productId: string; name: string; imageUrl?: string; quantity: number };
+export type GuestCartItem = {
+  productId: string; name: string; imageUrl?: string; quantity: number;
+  category?: string | null; subCategory?: string | null; weightGrams?: string | number | null;
+};
 
 function read(): GuestCartItem[] {
   if (typeof window === 'undefined') return [];

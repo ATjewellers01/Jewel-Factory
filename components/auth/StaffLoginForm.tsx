@@ -23,7 +23,7 @@ export function StaffLoginForm({
   title: string;
   subtitle: string;
   loginPath: string; // e.g. /api/store/login
-  redirectTo: string; // e.g. /store/dashboard
+  redirectTo: string; // e.g. /store/manufacturer-catalog
   /** @deprecated no longer used — the wordmark now lives in the page top bar. */
   brandWordmark?: boolean;
   footerLinks?: FooterLink[];

@@ -156,7 +156,12 @@ export default function ManufacturerKioskOrdersPage() {
                               />
                             ) : <div className="h-20 w-20 shrink-0 rounded-lg border bg-muted" />}
                             <span className="flex-1">
-                              <span className="block text-sm font-medium">{it.productNameSnapshot}</span>
+                              <span className="block text-sm font-medium">{it.product?.designNumber ?? it.productNameSnapshot}</span>
+                              <span className="block text-xs text-muted-foreground">
+                                {it.product?.category ?? it.categorySnapshot ?? '—'}
+                                {it.product?.subCategory ? ` › ${it.product.subCategory}` : ''}
+                                {it.product?.weightGrams != null ? ` · ${it.product.weightGrams}g` : ''}
+                              </span>
                               {it.product?.karigarCode && (
                                 <span className="mt-0.5 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Karigar: {it.product.karigarCode}</span>
                               )}
