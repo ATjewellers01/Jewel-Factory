@@ -116,7 +116,7 @@ export default function BranchesPage() {
             <Input type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number" value={form.phone} onChange={set('phone')} required />
           </label>
           <label className={labelClass}>Retail User Email
-            <Input type="email" inputMode="email" placeholder="Optional" value={form.email} onChange={set('email')} />
+            <Input type="email" inputMode="email" placeholder="e.g. name@example.com" value={form.email} onChange={set('email')} />
           </label>
         </div>
 
@@ -244,7 +244,7 @@ function BranchRetailerUsers({ branch, onChange }: { branch: Branch; onChange: (
 
       <form onSubmit={add} className="grid gap-2 rounded-lg border bg-card p-3 sm:grid-cols-2">
         <Input type="tel" inputMode="numeric" maxLength={10} placeholder="Retail User Number *" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} required />
-        <Input type="email" placeholder="Retail User Email (optional)" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+        <Input type="email" placeholder="Retail User Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
         {err && <p className="text-sm text-red-600 sm:col-span-2">{err}</p>}
         <div className="sm:col-span-2">
           <Button type="submit" size="sm" disabled={adding} className="metal-sheen text-[#17120b] font-semibold">{adding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Plus className="mr-1 h-3.5 w-3.5" />Add Retailer User</>}</Button>

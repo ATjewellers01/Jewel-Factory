@@ -10,6 +10,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
+import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
 
 const FALLBACK_STORE_LOGO = '/storeRe-logo.avif';
 
@@ -17,7 +18,6 @@ const FALLBACK_STORE_LOGO = '/storeRe-logo.avif';
 const TOP_NAV = [
   { label: 'Manufacturer Catalog', href: '/store/manufacturer-catalog', icon: Gem },
   { label: 'Similar Design Search', href: '/store/similar-search', icon: Search },
-  { label: 'Customised Designs', href: '/store/custom-designs', icon: PencilLine },
 ];
 
 // Dashboard drawer — operations/admin/account pages, opened via the "Dashboard" button.
@@ -26,6 +26,7 @@ const DRAWER_NAV = [
   { label: 'Pending Approvals', href: '/store/pending-approvals', icon: ClipboardCheck, section: 'Operations' },
   { label: 'Catalog Orders', href: '/store/b2b-orders', icon: Package, section: 'Operations' },
   { label: 'Kiosk Orders', href: '/store/kiosk-orders', icon: ShoppingBag, section: 'Operations' },
+  { label: 'Customised Designs', href: '/store/custom-designs', icon: PencilLine, section: 'Operations' },
   { label: 'Intelligence', href: '/store/intelligence', icon: Lightbulb, section: 'Insights' },
   // Kiosk PIN is managed per-Store on the Stores (Branches) page.
   { label: 'Stores (Branches)', href: '/store/branches', icon: Building2, section: 'Account' },
@@ -78,7 +79,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
   const drawerSections = Array.from(new Set(DRAWER_NAV.map((item) => item.section)));
 
   return (
-    <div className="min-h-screen bg-[#f8f7f3] text-[#26221e]">
+    <div className="flex min-h-screen flex-col bg-[#f8f7f3] text-[#26221e]">
       <title>{`${pageLabel} | ${storeName}`}</title>
       <link rel="icon" href={store.logoUrl || FALLBACK_STORE_LOGO} />
 
@@ -97,6 +98,14 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
               <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-[#9b8f82]">Retailer Admin portal</span>
             </span>
           </Link>
+
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="ml-2 hidden shrink-0 items-center gap-2 rounded-full border border-[#e3ddd3] bg-white px-4 py-2 text-[13px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea] lg:flex"
+          >
+            <LayoutDashboard className="h-4 w-4" /> Dashboard
+          </button>
 
           <nav className="ml-2 hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
             {TOP_NAV.map(({ label, href, icon: Icon }) => {
@@ -117,13 +126,6 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
           <div className="ml-auto flex shrink-0 items-center gap-2">
             <button
               type="button"
-              onClick={() => setDrawerOpen(true)}
-              className="flex items-center gap-2 rounded-full border border-[#e3ddd3] bg-white px-4 py-2 text-[13px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea]"
-            >
-              <LayoutDashboard className="h-4 w-4" /> Dashboard
-            </button>
-            <button
-              type="button"
               onClick={() => setMobileNavOpen(true)}
               className="rounded-lg border border-[#e3ddd3] bg-white p-2 text-[#554e47] shadow-sm lg:hidden"
               aria-label="Open navigation"
@@ -134,11 +136,19 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+      <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
 
-      <footer className="flex flex-col items-center justify-between gap-2 border-t border-[#e8e3da] bg-white px-4 py-4 text-[11px] text-[#8d8379] sm:flex-row sm:px-6 lg:px-8">
+      <footer className="flex flex-col items-center justify-between gap-2 border-t border-[#e8e3da] bg-white px-4 py-4 text-[11px] text-[#8d8379] sm:flex-row sm:flex-wrap sm:px-6 lg:px-8">
         <span>{storeName} · Retailer Admin portal</span>
-        <span>Powered by Jewel Factory</span>
+        <span className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
+          <span>
+            Facing an issue?{' '}
+            <a href={SUPPORT_EMAIL_HREF} className="break-all font-medium text-[#96702a] hover:underline">{SUPPORT_EMAIL}</a>
+            {' · '}
+            <a href={SUPPORT_PHONE_HREF} className="whitespace-nowrap font-medium text-[#96702a] hover:underline">{SUPPORT_PHONE}</a>
+          </span>
+          <span>Powered by Jewel Factory</span>
+        </span>
       </footer>
 
       {/* Dashboard drawer — operations/admin pages, toggled via the Dashboard button */}

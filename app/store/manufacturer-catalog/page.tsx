@@ -185,14 +185,20 @@ export default function ManufacturerCatalogBrowsePage() {
                         type="button"
                         onClick={() => fullProduct && setDetail(fullProduct)}
                         disabled={!fullProduct}
-                        className="min-w-0 flex-1 text-left disabled:cursor-default"
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
                       >
-                        <p className={`truncate text-sm ${fullProduct ? 'hover:text-primary' : ''}`}>{i.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {fullProduct?.category ?? '—'}
-                          {fullProduct?.subCategory ? ` › ${fullProduct.subCategory}` : ''}
-                          {fullProduct?.weightGrams != null ? ` · ${fullProduct.weightGrams}g` : ''}
-                        </p>
+                        {i.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={i.imageUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
+                        ) : <div className="h-12 w-12 shrink-0 rounded-lg border bg-muted" />}
+                        <span className="min-w-0">
+                          <span className={`block truncate text-sm ${fullProduct ? 'hover:text-primary' : ''}`}>{i.name}</span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {fullProduct?.category ?? '—'}
+                            {fullProduct?.subCategory ? ` › ${fullProduct.subCategory}` : ''}
+                            {fullProduct?.weightGrams != null ? ` · ${fullProduct.weightGrams}g` : ''}
+                          </span>
+                        </span>
                       </button>
                       <div className="flex items-center gap-1">
                         <button onClick={() => (i.quantity <= 1 ? cart.remove(i.productId) : cart.setQty(i.productId, i.quantity - 1))} className="rounded border p-1"><Minus className="h-3 w-3" /></button>
