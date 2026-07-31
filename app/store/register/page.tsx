@@ -220,10 +220,7 @@ export default function StoreRegisterPage() {
                     <label className={labelClass}>Person name <Input autoComplete="name" placeholder="Full name" value={form.personName} onChange={set('personName')} className={fieldClass} /></label>
                     <label className={labelClass}>Mobile number <Input type="tel" autoComplete="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number" value={form.mobileNumber} onChange={set('mobileNumber')} className={fieldClass} /></label>
                   </div>
-                  <label className={labelClass}>
-                    <span className="flex flex-wrap items-center gap-x-2">
-                      Business email <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
-                    </span>
+                  <label className={labelClass}>Business email
                     <Input type="email" autoComplete="email" inputMode="email" placeholder="Used to sign in" value={form.email} onChange={set('email')} className={fieldClass} />
                   </label>
                   {/* With an email the username is the email; without one the mobile

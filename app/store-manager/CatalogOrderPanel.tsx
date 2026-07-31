@@ -1,6 +1,6 @@
 'use client';
 
-import { Award, Check, ChevronDown, Gem, Heart, Loader2, Minus, Plus, Search, ShoppingCart, SlidersHorizontal, SortAsc, Trash2, X } from 'lucide-react';
+import { Award, Check, ChevronDown, Gem, Heart, LayoutGrid, Loader2, Minus, Plus, Search, ShoppingCart, SlidersHorizontal, SortAsc, Trash2, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -17,6 +17,19 @@ import { useStoreManager } from './store-manager-context';
 
 type Img = { secureUrl: string; isPrimary: boolean };
 type Product = StoreManagerProduct & { images: Img[] };
+
+// Items per row. Tailwind needs whole class names, so both scales are lookups.
+// The mobile choice applies below `md`, the wide-screen choice from `md` up.
+const MOBILE_COLS = { 1: 'grid-cols-1', 2: 'grid-cols-2' } as const;
+const WIDE_COLS = {
+  2: 'md:grid-cols-2',
+  3: 'md:grid-cols-3',
+  4: 'md:grid-cols-4',
+  5: 'md:grid-cols-5',
+} as const;
+type MobileCols = keyof typeof MOBILE_COLS;
+type WideCols = keyof typeof WIDE_COLS;
+const COLS_STORAGE_KEY = 'jf.catalog.cols';
 // Best-seller info for THIS branch, keyed by manufacturerProductId (restock only).
 type SalesInfo = { stars: number; unitsLast30d: number };
 
@@ -61,11 +74,30 @@ export function CatalogOrderPanel({
   const [detail, setDetail] = useState<Product | null>(null);
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [salesMap, setSalesMap] = useState<Record<string, SalesInfo>>({});
+  const [mobileCols, setMobileCols] = useState<MobileCols>(2);
+  const [wideCols, setWideCols] = useState<WideCols>(4);
 
   useEffect(() => {
     const requestedCategory = new URLSearchParams(window.location.search).get('category');
     if (requestedCategory) setCategory(requestedCategory);
   }, []);
+
+  // Remember the grid density across visits (per device, not per branch).
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(COLS_STORAGE_KEY) ?? 'null') as { mobile?: number; wide?: number } | null;
+      if (saved?.mobile && saved.mobile in MOBILE_COLS) setMobileCols(saved.mobile as MobileCols);
+      if (saved?.wide && saved.wide in WIDE_COLS) setWideCols(saved.wide as WideCols);
+    } catch { /* ignore unreadable/corrupt preference */ }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify({ mobile: mobileCols, wide: wideCols }));
+    } catch { /* private mode / quota — density just won't persist */ }
+  }, [mobileCols, wideCols]);
+
+  const gridCols = `${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`;
 
   useEffect(() => {
     if (openCartOnMount) setShowCart(true);
@@ -163,7 +195,40 @@ export function CatalogOrderPanel({
             <div className="relative w-full max-w-sm"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8174]" /><Input placeholder="Search by design number…" value={search} onChange={(event) => setSearch(event.target.value)} className="rounded-lg border-black/15 bg-white/50 pl-9" /></div>
             <span className="hidden text-sm text-[#746b62] sm:inline">{loading ? 'Loading…' : `${filtered.length} designs`}</span>
           </div>
-          <div className="relative"><SortAsc className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8174]" /><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="h-9 rounded-lg border border-black/15 bg-white/50 pl-9 pr-8 text-sm">{showPopularity && <option value="popularity">Best sellers</option>}<option value="relevance">Relevance</option><option value="newest">Newest first</option><option value="name">Name</option></select></div>
+          <div className="flex items-center gap-2">
+            {/* Items per row — 1 or 2 on phones, 2–5 from tablet up. Each set is
+                only rendered at the size it applies to, so the choice is unambiguous. */}
+            <div className="flex items-center gap-1 rounded-lg border border-black/15 bg-white/50 px-1.5 py-1" role="group" aria-label="Items per row">
+              <LayoutGrid className="h-4 w-4 shrink-0 text-[#8d8174]" aria-hidden />
+              <span className="flex gap-0.5 md:hidden">
+                {(Object.keys(MOBILE_COLS) as unknown as MobileCols[]).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setMobileCols(Number(value) as MobileCols)}
+                    aria-pressed={mobileCols === Number(value)}
+                    className={`h-7 w-7 rounded-md text-xs font-semibold transition-colors ${mobileCols === Number(value) ? 'bg-[#2b2119] text-white' : 'text-[#746b62] hover:bg-black/[0.05]'}`}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </span>
+              <span className="hidden gap-0.5 md:flex">
+                {(Object.keys(WIDE_COLS) as unknown as WideCols[]).map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setWideCols(Number(value) as WideCols)}
+                    aria-pressed={wideCols === Number(value)}
+                    className={`h-7 w-7 rounded-md text-xs font-semibold transition-colors ${wideCols === Number(value) ? 'bg-[#2b2119] text-white' : 'text-[#746b62] hover:bg-black/[0.05]'}`}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </span>
+            </div>
+            <div className="relative"><SortAsc className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8174]" /><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="h-9 rounded-lg border border-black/15 bg-white/50 pl-9 pr-8 text-sm">{showPopularity && <option value="popularity">Best sellers</option>}<option value="relevance">Relevance</option><option value="newest">Newest first</option><option value="name">Name</option></select></div>
+          </div>
         </div>
 
         {mobileFilters ? <div className="mb-6 rounded-lg border border-black/10 bg-[#fffdf8] p-4 lg:hidden"><CatalogFilters categories={availableCategories} category={category} subCategory={subCategory} setCategory={setCategory} setSubCategory={setSubCategory} /></div> : null}
@@ -306,9 +371,9 @@ export function CatalogOrderPanel({
         </aside>
         <div className="min-w-0 flex-1">
       {loading ? (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">{Array.from({ length: 8 }).map((_, index) => <div key={index} className="aspect-[3/4] animate-pulse rounded-lg bg-[#ece5da]" />)}</div>
+        <div className={`grid gap-4 md:gap-6 ${gridCols}`}>{Array.from({ length: 8 }).map((_, index) => <div key={index} className="aspect-[3/4] animate-pulse rounded-lg bg-[#ece5da]" />)}</div>
       ) : data && filtered.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
+        <div className={`grid gap-4 md:gap-6 ${gridCols}`}>
           {filtered.map((p) => {
             const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
             const inCart = cart.some((l) => l.productId === p.id);
@@ -364,9 +429,16 @@ export function CatalogOrderPanel({
           products={data ?? []}
           onClose={() => setDetail(null)}
           tryOnBack={placeEndpoint.includes('b2b-orders') ? '/store-manager/restock' : '/store-manager/kiosk'}
-          primaryAction={(product) => (
-            <Button onClick={() => { add(product as Product); setDetail(null); }} className="metal-sheen flex-1 font-semibold text-[#17120b]"><Plus className="mr-1.5 h-4 w-4" />Add to order</Button>
-          )}
+          /* The modal stays open after adding — similar designs are listed below
+             the opened one, so several can be added while scrolling. */
+          primaryAction={(product) => {
+            const inCart = cart.some((line) => line.productId === product.id);
+            return (
+              <Button onClick={() => add(product as Product)} className="metal-sheen flex-1 font-semibold text-[#17120b]">
+                <Plus className="mr-1.5 h-4 w-4" />{inCart ? 'Add another' : 'Add to order'}
+              </Button>
+            );
+          }}
         />
       ) : null}
     </div>

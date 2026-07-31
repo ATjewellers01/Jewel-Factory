@@ -162,10 +162,11 @@ export default function ManufacturerStoresPage() {
 
           <div className="hidden overflow-x-auto rounded-xl border bg-card md:block">
             <table className="w-full text-sm">
+              {/* divide-x on every row draws the vertical column separators. */}
               <thead>
-                <tr className="border-b bg-muted/40 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <tr className="divide-x border-b bg-muted/40 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <th className="whitespace-nowrap px-3 py-2.5">Sr No.</th>
-                  <th className="whitespace-nowrap px-3 py-2.5">Store Name</th>
+                  <th className="whitespace-nowrap px-3 py-2.5">Company Name</th>
                   <th className="whitespace-nowrap px-3 py-2.5">Contact</th>
                   <th className="whitespace-nowrap px-3 py-2.5">Stores</th>
                   <th className="whitespace-nowrap px-3 py-2.5">Status</th>
@@ -174,7 +175,7 @@ export default function ManufacturerStoresPage() {
               </thead>
               <tbody className="divide-y">
                 {filtered.map((s, index) => (
-                  <tr key={s.id} className="hover:bg-muted/20">
+                  <tr key={s.id} className="divide-x hover:bg-muted/20">
                     <td className="whitespace-nowrap px-3 py-3 tabular-nums text-muted-foreground">{index + 1}</td>
                     <td className="min-w-[180px] px-3 py-3">
                       <p className="truncate text-sm font-medium">
@@ -248,18 +249,18 @@ function EditModal({
       setNewLabel('');
       onBadgeLabelsChanged();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not add badge');
+      setErr(e instanceof Error ? e.message : 'Could not add tag');
     }
   }
   async function removeLabel(label: string) {
-    if (!confirm(`Remove badge "${label}"? Any purchase manager using it will become unassigned.`)) return;
+    if (!confirm(`Remove tag "${label}"? Any customer using it will become unassigned.`)) return;
     setErr(null);
     try {
       await apiSend('DELETE', `/api/manufacturer/retailer-badge-labels/${encodeURIComponent(label)}`);
       if (badgeLabel === label) setBadgeLabel('');
       onBadgeLabelsChanged();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not remove badge');
+      setErr(e instanceof Error ? e.message : 'Could not remove tag');
     }
   }
 
@@ -372,25 +373,25 @@ function EditModal({
 
         {/* Retailer badge */}
         <div className="space-y-2 border-t pt-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Badge</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tag</h3>
           <select
             className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
             value={badgeLabel}
             onChange={(e) => setBadgeLabel(e.target.value)}
           >
-            <option value="">No badge</option>
+            <option value="">No tag</option>
             {badgeLabels.map((label) => <option key={label} value={label}>{label}</option>)}
           </select>
           <div className="flex flex-wrap gap-1.5">
             {badgeLabels.map((label) => (
               <span key={label} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                 {label}
-                <button type="button" onClick={() => removeLabel(label)} className="hover:text-red-600" aria-label={`Delete badge ${label}`}>×</button>
+                <button type="button" onClick={() => removeLabel(label)} className="hover:text-red-600" aria-label={`Delete tag ${label}`}>×</button>
               </span>
             ))}
           </div>
           <div className="flex gap-2">
-            <Input placeholder="New badge, e.g. Gold Customer" value={newLabel} onChange={(e) => setNewLabel(e.target.value)} />
+            <Input placeholder="New tag, e.g. Gold Customer" value={newLabel} onChange={(e) => setNewLabel(e.target.value)} />
             <Button type="button" variant="outline" onClick={addLabel} disabled={!newLabel.trim()}>Add</Button>
           </div>
         </div>

@@ -76,6 +76,23 @@ export default function LandingPage() {
     })();
   }, []);
 
+  // Lock the page behind the product popup and close it on Escape.
+  useEffect(() => {
+    if (!detail) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (zoom) setZoom(null);
+      else setDetail(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [detail, zoom]);
+
   // A few real catalog pieces to "float" in the hero (desktop only).
   const floats = (showcase ?? []).filter(primaryImg).slice(0, 3);
 
@@ -323,12 +340,14 @@ export default function LandingPage() {
 
       {/* ── Product detail modal (public — ends with a Register/Login CTA) ── */}
       {detail && (
-        <div className="fixed inset-0 z-50 flex min-h-full items-center justify-center overflow-y-auto bg-black/50 p-4 py-8" onClick={() => setDetail(null)}>
-          <div className="relative w-full max-w-3xl rounded-2xl bg-card shadow-xl" onClick={(e) => e.stopPropagation()}>
+        // Scrolls inside the card on short screens — a taller-than-viewport panel
+        // was being clipped at both ends on phones.
+        <div className="fixed inset-0 z-50 flex min-h-full items-start justify-center overflow-y-auto bg-black/50 p-3 py-6 sm:items-center sm:p-4 sm:py-8" onClick={() => setDetail(null)} role="dialog" aria-modal="true">
+          <div className="relative max-h-[calc(100dvh-3rem)] w-full max-w-3xl overflow-y-auto overscroll-contain rounded-2xl bg-card shadow-xl sm:max-h-[calc(100dvh-4rem)]" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setDetail(null)} aria-label="Close" className="absolute right-3 top-3 z-20 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80"><X className="h-4 w-4" /></button>
             <div className="grid md:grid-cols-2">
               {/* Gallery */}
-              <div className="bg-[#ece5da] p-4 md:rounded-l-2xl">
+              <div className="bg-[#ece5da] p-3 sm:p-4">
                 <div className="aspect-square overflow-hidden rounded-xl bg-white">
                   {detail.images[detailImg] ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -347,16 +366,16 @@ export default function LandingPage() {
                 )}
               </div>
               {/* Info */}
-              <div className="space-y-4 p-6">
+              <div className="space-y-4 p-4 sm:p-6">
                 <div className="pr-8">
                   <p className="text-xs font-semibold uppercase tracking-widest text-primary">{detail.category ?? 'Jewellery'}{detail.subCategory ? ` · ${detail.subCategory}` : ''}</p>
-                  <h2 className="mt-1 font-display text-2xl font-medium">{detail.designNumber}</h2>
+                  <h2 className="mt-1 font-display text-xl font-medium sm:text-2xl">{detail.designNumber}</h2>
                 </div>
                 <div className="overflow-hidden rounded-xl border text-sm">
                   <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">Metal</span><span className="font-medium">Gold</span></div>
                   {detail.purity && <div className="flex justify-between bg-muted/40 px-4 py-2.5"><span className="text-muted-foreground">Purity</span><span className="font-medium">{detail.purity}</span></div>}
                   {formatWeight(detail.weightGrams) && <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">Weight</span><span className="font-medium">{formatWeight(detail.weightGrams)}</span></div>}
-                  <div className="flex justify-between bg-muted/40 px-4 py-2.5"><span className="text-muted-foreground">Category</span><span className="font-medium">{detail.category ?? '—'}{detail.subCategory ? ` › ${detail.subCategory}` : ''}</span></div>
+                  <div className="flex justify-between gap-4 bg-muted/40 px-4 py-2.5"><span className="text-muted-foreground">Category</span><span className="text-right font-medium">{detail.category ?? '—'}{detail.subCategory ? ` › ${detail.subCategory}` : ''}</span></div>
                 </div>
                 {detail.description && detail.description.trim().length >= 4 && (
                   <p className="text-sm leading-relaxed text-muted-foreground">{detail.description}</p>

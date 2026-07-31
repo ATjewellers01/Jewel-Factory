@@ -79,7 +79,9 @@ const portalContent = {
     title: 'Join the Jewel Factory network.',
     description: 'Share your Head Office details and delivery address for review.',
     loginTitle: 'Start your application',
-    loginDescription: 'One short form. Submit it once and the manufacturer takes it from there.',
+    // Intentionally blank — the registration form speaks for itself, so nothing
+    // renders under the "Start your application" heading.
+    loginDescription: '',
     accessLabel: 'Retailer Admin application',
     documentTitle: 'Retailer Admin Registration',
     leftFooter: 'Submitted securely for manufacturer review',
@@ -131,7 +133,9 @@ export function PortalLoginScreen({
         <ShieldCheck className="h-3.5 w-3.5" /> {content.accessLabel}
       </span>
       <h2 className="mt-5 font-display text-[clamp(1.75rem,3.5vw,2.25rem)] font-medium leading-tight tracking-[-0.015em]">{content.loginTitle}</h2>
-      <p className="mt-2 max-w-md text-sm leading-6 text-[#756c63]">{content.loginDescription}</p>
+      {content.loginDescription && (
+        <p className="mt-2 max-w-md text-sm leading-6 text-[#756c63]">{content.loginDescription}</p>
+      )}
 
       {children ? (
         <div className="mt-6">{children}</div>
