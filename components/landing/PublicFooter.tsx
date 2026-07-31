@@ -1,9 +1,10 @@
 'use client';
 
-import { Award, Building2, Camera, Factory, Search, ShieldCheck, Sparkles, Store } from 'lucide-react';
+import { Award, Building2, Camera, Factory, Mail, Phone, Search, ShieldCheck, Sparkles, Store } from 'lucide-react';
 import Link from 'next/link';
 
 import { Wordmark } from '@/components/landing/Wordmark';
+import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
 
 const TRUST = [
   { icon: ShieldCheck, label: 'BIS Hallmarked' },
@@ -33,7 +34,7 @@ export function PublicFooter({ onLogin }: { onLogin?: () => void }) {
         ))}
       </div>
       {/* Columns */}
-      <div className="mx-auto grid max-w-[1400px] gap-10 px-5 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-[1.5fr_1fr_1fr_1fr] lg:px-10 xl:px-12">
+      <div className="mx-auto grid max-w-[1400px] gap-10 px-5 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1.1fr] lg:px-10 xl:px-12">
         <div>
           <Wordmark href="/" size="md" tone="dark" />
           <p className="mt-4 max-w-sm text-sm leading-6 text-white/55">
@@ -49,7 +50,7 @@ export function PublicFooter({ onLogin }: { onLogin?: () => void }) {
           </ul>
         </div>
         <div>
-          <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">For purchase managers</p>
+          <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">For Retailer Admins</p>
           <ul className="space-y-2.5 text-sm text-white/70">
             <li><Link href="/store/register" className="inline-flex items-center gap-2 transition-colors hover:text-white"><Building2 className="h-3.5 w-3.5 text-[#c9a84c]" /> Join the network</Link></li>
             <li><Link href="/store/login" className="inline-flex items-center gap-2 transition-colors hover:text-white"><Store className="h-3.5 w-3.5 text-[#c9a84c]" /> Retailer Admin portal</Link></li>
@@ -67,6 +68,25 @@ export function PublicFooter({ onLogin }: { onLogin?: () => void }) {
             </li>
             <li><Link href="/about" className="transition-colors hover:text-white">Platform overview</Link></li>
             <li><Link href="/manufacturer" className="inline-flex items-center gap-2 transition-colors hover:text-white"><Factory className="h-3.5 w-3.5 text-[#c9a84c]" /> Manufacturer access</Link></li>
+          </ul>
+        </div>
+        {/* Support — break-all on the email so a long address can't overflow the
+            column on narrow screens. */}
+        <div>
+          <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Facing an issue?</p>
+          <ul className="space-y-2.5 text-sm text-white/70">
+            <li>
+              <a href={SUPPORT_EMAIL_HREF} className="inline-flex items-start gap-2 transition-colors hover:text-white">
+                <Mail className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[#c9a84c]" />
+                <span className="break-all">{SUPPORT_EMAIL}</span>
+              </a>
+            </li>
+            <li>
+              <a href={SUPPORT_PHONE_HREF} className="inline-flex items-center gap-2 transition-colors hover:text-white">
+                <Phone className="h-3.5 w-3.5 flex-shrink-0 text-[#c9a84c]" />
+                <span>{SUPPORT_PHONE}</span>
+              </a>
+            </li>
           </ul>
         </div>
       </div>

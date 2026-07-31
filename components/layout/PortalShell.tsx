@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 
+import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
+
 export type PortalNavItem = {
   label: string;
   href: string;
@@ -105,9 +107,19 @@ export function PortalShell({
           {children}
         </main>
 
-        <footer className="flex flex-col items-center justify-between gap-2 border-t border-[#e8e3da] bg-white px-4 py-4 text-[11px] text-[#8d8379] sm:flex-row sm:px-6 lg:px-8">
+        {/* flex-wrap + centred on mobile so the support contact can drop to its
+            own line instead of squeezing the other two items. */}
+        <footer className="flex flex-col items-center justify-between gap-2 border-t border-[#e8e3da] bg-white px-4 py-4 text-[11px] text-[#8d8379] sm:flex-row sm:flex-wrap sm:px-6 lg:px-8">
           <span>{brandName} · {portalLabel}</span>
-          <span>Powered by Jewel Factory</span>
+          <span className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
+            <span>
+              Facing an issue?{' '}
+              <a href={SUPPORT_EMAIL_HREF} className="break-all font-medium text-[#96702a] hover:underline">{SUPPORT_EMAIL}</a>
+              {' · '}
+              <a href={SUPPORT_PHONE_HREF} className="whitespace-nowrap font-medium text-[#96702a] hover:underline">{SUPPORT_PHONE}</a>
+            </span>
+            <span>Powered by Jewel Factory</span>
+          </span>
         </footer>
       </div>
     </div>

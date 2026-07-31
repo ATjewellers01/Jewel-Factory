@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 
 import { getServerEnv } from '@/lib/env';
+import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
 
 /**
  * Send an email via SMTP. If SMTP is not configured, logs the message instead of
@@ -136,8 +137,17 @@ function emailHeader(opts: {
 }
 
 function emailFooter(): string {
+  // Support contact goes in every outgoing email so a recipient always has a
+  // way to report a problem. Links are plain mailto:/tel: so they work in any
+  // client, and word-break keeps a long address from overflowing on mobile.
   return `
-    <div style="padding:20px 28px 4px;text-align:center;">
+    <div style="padding:18px 28px 6px;text-align:center;">
+      <p style="color:#8c8371;font-size:11px;margin:0 0 6px;line-height:1.6;">
+        Facing an issue? Write to
+        <a href="${escapeHtml(SUPPORT_EMAIL_HREF)}" style="color:${GOLD_DARK};text-decoration:none;word-break:break-all;">${escapeHtml(SUPPORT_EMAIL)}</a>
+        or call
+        <a href="${escapeHtml(SUPPORT_PHONE_HREF)}" style="color:${GOLD_DARK};text-decoration:none;white-space:nowrap;">${escapeHtml(SUPPORT_PHONE)}</a>.
+      </p>
       <p style="color:#b0a98f;font-size:11px;margin:0;letter-spacing:0.5px;">Powered by Jewel Factory</p>
     </div>`;
 }

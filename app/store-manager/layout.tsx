@@ -33,6 +33,7 @@ import {
 import { useApi, apiPost } from '@/hooks/use-api';
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
 import { useStoreManagerKioskCart } from '@/hooks/use-store-manager-cart';
+import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
 import { StoreManagerProvider, type StoreManagerMe } from './store-manager-context';
 
 // Fallback store logo (gold medallion) when a retailer has no logoUrl set.
@@ -271,7 +272,15 @@ function Shell({ children }: { children: ReactNode }) {
               ]} />
             </div>
             <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-5 text-[10px] text-white/35 sm:flex-row">
-              <span>© {new Date().getFullYear()} {data.retailer.name}. In-store customer experience.</span>
+              <span className="text-center sm:text-left">
+                © {new Date().getFullYear()} {data.retailer.name}. In-store customer experience.
+                <span className="mt-1 block">
+                  Facing an issue?{' '}
+                  <a href={SUPPORT_EMAIL_HREF} className="break-all text-[#c9a84c] hover:text-white">{SUPPORT_EMAIL}</a>
+                  {' · '}
+                  <a href={SUPPORT_PHONE_HREF} className="whitespace-nowrap text-[#c9a84c] hover:text-white">{SUPPORT_PHONE}</a>
+                </span>
+              </span>
               <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
                 <Sparkles className="h-3.5 w-3.5 text-[#c9a84c]" />
                 <span>Powered by Jewel Factory</span>
