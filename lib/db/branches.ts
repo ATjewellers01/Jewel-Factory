@@ -106,10 +106,10 @@ export async function clearBranchRestockPin(retailerId: string, branchId: string
 // ── Branch managers ───────────────────────────────────────────────────────────
 
 export type BranchManagerInput = {
-  name: string;
-  email: string;
-  password?: string;
-  phone?: string | null;
+  // Retailer User's mobile number — required. It is both the fallback login
+  // username (when no email is given) and always the password (mirrors Store).
+  phone: string;
+  email?: string | null;
   isActive?: boolean;
 };
 
@@ -127,25 +127,34 @@ export async function listBranchManagers(retailerId: string, branchId: string) {
 export async function createBranchManager(retailerId: string, branchId: string, input: BranchManagerInput, createdBy?: string) {
   const branch = await prisma.branch.findFirst({ where: { id: branchId, retailerId }, select: { id: true } });
   if (!branch) return null;
-  const email = input.email.toLowerCase().trim();
-  const dup = await prisma.branchManager.findFirst({ where: { branchId, email }, select: { id: true } });
+  const phone = input.phone.trim();
+  const email = input.email ? input.email.toLowerCase().trim() : null;
+
+  // Duplicate check: email (if given) must be free within this branch; a phone
+  // with no email must be free branch-wide, since the phone becomes the login
+  // username for email-less Retailer Users.
+  const dup = email
+    ? await prisma.branchManager.findFirst({ where: { branchId, email }, select: { id: true } })
+    : await prisma.branchManager.findFirst({ where: { branchId, phone }, select: { id: true } });
   if (dup) return { error: 'duplicate' as const };
-  const passwordHash = await hashPassword(input.password || Math.random().toString(36).slice(2) + 'A1');
+
+  // No manual password: the mobile number is always the password, mirroring
+  // the Retailer Admin (Store) self-registration flow.
+  const passwordHash = await hashPassword(phone);
   const mgr = await prisma.branchManager.create({
-    data: { branchId, name: input.name, email, passwordHash, phone: input.phone ?? null, isActive: input.isActive ?? true, createdBy: createdBy ?? null },
+    data: { branchId, name: email ?? phone, email, passwordHash, phone, isActive: input.isActive ?? true, createdBy: createdBy ?? null },
     select: { id: true, name: true, email: true, phone: true, isActive: true },
   });
   return { manager: mgr };
 }
 
-export async function updateBranchManager(retailerId: string, branchId: string, managerId: string, input: Partial<Omit<BranchManagerInput, 'password'>>) {
+export async function updateBranchManager(retailerId: string, branchId: string, managerId: string, input: Partial<BranchManagerInput>) {
   const mgr = await prisma.branchManager.findFirst({ where: { id: managerId, branchId, branch: { retailerId } }, select: { id: true } });
   if (!mgr) return null;
   return prisma.branchManager.update({
     where: { id: managerId },
     data: {
-      ...(input.name !== undefined ? { name: input.name } : {}),
-      ...(input.email !== undefined ? { email: input.email.toLowerCase().trim() } : {}),
+      ...(input.email !== undefined ? { email: input.email ? input.email.toLowerCase().trim() : null } : {}),
       ...(input.phone !== undefined ? { phone: input.phone } : {}),
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
     },

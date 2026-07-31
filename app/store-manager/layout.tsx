@@ -313,7 +313,7 @@ function Shell({ children }: { children: ReactNode }) {
               <div className="mt-auto border-t border-black/10 bg-white/45 p-4">
                 <div className="mb-3 flex items-center gap-3 px-2">
                   <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#211c17] text-[10px] font-bold tracking-wide text-[#efd489]">{managerInitials}</span>
-                  <div className="min-w-0"><p className="truncate text-sm font-semibold">{data.name}</p><p className="truncate text-xs text-[#80756a]">Store manager</p></div>
+                  <div className="min-w-0"><p className="truncate text-sm font-semibold">{data.name}</p><p className="truncate text-xs text-[#80756a]">Retailer User</p></div>
                 </div>
                 <button onClick={logout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-[#765147] hover:bg-[#f5eae7] hover:text-[#8e3127]"><LogOut className="h-4 w-4" /> Logout</button>
               </div>

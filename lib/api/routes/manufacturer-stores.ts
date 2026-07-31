@@ -34,19 +34,23 @@ manufacturerStoreRoutes.post('/store-registrations/:id/approve', async (c) => {
   if (!result) return sendError(c, 'not_found', 'Pending registration not found', 404);
 
   // Notify the store owner that their store is approved (fire-and-forget — never
-  // block or fail the approval if email/SMTP is down or unconfigured).
-  const env = getServerEnv();
-  const { subject, html } = storeApprovedEmail({
-    storeName: result.name,
-    storeSlug: result.slug,
-    ownerEmail: result.email,
-    managerEmails: result.managers.map((m) => m.email),
-    appUrl: env.NEXT_PUBLIC_APP_URL,
-    retailerLogoUrl: result.logoUrl,
-  });
-  void sendEmail({ to: result.email, subject, html }).catch((e) =>
-    console.warn('[approve] store-approved email failed:', e),
-  );
+  // block or fail the approval if email/SMTP is down or unconfigured). Retailers
+  // who registered with a mobile number only have no address to send to.
+  if (result.email) {
+    const env = getServerEnv();
+    const ownerEmail = result.email;
+    const { subject, html } = storeApprovedEmail({
+      storeName: result.name,
+      storeSlug: result.slug,
+      ownerEmail,
+      managerEmails: result.managers.map((m) => m.email),
+      appUrl: env.NEXT_PUBLIC_APP_URL,
+      retailerLogoUrl: result.logoUrl,
+    });
+    void sendEmail({ to: ownerEmail, subject, html }).catch((e) =>
+      console.warn('[approve] store-approved email failed:', e),
+    );
+  }
 
   return sendData(c, result);
 });
@@ -65,7 +69,8 @@ manufacturerStoreRoutes.get('/stores', async (c) => {
 
 const EditBody = z.object({
   name: z.string().min(2).optional(),
-  email: z.string().email().optional(),
+  // Blank means "leave as is" — email-less retailers keep having no email.
+  email: z.preprocess((v) => (typeof v === 'string' && v.trim() === '' ? undefined : v), z.string().email().optional()),
   city: z.string().optional(),
   phone: z.string().optional(),
   extraBranchAllowance: z.coerce.number().int().min(0).optional(),

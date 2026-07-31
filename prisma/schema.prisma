@@ -112,9 +112,12 @@ model Store {
   manufacturer   Manufacturer? @relation(fields: [manufacturerId], references: [id])
 
   // identity / auth
-  name         String
-  slug         String  @unique // kiosk URL segment: /<slug>/...
-  email        String  @unique
+  name String
+  slug String @unique // kiosk URL segment: /<slug>/...
+  // Email is OPTIONAL — older retailers register with a mobile number only. The
+  // login username is the email when present, otherwise the mobile number
+  // (ownerPhone). An email can be added later from /store/profile.
+  email        String? @unique
   passwordHash String  @map("password_hash") // bcrypt (store owner)
 
   // registration
@@ -164,6 +167,7 @@ model Store {
   customOrders   CustomDesignOrder[]
   resetTokens    PasswordResetToken[]
 
+  @@index([ownerPhone]) // login-by-mobile lookup (email-less retailers)
   @@map("stores")
 }
 
@@ -210,11 +214,14 @@ model Branch {
 }
 
 model BranchManager {
-  id           String   @id @default(uuid())
-  branchId     String   @map("branch_id")
-  branch       Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  name         String
-  email        String
+  id       String @id @default(uuid())
+  branchId String @map("branch_id")
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  // Retailer Users register with a mobile number only — email is optional. The
+  // login username is the email when present, otherwise the mobile number
+  // (phone); the password is always the mobile number (mirrors Store).
+  name         String?
+  email        String?
   passwordHash String   @map("password_hash") // bcrypt
   phone        String?
   isActive     Boolean  @default(true) @map("is_active")
@@ -224,6 +231,7 @@ model BranchManager {
 
   @@unique([branchId, email])
   @@index([email])
+  @@index([phone]) // login-by-mobile lookup (email-less Retailer Users)
   @@map("branch_managers")
 }
 

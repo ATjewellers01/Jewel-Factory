@@ -25,7 +25,7 @@ const NAV = [
   { label: 'Intelligence', href: '/store/intelligence', icon: Lightbulb, section: 'Insights' },
   // Kiosk PIN is managed per-Store on the Stores (Branches) page.
   { label: 'Stores (Branches)', href: '/store/branches', icon: Building2, section: 'Account' },
-  { label: 'Purchase Manager Profile', href: '/store/profile', icon: StoreIcon, section: 'Account' },
+  { label: 'Retailer Admin Profile', href: '/store/profile', icon: StoreIcon, section: 'Account' },
   { label: 'Settings', href: '/store/settings', icon: Settings, section: 'Account' },
 ];
 
@@ -62,8 +62,8 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
       brandName={storeName}
       brandLogo={store.logoUrl || FALLBACK_STORE_LOGO}
       fallbackLogo={FALLBACK_STORE_LOGO}
-      portalLabel="Purchase manager portal"
-      roleLabel="Purchase manager"
+      portalLabel="Retailer Admin portal"
+      roleLabel="Retailer Admin"
       pageLabel={pageLabel}
       nav={NAV}
       onSignOut={signOut}

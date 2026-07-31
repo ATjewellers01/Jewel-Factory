@@ -80,6 +80,9 @@ storePortalRoutes.post('/search/image', storeGuard, zValidator('json', z.object(
 
 const ProfileBody = z.object({
   name: z.string().min(2).optional(),
+  // Retailers who registered with a mobile number only can add an email here
+  // later; it then becomes their sign-in username alongside the mobile number.
+  email: z.preprocess(emptyToUndef, z.string().email().optional()),
   city: z.string().optional(),
   phone: z.string().optional(),
   addressStreet: z.string().optional(),
@@ -93,6 +96,7 @@ const ProfileBody = z.object({
 
 storePortalRoutes.patch('/profile', storeGuard, zValidator('json', ProfileBody), async (c) => {
   const result = await updateStoreProfile(c.get('storeId'), c.req.valid('json') as Record<string, string>);
+  if ('error' in result) return sendError(c, 'conflict', 'That email is already registered.', 409);
   return sendData(c, result);
 });
 
@@ -159,24 +163,26 @@ storePortalRoutes.get('/branches/:id/managers', storeGuard, async (c) => {
   return sendData(c, list);
 });
 
+// No manual password: the mobile number is always the Retailer User's password
+// (mirrors Retailer Admin self-registration). Email is optional — when absent,
+// the mobile number is also the login username.
+const MOBILE_RE = /^[6-9]\d{9}$/;
 const BMCreateBody = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(6),
-  phone: z.preprocess(emptyToUndef, z.string().optional()),
+  phone: z.string().regex(MOBILE_RE, 'Enter a valid 10-digit mobile number'),
+  email: z.preprocess(emptyToUndef, z.string().email().optional()),
 });
 
 storePortalRoutes.post('/branches/:id/managers', storeGuard, zValidator('json', BMCreateBody), async (c) => {
   const b = c.req.valid('json');
-  const res = await createBranchManager(c.get('storeId'), c.req.param('id'), { name: b.name, email: b.email, password: b.password, phone: b.phone as string | undefined });
+  const res = await createBranchManager(c.get('storeId'), c.req.param('id'), { phone: b.phone, email: b.email ?? null });
   if (res === null) return sendError(c, 'not_found', 'Branch not found', 404);
-  if ('error' in res) return sendError(c, 'conflict', 'A store manager with this email already exists for this store.', 409);
+  if ('error' in res) return sendError(c, 'conflict', 'A Retailer User with this email or mobile number already exists for this store.', 409);
   return sendData(c, res.manager, 201);
 });
 
 const BMUpdateBody = z.object({
-  name: z.string().min(2).optional(),
-  phone: z.preprocess(emptyToUndef, z.string().optional()),
+  email: z.preprocess(emptyToUndef, z.string().email().optional()),
+  phone: z.preprocess(emptyToUndef, z.string().regex(MOBILE_RE, 'Enter a valid 10-digit mobile number').optional()),
   isActive: z.boolean().optional(),
 });
 

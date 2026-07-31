@@ -24,13 +24,13 @@ type PortalKind = 'retailer' | 'manager' | 'manufacturer' | 'retailer-registrati
 
 const portalContent = {
   retailer: {
-    eyebrow: 'Purchase manager workspace',
+    eyebrow: 'Retailer Admin workspace',
     title: 'Run every store from one clear workspace.',
     description: 'Manage approvals, branches, staff, branding, and orders without losing sight of the customer experience.',
-    loginTitle: 'Purchase manager sign in',
+    loginTitle: 'Retailer Admin sign in',
     loginDescription: 'Access your head-office workspace and connected stores.',
-    accessLabel: 'Purchase manager access',
-    documentTitle: 'Purchase manager sign in',
+    accessLabel: 'Retailer Admin access',
+    documentTitle: 'Retailer Admin sign in',
     leftFooter: 'Secure, authorized access only',
     rightFooter: 'Your credentials are used only to access this protected workspace.',
     icon: Store,
@@ -44,10 +44,10 @@ const portalContent = {
     eyebrow: 'Store workspace',
     title: 'Everything your team needs on the shop floor.',
     description: 'Open the customer kiosk, find similar designs, manage try-ons, and place restock requests from one place.',
-    loginTitle: 'Store Manager sign in',
+    loginTitle: 'Retailer User sign in',
     loginDescription: 'Use the account created for your assigned store.',
     accessLabel: 'Store team access',
-    documentTitle: 'Store Manager sign in',
+    documentTitle: 'Retailer User sign in',
     leftFooter: 'Secure, authorized access only',
     rightFooter: 'Your credentials are used only to access this protected workspace.',
     icon: Users,
@@ -75,13 +75,13 @@ const portalContent = {
     ],
   },
   'retailer-registration': {
-    eyebrow: 'Purchase manager partnership',
+    eyebrow: 'Retailer Admin partnership',
     title: 'Join the Jewel Factory network.',
     description: 'Share your Head Office details and delivery address for review.',
     loginTitle: 'Start your application',
-    loginDescription: 'Two short steps. Your progress stays here as you continue.',
-    accessLabel: 'Purchase manager application',
-    documentTitle: 'Purchase Manager Registration',
+    loginDescription: 'One short form. Submit it once and the manufacturer takes it from there.',
+    accessLabel: 'Retailer Admin application',
+    documentTitle: 'Retailer Admin Registration',
     leftFooter: 'Submitted securely for manufacturer review',
     rightFooter: 'Your application details remain private while the manufacturer reviews them.',
     icon: Store,
@@ -142,6 +142,13 @@ export function PortalLoginScreen({
             showLabels
             title=""
             subtitle=""
+            {...(portal === 'retailer'
+              ? {
+                  identifierLabel: 'Email or mobile number',
+                  identifierPlaceholder: 'you@company.com or 10-digit mobile',
+                  identifierHint: 'Registered without an email? Use your mobile number as both username and password.',
+                }
+              : {})}
             loginPath={loginPath}
             redirectTo={redirectTo}
             forgotHref={forgotHref}
@@ -158,10 +165,15 @@ export function PortalLoginScreen({
   );
 
   return (
-    <main className="relative h-dvh overflow-hidden bg-[#f4f0e8] px-3 py-3 text-[#28231e] sm:px-5 sm:py-5 lg:px-8 lg:py-7">
+    // Mobile (< md) scrolls the page naturally — a fixed-height, overflow-hidden
+    // card clipped the form on short viewports and left dead space on tall ones.
+    // The locked full-height split panel only kicks in from md up.
+    <main className="relative min-h-dvh bg-[#f4f0e8] px-3 py-3 text-[#28231e] sm:px-5 sm:py-5 md:h-dvh md:overflow-hidden lg:px-8 lg:py-7">
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_12%,rgba(206,166,72,0.18),transparent_30rem),radial-gradient(circle_at_90%_88%,rgba(128,99,49,0.08),transparent_28rem)]" />
 
-      <div className="relative mx-auto grid h-[calc(100dvh-1.5rem)] w-full max-w-[1240px] overflow-hidden rounded-[26px] border border-[#ded6ca] bg-white shadow-[0_28px_90px_rgba(62,48,29,0.12)] sm:h-[calc(100dvh-2.5rem)] md:grid-cols-[0.88fr_1.12fr] lg:h-[calc(100dvh-3.5rem)]">
+      {/* min-h on mobile so a short form (login) centres in the viewport instead
+          of leaving dead space, while a long one (registration) just grows. */}
+      <div className="relative mx-auto grid min-h-[calc(100dvh-1.5rem)] w-full max-w-[1240px] rounded-[22px] border border-[#ded6ca] bg-white shadow-[0_28px_90px_rgba(62,48,29,0.12)] sm:min-h-[calc(100dvh-2.5rem)] sm:rounded-[26px] md:h-[calc(100dvh-2.5rem)] md:grid-cols-[0.88fr_1.12fr] md:overflow-hidden lg:h-[calc(100dvh-3.5rem)]">
         <section className="relative hidden h-full min-h-0 flex-col justify-between overflow-hidden border-r border-[#ded6ca] bg-[#211c17] p-8 text-[#faf7f0] md:flex lg:p-12">
           <div aria-hidden className="absolute -bottom-20 -right-20 h-80 w-80 rotate-12 border border-[#d0a84e]/15" />
           <div aria-hidden className="absolute -bottom-5 -right-5 h-52 w-52 rotate-12 border border-[#d0a84e]/15" />
@@ -195,22 +207,22 @@ export function PortalLoginScreen({
           </p>
         </section>
 
-        <section className="relative flex h-full min-h-0 flex-col overflow-hidden bg-[#fffdf9]">
-          <div className="flex shrink-0 items-center justify-between border-b border-[#ebe5dc] px-5 py-4 md:justify-end md:px-8">
+        <section className="relative flex min-h-0 flex-col rounded-[22px] bg-[#fffdf9] sm:rounded-[26px] md:h-full md:rounded-none md:overflow-hidden">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#ebe5dc] px-4 py-3.5 sm:px-5 sm:py-4 md:justify-end md:px-8">
             <Wordmark href="/" size="sm" className="md:hidden" />
-            <Link href={backHref} className="inline-flex min-h-10 items-center gap-2 rounded-full px-3 text-xs font-medium text-[#71685f] transition-colors hover:bg-[#f4efe6] hover:text-[#29231e] sm:text-sm">
-              <ArrowLeft className="h-4 w-4" /> <span className="hidden min-[360px]:inline">{backLabel}</span><span className="min-[360px]:hidden">Back</span>
+            <Link href={backHref} className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-2 text-xs font-medium text-[#71685f] transition-colors hover:bg-[#f4efe6] hover:text-[#29231e] sm:gap-2 sm:px-3 sm:text-sm">
+              <ArrowLeft className="h-4 w-4 shrink-0" /> <span className="hidden min-[420px]:inline">{backLabel}</span><span className="min-[420px]:hidden">Back</span>
             </Link>
           </div>
 
           {children ? (
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
-              <div className="flex min-h-full justify-center px-5 py-8 sm:px-9 sm:py-10 lg:px-16 lg:py-12">
+            <div className="min-h-0 flex-1 md:overflow-y-auto md:overscroll-contain md:[scrollbar-gutter:stable]">
+              <div className="flex justify-center px-4 py-7 sm:px-9 sm:py-10 md:min-h-full lg:px-16 lg:py-12">
                 {panelContent}
               </div>
             </div>
           ) : (
-            <div className="flex flex-1 items-center justify-center px-5 py-9 sm:px-9 sm:py-12 lg:px-16">
+            <div className="flex flex-1 items-center justify-center px-4 py-9 sm:px-9 sm:py-12 lg:px-16">
               {panelContent}
             </div>
           )}

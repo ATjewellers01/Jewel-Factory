@@ -39,17 +39,31 @@ function bmSecret(env: { BRANCH_MANAGER_SECRET?: string; MANAGER_SECRET: string 
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
-const LoginBody = z.object({ email: z.string().email(), password: z.string().min(1) });
+// The `email` field is the USERNAME — it holds either an email address or, for
+// Retailer Users who registered without one, their 10-digit mobile number. The
+// field name is kept so the login payload stays unchanged for every existing
+// client (mirrors the Retailer Admin / Store login).
+const LoginBody = z.object({ email: z.string().min(1), password: z.string().min(1) });
 
 // POST /api/branch-manager/login
 branchManagerRoutes.post('/login', zValidator('json', LoginBody), async (c) => {
   const env = getServerEnv();
   const { email, password } = c.req.valid('json');
+  const username = email.toLowerCase().trim();
 
-  const bm = await prisma.branchManager.findFirst({
-    where: { email: email.toLowerCase().trim(), isActive: true },
-    include: { branch: { select: { id: true, isActive: true, retailerId: true, retailer: { select: { isActive: true, registrationStatus: true } } } } },
-  });
+  // Email-less Retailer Users sign in with their mobile number. `phone` has no
+  // unique constraint (historical rows may share one within different branches),
+  // so this picks the oldest match.
+  const bm = username.includes('@')
+    ? await prisma.branchManager.findFirst({
+        where: { email: username, isActive: true },
+        include: { branch: { select: { id: true, isActive: true, retailerId: true, retailer: { select: { isActive: true, registrationStatus: true } } } } },
+      })
+    : await prisma.branchManager.findFirst({
+        where: { phone: username, isActive: true },
+        orderBy: { createdAt: 'asc' },
+        include: { branch: { select: { id: true, isActive: true, retailerId: true, retailer: { select: { isActive: true, registrationStatus: true } } } } },
+      });
   if (!bm) return sendError(c, 'unauthorized', 'Invalid email or password', 401);
 
   const ok = await verifyPassword(password, bm.passwordHash);

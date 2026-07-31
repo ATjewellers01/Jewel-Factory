@@ -7,9 +7,9 @@ import { PublicNav } from '@/components/landing/PublicNav';
 export const metadata = { title: 'About' };
 
 const ROLES = [
-  { icon: Factory, title: 'Manufacturer', desc: 'Owns the gold design catalog, approves purchase managers, and fulfils every order — without ever seeing a customer’s personal details.' },
-  { icon: Store, title: 'Purchase manager (Head Office)', desc: 'A jewellery business that runs many stores. Approves all orders, manages branches & staff, and restocks from the manufacturer.' },
-  { icon: Users, title: 'Store Manager', desc: 'Runs one store’s kiosk — helps walk-in customers browse, try on, and place orders that flow up for approval.' },
+  { icon: Factory, title: 'Manufacturer', desc: 'Owns the gold design catalog, approves Retailer Admins, and fulfils every order — without ever seeing a customer’s personal details.' },
+  { icon: Store, title: 'Retailer Admin (Head Office)', desc: 'A jewellery business that runs many stores. Approves all orders, manages branches & staff, and restocks from the manufacturer.' },
+  { icon: Users, title: 'Retailer User', desc: 'Runs one store’s kiosk — helps walk-in customers browse, try on, and place orders that flow up for approval.' },
   { icon: Gem, title: 'Customer', desc: 'Walks into a store, browses the catalog and tries pieces on with AR. No login, and none of their personal data is stored.' },
 ];
 
@@ -18,15 +18,15 @@ const PRINCIPLES = [
   { icon: ShieldCheck, title: 'Customer privacy by design', desc: 'Orders carry only products + an editable requirement note. Customer name and phone never reach the manufacturer.' },
   { icon: Sparkles, title: 'AR try-on', desc: 'Every eligible design has a transparent asset so it can be tried on live at the store kiosk.' },
   { icon: Search, title: 'Similar-design search', desc: 'Upload a photo at the kiosk to instantly find matching designs in the catalog by visual similarity.' },
-  { icon: Building2, title: 'One purchase manager, many stores', desc: 'Approvals, restock and custom orders are tracked across every branch, end to end.' },
+  { icon: Building2, title: 'One Retailer Admin, many stores', desc: 'Approvals, restock and custom orders are tracked across every branch, end to end.' },
 ];
 
 const STEPS = [
-  'A customer browses the store kiosk; the Store Manager builds an order — products, quantity and a requirement note (no personal data).',
-  'The Purchase manager (Head Office) reviews it, can edit the note, and approves.',
-  'The approved order reaches the Manufacturer — showing the purchase manager and branch, never the customer.',
-  'The Manufacturer ships to the purchase manager’s fixed Head Office address; the purchase manager distributes to the branch.',
-  'The Store Manager tracks status, chats with Head Office on the order, and marks it Completed when the customer has the piece.',
+  'A customer browses the store kiosk; the Retailer User builds an order — products, quantity and a requirement note (no personal data).',
+  'The Retailer Admin (Head Office) reviews it, can edit the note, and approves.',
+  'The approved order reaches the Manufacturer — showing the Retailer Admin and branch, never the customer.',
+  'The Manufacturer ships to the Retailer Admin’s fixed Head Office address; the Retailer Admin distributes to the branch.',
+  'The Retailer User tracks status, chats with Head Office on the order, and marks it Completed when the customer has the piece.',
 ];
 
 const TRUST = [

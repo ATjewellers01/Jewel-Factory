@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { apiSend } from '@/hooks/use-api';
 
 type Store = {
-  name: string; city: string | null; phone: string | null;
+  name: string; email: string | null; city: string | null; phone: string | null;
   addressStreet: string | null; addressCity: string | null; addressState: string | null;
   addressPincode: string | null; addressLandmark: string | null;
   ownerName: string | null; ownerPhone: string | null;
@@ -38,7 +38,7 @@ export default function StoreProfilePage() {
     setSavingProfile(true); setSavedMsg(null);
     try {
       await apiSend('PATCH', '/api/store/profile', {
-        name: store.name, city: store.city, phone: store.phone,
+        name: store.name, email: store.email ?? '', city: store.city, phone: store.phone,
         addressStreet: store.addressStreet, addressCity: store.addressCity, addressState: store.addressState,
         addressPincode: store.addressPincode, addressLandmark: store.addressLandmark,
         ownerName: store.ownerName, ownerPhone: store.ownerPhone,
@@ -61,12 +61,20 @@ export default function StoreProfilePage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">
-      <h1 className="text-2xl font-medium tracking-tight">Purchase Manager Profile</h1>
+      <h1 className="text-2xl font-medium tracking-tight">Retailer Admin Profile</h1>
       {savedMsg && <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-700">{savedMsg}</div>}
 
       <section className="space-y-3 rounded-xl border bg-card p-4">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Store & Owner</h2>
         <Field label="Store name" value={store.name} onChange={(v) => set('name', v)} />
+        <Field
+          label="Email address"
+          value={store.email ?? ''}
+          onChange={(v) => set('email', v)}
+          hint={store.email
+            ? 'Used as your sign-in username.'
+            : 'Optional — add one to sign in with your email instead of your mobile number.'}
+        />
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="City" value={store.city ?? ''} onChange={(v) => set('city', v)} />
           <Field label="Store phone" value={store.phone ?? ''} onChange={(v) => set('phone', v)} />
@@ -103,11 +111,12 @@ export default function StoreProfilePage() {
   );
 }
 
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function Field({ label, value, onChange, hint }: { label: string; value: string; onChange: (v: string) => void; hint?: string }) {
   return (
     <div>
       <label className="text-xs font-medium text-muted-foreground">{label}</label>
       <Input className="mt-1" value={value} onChange={(e) => onChange(e.target.value)} />
+      {hint && <p className="mt-1 text-[11px] leading-4 text-muted-foreground">{hint}</p>}
     </div>
   );
 }

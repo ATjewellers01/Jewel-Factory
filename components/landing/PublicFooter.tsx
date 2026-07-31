@@ -52,7 +52,7 @@ export function PublicFooter({ onLogin }: { onLogin?: () => void }) {
           <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">For purchase managers</p>
           <ul className="space-y-2.5 text-sm text-white/70">
             <li><Link href="/store/register" className="inline-flex items-center gap-2 transition-colors hover:text-white"><Building2 className="h-3.5 w-3.5 text-[#c9a84c]" /> Join the network</Link></li>
-            <li><Link href="/store/login" className="inline-flex items-center gap-2 transition-colors hover:text-white"><Store className="h-3.5 w-3.5 text-[#c9a84c]" /> Purchase manager portal</Link></li>
+            <li><Link href="/store/login" className="inline-flex items-center gap-2 transition-colors hover:text-white"><Store className="h-3.5 w-3.5 text-[#c9a84c]" /> Retailer Admin portal</Link></li>
           </ul>
         </div>
         <div>

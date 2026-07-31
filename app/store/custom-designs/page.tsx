@@ -143,7 +143,7 @@ export default function StoreCustomDesignsPage() {
                       </>
                     )}
                     <Button size="sm" variant="outline" onClick={() => setChat({ id: r.id, label: r.customerName })}>
-                      <MessageSquare className="mr-1 h-3.5 w-3.5" />Message Store Manager
+                      <MessageSquare className="mr-1 h-3.5 w-3.5" />Message Retailer User
                     </Button>
                   </div>
                 </div>

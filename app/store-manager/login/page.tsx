@@ -1,6 +1,6 @@
 import { PortalLoginScreen } from '@/components/auth/PortalLoginScreen';
 
-export const metadata = { title: 'Store Manager Login' };
+export const metadata = { title: 'Retailer User Login' };
 
 export default function StoreManagerLoginPage() {
   return (
@@ -8,7 +8,7 @@ export default function StoreManagerLoginPage() {
       portal="manager"
       loginPath="/api/branch-manager/login"
       redirectTo="/store-manager"
-      footerLinks={[{ prompt: 'Purchase manager account?', label: 'Open purchase manager sign in', href: '/store/login' }]}
+      footerLinks={[{ prompt: 'Retailer Admin account?', label: 'Open Retailer Admin sign in', href: '/store/login' }]}
     />
   );
 }

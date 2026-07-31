@@ -19,6 +19,9 @@ export function StaffLoginForm({
   forgotHref,
   bare = false,
   showLabels = false,
+  identifierLabel = 'Email address',
+  identifierPlaceholder,
+  identifierHint,
 }: {
   title: string;
   subtitle: string;
@@ -34,6 +37,12 @@ export function StaffLoginForm({
   // Full portal pages use visible labels; the compact landing modal keeps the
   // existing placeholder-led presentation.
   showLabels?: boolean;
+  // Purchase managers may have registered with a mobile number instead of an
+  // email, so their username field accepts either. The request payload keeps
+  // sending it as `email` — the server treats that field as the username.
+  identifierLabel?: string;
+  identifierPlaceholder?: string;
+  identifierHint?: string;
 }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -89,16 +98,17 @@ export function StaffLoginForm({
 
         <div className="space-y-4">
           <label className="block space-y-2">
-            {showLabels && <span className="text-xs font-semibold text-[#4f473f]">Email address</span>}
+            {showLabels && <span className="text-xs font-semibold text-[#4f473f]">{identifierLabel}</span>}
             <Input
-              type="email"
-              autoComplete="email"
-              placeholder={showLabels ? 'you@company.com' : 'Email'}
+              type={identifierPlaceholder ? 'text' : 'email'}
+              autoComplete={identifierPlaceholder ? 'username' : 'email'}
+              placeholder={identifierPlaceholder ?? (showLabels ? 'you@company.com' : 'Email')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               className={showLabels ? 'h-12 rounded-xl border-[#dcd3c6] bg-white px-4 shadow-sm transition-shadow focus-visible:ring-[#b98b31]/35' : undefined}
             />
+            {identifierHint && showLabels && <span className="block text-[11px] leading-4 text-[#8a8178]">{identifierHint}</span>}
           </label>
           <label className="block space-y-2">
             {showLabels && <span className="text-xs font-semibold text-[#4f473f]">Password</span>}
