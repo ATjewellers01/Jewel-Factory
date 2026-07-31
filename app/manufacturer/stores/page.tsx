@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { useApi, apiPost, apiSend } from '@/hooks/use-api';
 
 type Store = {
-  id: string; name: string; slug: string; email: string;
+  id: string; name: string; slug: string; email: string | null;
   phone: string | null; ownerName: string | null; ownerPhone: string | null;
   city: string | null; addressStreet: string | null; addressCity: string | null; addressState: string | null;
   addressPincode: string | null; addressLandmark: string | null;
@@ -38,7 +38,7 @@ export default function ManufacturerStoresPage() {
   const cityOptions = Array.from(new Set((data ?? []).map((s) => s.city).filter((c): c is string => !!c))).sort();
 
   const filtered = (data ?? []).filter((s) => {
-    const matchSearch = !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.email.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || s.name.toLowerCase().includes(search.toLowerCase()) || (s.email ?? '').toLowerCase().includes(search.toLowerCase());
     const matchStatus = !statusFilter || (statusFilter === 'active' ? s.isActive : !s.isActive);
     const matchBadge = !badgeFilter || s.badgeLabel === badgeFilter;
     const matchCity = !cityFilter || s.city === cityFilter;
@@ -61,7 +61,7 @@ export default function ManufacturerStoresPage() {
     }
   }
   async function remove(s: Store) {
-    if (!confirm(`Delete purchase manager "${s.name}"? This cannot be undone.`)) return;
+    if (!confirm(`Delete customer "${s.name}"? This cannot be undone.`)) return;
     setActionError(null);
     try {
       await apiSend('DELETE', `/api/manufacturer/stores/${s.id}`);
@@ -74,40 +74,42 @@ export default function ManufacturerStoresPage() {
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4">
       <div>
-        <h1 className="text-2xl font-medium tracking-tight">Purchase managers</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Manage approved purchase managers.</p>
+        <h1 className="text-2xl font-medium tracking-tight">Customers</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">Manage approved customers.</p>
       </div>
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {actionError && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{actionError}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
 
       {data && data.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <Input placeholder="Search by name or email…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
-            <option value="">All statuses</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          {badgeLabels && badgeLabels.length > 0 && (
-            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={badgeFilter} onChange={(e) => setBadgeFilter(e.target.value)}>
-              <option value="">All badges</option>
-              {badgeLabels.map((label) => <option key={label} value={label}>{label}</option>)}
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <Input placeholder="Search by name or email…" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full sm:max-w-xs" />
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+            <select className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm sm:w-auto" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
+              <option value="">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
             </select>
-          )}
-          {cityOptions.length > 0 && (
-            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={cityFilter} onChange={(e) => setCityFilter(e.target.value)}>
-              <option value="">All cities</option>
-              {cityOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+            {badgeLabels && badgeLabels.length > 0 && (
+              <select className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm sm:w-auto" value={badgeFilter} onChange={(e) => setBadgeFilter(e.target.value)}>
+                <option value="">All tags</option>
+                {badgeLabels.map((label) => <option key={label} value={label}>{label}</option>)}
+              </select>
+            )}
+            {cityOptions.length > 0 && (
+              <select className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm sm:w-auto" value={cityFilter} onChange={(e) => setCityFilter(e.target.value)}>
+                <option value="">All cities</option>
+                {cityOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            )}
+            <select className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm sm:w-auto" value={storeCountFilter} onChange={(e) => setStoreCountFilter(e.target.value as typeof storeCountFilter)}>
+              <option value="">Any store count</option>
+              <option value="has">Has stores</option>
+              <option value="zero">No stores yet</option>
             </select>
-          )}
-          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={storeCountFilter} onChange={(e) => setStoreCountFilter(e.target.value as typeof storeCountFilter)}>
-            <option value="">Any store count</option>
-            <option value="has">Has stores</option>
-            <option value="zero">No stores yet</option>
-          </select>
+          </div>
           {hasActiveFilters && (
-            <button type="button" onClick={clearFilters} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+            <button type="button" onClick={clearFilters} className="self-start text-xs text-muted-foreground hover:text-foreground sm:self-auto">Clear</button>
           )}
         </div>
       )}
@@ -119,34 +121,94 @@ export default function ManufacturerStoresPage() {
       )}
       {data && data.length > 0 && filtered.length === 0 && (
         <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
-          <StoreIcon className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No purchase managers match these filters.</p>
+          <StoreIcon className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No customers match these filters.</p>
         </div>
       )}
       {filtered.length > 0 && (
-        <div className="rounded-xl border bg-card overflow-hidden divide-y">
-          {filtered.map((s) => (
-            <div key={s.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">
-                  {s.name} <span className="text-xs font-normal text-muted-foreground">/{s.slug}</span>
-                  {s.badgeLabel && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">{s.badgeLabel}</span>}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">{s.email}{s.city ? ` · ${s.city}` : ''}{s.phone ? ` · ${s.phone}` : ''}</p>
+        <>
+          {/* Card list below md — a 6-column table forces horizontal scroll on
+              phones even inside overflow-x-auto, which is unusable as a primary
+              list. Table view (unchanged) takes over from md up. */}
+          <div className="space-y-2 md:hidden">
+            {filtered.map((s, index) => (
+              <div key={s.id} className="rounded-xl border bg-card p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground">#{index + 1}</p>
+                    <p className="truncate text-sm font-medium">
+                      {s.name} <span className="text-xs font-normal text-muted-foreground">/{s.slug}</span>
+                    </p>
+                    {s.badgeLabel && <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">{s.badgeLabel}</span>}
+                    <p className="mt-1 truncate text-xs text-muted-foreground">{s.email ?? s.ownerPhone ?? 'No email'}</p>
+                    <p className="truncate text-xs text-muted-foreground">{[s.city, s.phone].filter(Boolean).join(' · ')}</p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button onClick={() => setEditing(s)} className="text-muted-foreground hover:text-primary" aria-label={`Edit ${s.name}`}><Pencil className="h-4 w-4" /></button>
+                    <button onClick={() => setPwStore(s)} className="text-muted-foreground hover:text-primary" aria-label={`Reset password for ${s.name}`}><Key className="h-4 w-4" /></button>
+                    <button onClick={() => remove(s)} className="text-muted-foreground hover:text-red-600" aria-label={`Delete ${s.name}`}><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                </div>
+                <div className="mt-2.5 flex items-center gap-2">
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground" title="Stores used / allowed (2 free + manufacturer-granted extra)">
+                    Stores {s.branchCount}/{FREE_BRANCH_LIMIT}{s.extraBranchAllowance > 0 ? `+${s.extraBranchAllowance}` : ''}
+                  </span>
+                  <button onClick={() => toggle(s)} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                    {s.isActive ? 'Active' : 'Inactive'}
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground" title="Stores used / allowed (2 free + manufacturer-granted extra)">
-                  Stores {s.branchCount}/{FREE_BRANCH_LIMIT}{s.extraBranchAllowance > 0 ? `+${s.extraBranchAllowance}` : ''}
-                </span>
-                <button onClick={() => toggle(s)} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                  {s.isActive ? 'Active' : 'Inactive'}
-                </button>
-                <button onClick={() => setEditing(s)} className="text-muted-foreground hover:text-primary"><Pencil className="h-4 w-4" /></button>
-                <button onClick={() => setPwStore(s)} className="text-muted-foreground hover:text-primary"><Key className="h-4 w-4" /></button>
-                <button onClick={() => remove(s)} className="text-muted-foreground hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto rounded-xl border bg-card md:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/40 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="whitespace-nowrap px-3 py-2.5">Sr No.</th>
+                  <th className="whitespace-nowrap px-3 py-2.5">Store Name</th>
+                  <th className="whitespace-nowrap px-3 py-2.5">Contact</th>
+                  <th className="whitespace-nowrap px-3 py-2.5">Stores</th>
+                  <th className="whitespace-nowrap px-3 py-2.5">Status</th>
+                  <th className="whitespace-nowrap px-3 py-2.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filtered.map((s, index) => (
+                  <tr key={s.id} className="hover:bg-muted/20">
+                    <td className="whitespace-nowrap px-3 py-3 tabular-nums text-muted-foreground">{index + 1}</td>
+                    <td className="min-w-[180px] px-3 py-3">
+                      <p className="truncate text-sm font-medium">
+                        {s.name} <span className="text-xs font-normal text-muted-foreground">/{s.slug}</span>
+                      </p>
+                      {s.badgeLabel && <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">{s.badgeLabel}</span>}
+                    </td>
+                    <td className="min-w-[160px] px-3 py-3 text-xs text-muted-foreground">
+                      <p className="truncate">{s.email ?? s.ownerPhone ?? 'No email'}</p>
+                      <p className="truncate">{[s.city, s.phone].filter(Boolean).join(' · ')}</p>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-3">
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground" title="Stores used / allowed (2 free + manufacturer-granted extra)">
+                        {s.branchCount}/{FREE_BRANCH_LIMIT}{s.extraBranchAllowance > 0 ? `+${s.extraBranchAllowance}` : ''}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-3">
+                      <button onClick={() => toggle(s)} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                        {s.isActive ? 'Active' : 'Inactive'}
+                      </button>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => setEditing(s)} className="text-muted-foreground hover:text-primary" aria-label={`Edit ${s.name}`}><Pencil className="h-4 w-4" /></button>
+                        <button onClick={() => setPwStore(s)} className="text-muted-foreground hover:text-primary" aria-label={`Reset password for ${s.name}`}><Key className="h-4 w-4" /></button>
+                        <button onClick={() => remove(s)} className="text-muted-foreground hover:text-red-600" aria-label={`Delete ${s.name}`}><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {editing && (
@@ -169,7 +231,7 @@ function EditModal({
   store: Store; badgeLabels: string[]; onBadgeLabelsChanged: () => void; onClose: () => void; onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    name: store.name, email: store.email, city: store.city ?? '', phone: store.phone ?? '',
+    name: store.name, email: store.email ?? '', city: store.city ?? '', phone: store.phone ?? '',
     extraBranchAllowance: String(store.extraBranchAllowance),
   });
   const [badgeLabel, setBadgeLabel] = useState(store.badgeLabel ?? '');

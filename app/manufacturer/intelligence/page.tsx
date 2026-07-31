@@ -137,7 +137,7 @@ export default function ManufacturerIntelligencePage() {
     <div className="mx-auto w-full max-w-6xl space-y-5">
       <div>
         <h1 className="text-2xl font-medium tracking-tight">Intelligence</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Which products, categories and purchase managers are driving orders — system-wide.</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">Which products, categories and customers are driving orders — system-wide.</p>
       </div>
 
       <AnalyticsFilterBar filters={filters} onChange={setFilters} unitsLabel="Units ordered" />
@@ -151,12 +151,12 @@ export default function ManufacturerIntelligencePage() {
             <Stat label="Units in range" value={view.totalUnits} icon={BarChart3} />
             <Stat label="Products ordered" value={view.topProducts.length} icon={Package} />
             <Stat label="Categories" value={Object.keys(view.byCategory).length} icon={Scale} />
-            <Stat label="Purchase managers" value={view.retailers.length} icon={StoreIcon} />
+            <Stat label="Customers" value={view.retailers.length} icon={StoreIcon} />
           </div>
 
           <div className="rounded-xl border bg-card overflow-hidden">
             <div className="flex items-center gap-2 border-b bg-muted/40 px-4 py-3">
-              <Trophy className="h-4 w-4 text-primary" /><p className="text-sm font-medium">Top products (all purchase managers)</p>
+              <Trophy className="h-4 w-4 text-primary" /><p className="text-sm font-medium">Top products (all customers)</p>
             </div>
             <div className="divide-y">
               {view.topProducts.length === 0 && <p className="px-4 py-8 text-center text-sm text-muted-foreground">No orders match these filters.</p>}
@@ -219,7 +219,7 @@ export default function ManufacturerIntelligencePage() {
 
           <div className="rounded-xl border bg-card overflow-hidden">
             <div className="flex items-center gap-2 border-b bg-muted/40 px-4 py-3">
-              <StoreIcon className="h-4 w-4 text-primary" /><p className="text-sm font-medium">By purchase manager</p>
+              <StoreIcon className="h-4 w-4 text-primary" /><p className="text-sm font-medium">By customer</p>
             </div>
             <div className="divide-y">
               {view.retailers.length === 0 && <p className="px-4 py-8 text-center text-sm text-muted-foreground">No orders match these filters.</p>}

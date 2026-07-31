@@ -29,7 +29,7 @@ const DRAWER_NAV = [
   { label: 'Intelligence', href: '/store/intelligence', icon: Lightbulb, section: 'Insights' },
   // Kiosk PIN is managed per-Store on the Stores (Branches) page.
   { label: 'Stores (Branches)', href: '/store/branches', icon: Building2, section: 'Account' },
-  { label: 'Purchase Manager Profile', href: '/store/profile', icon: StoreIcon, section: 'Account' },
+  { label: 'Retailer Admin Profile', href: '/store/profile', icon: StoreIcon, section: 'Account' },
   { label: 'Settings', href: '/store/settings', icon: Settings, section: 'Account' },
 ];
 
@@ -94,7 +94,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
             />
             <span className="hidden min-w-0 sm:block">
               <span className="block truncate text-sm font-semibold text-[#26221e]">{storeName}</span>
-              <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-[#9b8f82]">Purchase manager portal</span>
+              <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-[#9b8f82]">Retailer Admin portal</span>
             </span>
           </Link>
 
@@ -137,7 +137,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
       <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
 
       <footer className="flex flex-col items-center justify-between gap-2 border-t border-[#e8e3da] bg-white px-4 py-4 text-[11px] text-[#8d8379] sm:flex-row sm:px-6 lg:px-8">
-        <span>{storeName} · Purchase manager portal</span>
+        <span>{storeName} · Retailer Admin portal</span>
         <span>Powered by Jewel Factory</span>
       </footer>
 

@@ -66,7 +66,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
             onClick={() => setActiveRole('retailer')}
             className={`min-h-10 rounded-lg px-3 text-sm font-semibold transition-colors ${activeRole === 'retailer' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}
           >
-            Purchase manager
+            Retailer Admin
           </button>
           <button
             type="button"
@@ -74,7 +74,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
             onClick={() => setActiveRole('manager')}
             className={`min-h-10 rounded-lg px-3 text-sm font-semibold transition-colors ${activeRole === 'manager' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}
           >
-            Store Manager
+            Retailer User
           </button>
         </div>
 
@@ -86,7 +86,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
                 <Store className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-sm font-semibold">Purchase manager</p>
+                <p className="text-sm font-semibold">Retailer Admin</p>
                 <p className="text-xs text-muted-foreground">Head Office — approvals, stores, orders</p>
               </div>
             </div>
@@ -98,18 +98,18 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
               loginPath="/api/store/login"
               redirectTo="/store/manufacturer-catalog"
               forgotHref="/store/forgot-password"
-              footerLinks={[{ prompt: 'New purchase manager?', label: 'Register here', href: '/store/register' }]}
+              footerLinks={[{ prompt: 'New Retailer Admin?', label: 'Register here', href: '/store/register' }]}
             />
           </div>
 
-          {/* Store Manager */}
+          {/* Retailer User */}
           <div className={`${activeRole === 'manager' ? 'block' : 'hidden'} rounded-2xl border bg-card/60 p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5 md:block`}>
             <div className="mb-4 flex items-center gap-2.5">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Gem className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-sm font-semibold">Store Manager</p>
+                <p className="text-sm font-semibold">Retailer User</p>
                 <p className="text-xs text-muted-foreground">Run your store — kiosk, try-on, restock</p>
               </div>
             </div>
@@ -120,7 +120,7 @@ export function LoginModal({ onClose }: { onClose: () => void }) {
               subtitle=""
               loginPath="/api/branch-manager/login"
               redirectTo="/store-manager"
-              footerLinks={[{ prompt: 'No account?', label: 'Ask your Purchase manager to add you', href: '/store/login' }]}
+              footerLinks={[{ prompt: 'No account?', label: 'Ask your Retailer Admin to add you', href: '/store/login' }]}
             />
           </div>
         </div>

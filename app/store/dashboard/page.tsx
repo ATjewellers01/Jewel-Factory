@@ -47,7 +47,7 @@ export default function StoreDashboardPage() {
           </div>
           <section className="grid gap-3 border-t border-[#e6e0d7] pt-6 sm:grid-cols-2">
             <QuickLink href="/store/manufacturer-catalog" icon={Gem} title="Manufacturer catalog" description="Browse active designs and prepare a restock order." />
-            <QuickLink href="/store/branches" icon={Building2} title="Stores and managers" description="Manage branches, restock PINs, and store teams." />
+            <QuickLink href="/store/branches" icon={Building2} title="Stores and Retailer Users" description="Manage branches, restock PINs, and store teams." />
           </section>
         </>
       )}

@@ -188,21 +188,29 @@ export async function updateStoreBranding(
 export async function updateStoreProfile(
   storeId: string,
   input: {
-    name?: string; city?: string; phone?: string;
+    name?: string; email?: string; city?: string; phone?: string;
     addressStreet?: string; addressCity?: string; addressState?: string;
     addressPincode?: string; addressLandmark?: string;
     ownerName?: string; ownerPhone?: string;
   },
 ) {
-  return prisma.store.update({
-    where: { id: storeId },
-    data: input,
-    select: {
-      id: true, name: true, city: true, phone: true,
-      addressStreet: true, addressCity: true, addressState: true, addressPincode: true, addressLandmark: true,
-      ownerName: true, ownerPhone: true,
-    },
-  });
+  const { email, ...rest } = input;
+  try {
+    return await prisma.store.update({
+      where: { id: storeId },
+      data: { ...rest, ...(email ? { email: email.toLowerCase().trim() } : {}) },
+      select: {
+        id: true, name: true, email: true, city: true, phone: true,
+        addressStreet: true, addressCity: true, addressState: true, addressPincode: true, addressLandmark: true,
+        ownerName: true, ownerPhone: true,
+      },
+    });
+  } catch (err) {
+    // Adding an email that another retailer already uses hits the unique index.
+    const msg = err instanceof Error ? err.message : String(err);
+    if (email && /unique/i.test(msg)) return { error: 'email_taken' as const };
+    throw err;
+  }
 }
 
 export function formatStoreAddress(store: {

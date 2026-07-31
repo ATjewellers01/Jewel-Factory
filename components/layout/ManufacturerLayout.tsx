@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   Package,
   ShoppingBag,
-  Users,
   PencilLine,
   Store as StoreIcon,
   ClipboardCheck,
@@ -16,15 +15,16 @@ import type { ReactNode } from 'react';
 import { PortalShell } from '@/components/layout/PortalShell';
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
 
+// Manufacturer-portal display text only: "Purchase manager"/"Retailer" reads as
+// "Customer" here. Routes, API paths, and every other portal are unchanged.
 const NAV = [
   { label: 'Dashboard', href: '/manufacturer/dashboard', icon: LayoutDashboard, section: 'Overview' },
   { label: 'Intelligence', href: '/manufacturer/intelligence', icon: BarChart3, section: 'Overview' },
   { label: 'Catalog', href: '/manufacturer/catalog', icon: Package, section: 'Catalog & orders' },
   { label: 'Catalog Orders', href: '/manufacturer/orders', icon: ShoppingBag, section: 'Catalog & orders' },
-  { label: 'Kiosk Orders', href: '/manufacturer/kiosk-orders', icon: Users, section: 'Catalog & orders' },
-  { label: 'Customised Designs', href: '/manufacturer/custom-designs', icon: PencilLine, section: 'Catalog & orders' },
-  { label: 'Purchase managers', href: '/manufacturer/stores', icon: StoreIcon, section: 'Purchase manager network' },
-  { label: 'Purchase Manager Registrations', href: '/manufacturer/store-registrations', icon: ClipboardCheck, section: 'Purchase manager network' },
+  { label: 'Customised Orders', href: '/manufacturer/custom-designs', icon: PencilLine, section: 'Catalog & orders' },
+  { label: 'Customers', href: '/manufacturer/stores', icon: StoreIcon, section: 'Customer network' },
+  { label: 'Customer Registrations', href: '/manufacturer/store-registrations', icon: ClipboardCheck, section: 'Customer network' },
 ];
 
 export default function ManufacturerLayout({ children }: { children: ReactNode }) {

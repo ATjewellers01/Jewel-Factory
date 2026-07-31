@@ -67,7 +67,7 @@ export function OrderChat({
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div>
             <p className="text-sm font-semibold">Messages</p>
-            <p className="text-xs text-muted-foreground">{orderLabel} · Head Office ↔ Store Manager</p>
+            <p className="text-xs text-muted-foreground">{orderLabel} · Head Office ↔ Retailer User</p>
           </div>
           <button onClick={onClose} className="rounded-full p-1 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
         </div>
@@ -80,7 +80,7 @@ export function OrderChat({
             return (
               <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${mine ? 'bg-primary text-primary-foreground' : 'bg-card ring-1 ring-black/5'}`}>
-                  {!mine && <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider opacity-70">{m.senderName ?? (m.sender === 'HO' ? 'Head Office' : 'Store Manager')}</p>}
+                  {!mine && <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider opacity-70">{m.senderName ?? (m.sender === 'HO' ? 'Head Office' : 'Retailer User')}</p>}
                   <p className="whitespace-pre-wrap">{m.body}</p>
                   <p className={`mt-0.5 text-[10px] ${mine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{new Date(m.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
                 </div>

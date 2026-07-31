@@ -36,8 +36,11 @@ const emptyToUndef = (v: unknown) => (typeof v === 'string' && v.trim() === '' ?
 
 // ── Login ─────────────────────────────────────────────────────────────────────
 
+// The `email` field is the USERNAME — it holds either an email address or, for
+// retailers who registered without one, their 10-digit mobile number. The field
+// name is kept so the login payload stays unchanged for every existing client.
 const LoginBody = z.object({
-  email: z.string().email(),
+  email: z.string().min(1),
   password: z.string().min(1),
 });
 
@@ -45,8 +48,17 @@ const LoginBody = z.object({
 storeAuthRoutes.post('/login', zValidator('json', LoginBody), async (c) => {
   const env = getServerEnv();
   const { email, password } = c.req.valid('json');
+  const username = email.toLowerCase().trim();
 
-  const store = await prisma.store.findUnique({ where: { email: email.toLowerCase().trim() } });
+  // Email-less retailers sign in with their mobile number. `owner_phone` has no
+  // unique constraint (historical rows may share one), so registration rejects a
+  // duplicate mobile for email-less signups and this picks the oldest match.
+  const store = username.includes('@')
+    ? await prisma.store.findUnique({ where: { email: username } })
+    : await prisma.store.findFirst({
+        where: { ownerPhone: username },
+        orderBy: { createdAt: 'asc' },
+      });
   if (!store || !store.isActive) {
     return sendError(c, 'unauthorized', 'Invalid email or password', 401);
   }
@@ -101,12 +113,16 @@ const BUSINESS_NAME_RE = /^[A-Za-z0-9 &.,'-]{2,}$/;
 
 const RegisterBody = z.object({
   name: z.string().min(2).regex(BUSINESS_NAME_RE, 'Business name has invalid characters'),
-  email: z.string().email(),
+  // Optional — retailers without an email sign in with their mobile number and
+  // can add an email later from /store/profile.
+  email: z.preprocess(emptyToUndef, z.string().email().optional()),
   personName: z.string().min(2).regex(NAME_RE, 'Person name must be letters only'),
   mobileNumber: z.string().regex(MOBILE_RE, 'Enter a valid 10-digit mobile number'),
   logoUrl: z.preprocess(emptyToUndef, z.string().url().optional()),
   addressPincode: z.string().regex(/^\d{6}$/, 'Enter a valid 6-digit PIN code'),
-  addressStreet: z.string().min(3),
+  // Street + landmark are optional here and can be filled in later from the
+  // purchase manager's profile page.
+  addressStreet: z.preprocess(emptyToUndef, z.string().optional()),
   addressCity: z.string().min(2),
   addressState: z.string().min(2),
   addressLandmark: z.preprocess(emptyToUndef, z.string().optional()),
@@ -115,10 +131,19 @@ const RegisterBody = z.object({
 // POST /api/store/register
 storeAuthRoutes.post('/register', zValidator('json', RegisterBody), async (c) => {
   const body = c.req.valid('json');
-  const email = body.email.toLowerCase().trim();
+  const email = typeof body.email === 'string' ? body.email.toLowerCase().trim() : null;
 
-  const existing = await prisma.store.findUnique({ where: { email } });
-  if (existing) return sendError(c, 'conflict', 'Email already registered', 409);
+  if (email) {
+    const existing = await prisma.store.findUnique({ where: { email } });
+    if (existing) return sendError(c, 'conflict', 'Email already registered', 409);
+  } else {
+    // No email means the mobile number IS the username, so it has to be free.
+    const existing = await prisma.store.findFirst({
+      where: { ownerPhone: body.mobileNumber },
+      select: { id: true },
+    });
+    if (existing) return sendError(c, 'conflict', 'Mobile number already registered', 409);
+  }
 
   const slug = await uniqueStoreSlug(slugify(body.name));
   // No password is set at registration — the retailer signs in with email +
@@ -140,7 +165,7 @@ storeAuthRoutes.post('/register', zValidator('json', RegisterBody), async (c) =>
         ownerPhone: body.mobileNumber,
         phone: body.mobileNumber,
         logoUrl: body.logoUrl as string | undefined,
-        addressStreet: body.addressStreet,
+        addressStreet: body.addressStreet as string | undefined,
         addressCity: body.addressCity,
         addressState: body.addressState,
         addressPincode: body.addressPincode,

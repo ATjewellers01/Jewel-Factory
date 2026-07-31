@@ -1,15 +1,11 @@
 'use client';
 
 import {
-  ArrowLeft,
   ArrowRight,
-  Check,
   CheckCircle2,
   Clock3,
   Loader2,
   LockKeyhole,
-  MapPin,
-  Store,
   Upload,
   X,
 } from 'lucide-react';
@@ -39,13 +35,6 @@ const INITIAL: FormState = {
   addressPincode: '', addressStreet: '', addressCity: '', addressState: '', addressLandmark: '',
 };
 
-const STEPS = [
-  { number: 1, label: 'Business', icon: Store },
-  { number: 2, label: 'Address', icon: MapPin },
-] as const;
-
-type Step = 1 | 2;
-
 // name: letters + spaces only. mobile: exactly 10 digits. business name: letters,
 // numbers, spaces and common punctuation (no validator too strict to reject real names).
 const NAME_RE = /^[A-Za-z ]{2,}$/;
@@ -57,7 +46,6 @@ const labelClass = 'grid gap-2 text-[11px] font-semibold uppercase tracking-[0.1
 
 export default function StoreRegisterPage() {
   const [form, setForm] = useState<FormState>(INITIAL);
-  const [step, setStep] = useState<Step>(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [logoMode, setLogoMode] = useState<'upload' | 'url'>('upload');
@@ -144,43 +132,28 @@ export default function StoreRegisterPage() {
     }
   }
 
-  function validate(target: Step): string | null {
-    if (target === 1) {
-      if (!form.name.trim() || !form.personName.trim() || !form.mobileNumber.trim() || !form.email.trim()) {
-        return 'Complete all required business details to continue.';
-      }
-      if (!BUSINESS_NAME_RE.test(form.name.trim())) return 'Business name can only contain letters, numbers, spaces and & . , \' -';
-      if (!NAME_RE.test(form.personName.trim())) return 'Person name can only contain letters and spaces.';
-      if (!MOBILE_RE.test(form.mobileNumber.trim())) return 'Enter a valid 10-digit mobile number.';
-      if (!/^\S+@\S+\.\S+$/.test(form.email)) return 'Enter a valid business email address.';
+  // Email is optional: retailers without one sign in with their mobile number.
+  // Street address + landmark are optional too (fillable later from the portal).
+  function validate(): string | null {
+    if (!form.name.trim() || !form.personName.trim() || !form.mobileNumber.trim()) {
+      return 'Complete all required business details to continue.';
     }
-    if (target === 2 && (!form.addressPincode.trim() || !form.addressStreet.trim() || !form.addressCity.trim() || !form.addressState.trim())) {
-      return 'Complete the fixed delivery address to continue.';
+    if (!BUSINESS_NAME_RE.test(form.name.trim())) return 'Business name can only contain letters, numbers, spaces and & . , \' -';
+    if (!NAME_RE.test(form.personName.trim())) return 'Person name can only contain letters and spaces.';
+    if (!MOBILE_RE.test(form.mobileNumber.trim())) return 'Enter a valid 10-digit mobile number.';
+    if (form.email.trim() && !/^\S+@\S+\.\S+$/.test(form.email.trim())) return 'Enter a valid business email address.';
+    if (!form.addressPincode.trim() || !form.addressCity.trim() || !form.addressState.trim()) {
+      return 'Complete the delivery PIN code, city and state to continue.';
     }
-    if (target === 2 && !/^\d{6}$/.test(form.addressPincode.trim())) {
-      return 'Enter a valid 6-digit PIN code.';
-    }
+    if (!/^\d{6}$/.test(form.addressPincode.trim())) return 'Enter a valid 6-digit PIN code.';
     return null;
-  }
-
-  function nextStep() {
-    const message = validate(step);
-    if (message) return setError(message);
-    setError(null);
-    setStep((current) => Math.min(2, current + 1) as Step);
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (step < 2) return nextStep();
-    for (const target of [1, 2] as const) {
-      const message = validate(target);
-      if (message) {
-        setStep(target);
-        return setError(message);
-      }
-    }
+    const message = validate();
+    if (message) return setError(message);
 
     setSubmitting(true);
     try {
@@ -189,7 +162,10 @@ export default function StoreRegisterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
-      if (res.status === 409) return setError('Email already registered.');
+      if (res.status === 409) {
+        const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+        return setError(json?.error?.message ?? 'Already registered.');
+      }
       if (!res.ok) {
         const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
         return setError(json?.error?.message ?? 'Registration failed. Please try again.');
@@ -236,42 +212,30 @@ export default function StoreRegisterPage() {
               <span className="inline-flex items-center gap-1.5 text-xs text-[#8a8178]"><Clock3 className="h-3.5 w-3.5 text-[#ad8438]" /> About 3 minutes</span>
             </div>
 
-            <nav className="my-5 grid grid-cols-2" aria-label="Application progress">
-              {STEPS.map(({ number, label, icon: Icon }, index) => {
-                const complete = step > number;
-                const active = step === number;
-                return (
-                  <div key={number} className="relative flex flex-col items-center gap-2 text-center">
-                    {index > 0 && <span aria-hidden className={`absolute right-1/2 top-4 h-px w-full transition-colors ${step >= number ? 'bg-[#b88c3e]' : 'bg-[#d9d1c6]'}`} />}
-                    <button
-                      type="button"
-                      onClick={() => complete && setStep(number)}
-                      disabled={!complete}
-                      aria-current={active ? 'step' : undefined}
-                      className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full border text-xs transition-all ${complete ? 'border-[#b88c3e] bg-[#b88c3e] text-white' : active ? 'border-[#2b2119] bg-[#2b2119] text-white shadow-[0_0_0_4px_rgba(43,33,25,0.08)]' : 'border-[#d3cabe] bg-[#f8f5ef] text-[#9d948a]'}`}
-                    >
-                      {complete ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
-                    </button>
-                    <span className={`text-[10px] font-semibold uppercase tracking-[0.12em] ${active ? 'text-[#2b2119]' : 'text-[#9a9187]'}`}>{label}</span>
-                  </div>
-                );
-              })}
-            </nav>
-
-            <section key={step} className="animate-in fade-in slide-in-from-bottom-2 border-y border-[#e0d8ce] py-6 duration-300 sm:py-7">
-              {step === 1 && (
+            <section className="space-y-8 border-y border-[#e0d8ce] py-6 sm:py-7">
                 <fieldset className="space-y-5">
                   <legend className="font-display text-[1.35rem] tracking-tight">Tell us about your business</legend>
-                  <p className="-mt-3 text-sm leading-6 text-[#7b7269]">Use the Head Office details you want associated with every branch.</p>
                   <label className={labelClass}>Business name <Input autoFocus autoComplete="organization" placeholder="e.g. Mehta Jewellers" value={form.name} onChange={set('name')} className={fieldClass} /></label>
                   <div className="grid gap-5 lg:grid-cols-2">
                     <label className={labelClass}>Person name <Input autoComplete="name" placeholder="Full name" value={form.personName} onChange={set('personName')} className={fieldClass} /></label>
                     <label className={labelClass}>Mobile number <Input type="tel" autoComplete="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number" value={form.mobileNumber} onChange={set('mobileNumber')} className={fieldClass} /></label>
                   </div>
-                  <label className={labelClass}>Business email <Input type="email" autoComplete="email" inputMode="email" placeholder="Used to sign in" value={form.email} onChange={set('email')} className={fieldClass} /></label>
-                  <p className="flex items-center gap-2 rounded-xl bg-[#f4f0e8] px-4 py-3 text-xs leading-5 text-[#746b62]"><LockKeyhole className="h-4 w-4 shrink-0 text-[#a77d31]" /> No password to set — after approval, sign in with this email and mobile number.</p>
+                  <label className={labelClass}>
+                    <span className="flex flex-wrap items-center gap-x-2">
+                      Business email <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
+                    </span>
+                    <Input type="email" autoComplete="email" inputMode="email" placeholder="Used to sign in" value={form.email} onChange={set('email')} className={fieldClass} />
+                  </label>
+                  {/* With an email the username is the email; without one the mobile
+                      number is both username and password, so the note has to say so. */}
+                  <p className="flex items-start gap-2 rounded-xl bg-[#f4f0e8] px-4 py-3 text-xs leading-5 text-[#746b62]">
+                    <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-[#a77d31]" />
+                    {form.email.trim()
+                      ? 'No password to set — after approval, sign in with this email and mobile number.'
+                      : 'No password to set — after approval, sign in with your mobile number as both the username and the password. You can add an email later from your portal profile.'}
+                  </p>
                   <div className={labelClass}>
-                    <span className="flex items-center justify-between">
+                    <span className="flex flex-wrap items-center gap-x-2">
                       Store logo <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
                     </span>
 
@@ -314,9 +278,7 @@ export default function StoreRegisterPage() {
                     {logoError ? <span className="font-normal normal-case tracking-normal text-[11px] text-red-600">{logoError}</span> : null}
                   </div>
                 </fieldset>
-              )}
 
-              {step === 2 && (
                 <fieldset className="space-y-5">
                   <legend className="font-display text-[1.35rem] tracking-tight">Where should orders arrive?</legend>
                   <p className="-mt-3 text-sm leading-6 text-[#7b7269]">Approved orders are shipped to this fixed Head Office address.</p>
@@ -326,35 +288,36 @@ export default function StoreRegisterPage() {
                       {pincodeLookup === 'loading' && <span className="inline-flex items-center gap-1 font-normal normal-case tracking-normal text-[#a39a91]"><Loader2 className="h-3 w-3 animate-spin" />Looking up…</span>}
                       {pincodeLookup === 'not-found' && <span className="font-normal normal-case tracking-normal text-red-600">PIN not found — enter city/state manually</span>}
                     </span>
-                    <Input autoFocus autoComplete="postal-code" inputMode="numeric" maxLength={6} placeholder="6-digit PIN code" value={form.addressPincode} onChange={set('addressPincode')} className={fieldClass} />
+                    <Input autoComplete="postal-code" inputMode="numeric" maxLength={6} placeholder="6-digit PIN code" value={form.addressPincode} onChange={set('addressPincode')} className={fieldClass} />
                   </label>
                   <div className="grid gap-5 lg:grid-cols-2">
                     <label className={labelClass}>City <Input autoComplete="address-level2" placeholder="City" value={form.addressCity} onChange={set('addressCity')} className={fieldClass} /></label>
                     <label className={labelClass}>State <Input autoComplete="address-level1" placeholder="State" value={form.addressState} onChange={set('addressState')} className={fieldClass} /></label>
                   </div>
-                  <label className={labelClass}>Street address <Input autoComplete="street-address" placeholder="Building, street and area" value={form.addressStreet} onChange={set('addressStreet')} className={fieldClass} /></label>
-                  <label className={labelClass}><span className="flex items-center justify-between">Landmark <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span></span><Input placeholder="Nearby landmark" value={form.addressLandmark} onChange={set('addressLandmark')} className={fieldClass} /></label>
+                  {/* Street + landmark are optional here — both can be added or
+                      edited later from the purchase manager's profile page. */}
+                  <label className={labelClass}>
+                    <span className="flex flex-wrap items-center gap-x-2">
+                      Street address <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
+                    </span>
+                    <Input autoComplete="street-address" placeholder="Building, street and area" value={form.addressStreet} onChange={set('addressStreet')} className={fieldClass} />
+                  </label>
+                  <label className={labelClass}>
+                    <span className="flex flex-wrap items-center gap-x-2">
+                      Landmark <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
+                    </span>
+                    <Input placeholder="Nearby landmark" value={form.addressLandmark} onChange={set('addressLandmark')} className={fieldClass} />
+                  </label>
+                  <p className="text-xs leading-5 text-[#8a8178]">You can add or change the street address and landmark later from your portal profile.</p>
                 </fieldset>
-              )}
             </section>
 
             {error && <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
-            <div className="mt-5 flex items-center gap-3">
-              {step > 1 && (
-                <Button type="button" variant="outline" onClick={() => { setError(null); setStep((current) => (current - 1) as Step); }} className="h-12 rounded-xl border-[#d6cdbf] bg-transparent px-5 text-[#655b51] shadow-none hover:bg-white">
-                  <ArrowLeft className="h-4 w-4" /> Back
-                </Button>
-              )}
-              {step < 2 ? (
-                <Button key="continue" type="button" onClick={nextStep} className="metal-sheen h-12 flex-1 rounded-xl border-0 font-semibold text-[#17120b] shadow-[0_10px_25px_rgba(166,119,45,0.18)] transition-transform hover:-translate-y-0.5">
-                  Continue <ArrowRight className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button key="submit" type="submit" className="metal-sheen h-12 flex-1 rounded-xl border-0 font-semibold text-[#17120b] shadow-[0_10px_25px_rgba(166,119,45,0.18)] transition-transform hover:-translate-y-0.5" disabled={submitting}>
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Submit application <ArrowRight className="h-4 w-4" /></>}
-                </Button>
-              )}
+            <div className="mt-5">
+              <Button type="submit" className="metal-sheen h-12 w-full rounded-xl border-0 font-semibold text-[#17120b] shadow-[0_10px_25px_rgba(166,119,45,0.18)] transition-transform hover:-translate-y-0.5" disabled={submitting}>
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Submit application <ArrowRight className="h-4 w-4" /></>}
+              </Button>
             </div>
 
             <p className="mt-6 text-center text-sm text-[#81776e]">

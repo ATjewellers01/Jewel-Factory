@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useApi, apiPost } from '@/hooks/use-api';
 
 type Pending = {
-  id: string; name: string; slug: string; email: string; city: string | null;
+  id: string; name: string; slug: string; email: string | null; city: string | null;
   ownerName: string | null; ownerPhone: string | null;
   addressStreet: string | null; addressCity: string | null; addressState: string | null; addressPincode: string | null;
   registrationSubmittedAt: string | null;
@@ -27,8 +27,8 @@ export default function StoreRegistrationsPage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4">
       <div>
-        <h1 className="text-2xl font-medium tracking-tight">Purchase Manager Registrations</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Approve purchase managers to give them access and link them to your catalog.</p>
+        <h1 className="text-2xl font-medium tracking-tight">Customer Registrations</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">Approve customers to give them access and link them to your catalog.</p>
       </div>
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
@@ -44,7 +44,7 @@ export default function StoreRegistrationsPage() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold">{s.name} <span className="text-xs font-normal text-muted-foreground">/{s.slug}</span></p>
-                  <p className="text-xs text-muted-foreground">{s.email}{s.city ? ` · ${s.city}` : ''}</p>
+                  <p className="text-xs text-muted-foreground">{s.email ?? s.ownerPhone ?? 'No email'}{s.city ? ` · ${s.city}` : ''}</p>
                 </div>
                 <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-semibold text-yellow-800">Pending</span>
               </div>
