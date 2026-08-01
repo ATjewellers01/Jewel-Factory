@@ -54,13 +54,17 @@ branchManagerRoutes.post('/login', zValidator('json', LoginBody), async (c) => {
   // Email-less Retailer Users sign in with their mobile number. `phone` has no
   // unique constraint (historical rows may share one within different branches),
   // so this picks the oldest match.
+  // `isActive` is deliberately NOT part of the lookup: filtering it in the query
+  // made a deactivated user indistinguishable from a wrong password, so a valid
+  // (or freshly reset) password looked broken. Match on identity, then report
+  // the real reason below.
   const bm = username.includes('@')
     ? await prisma.branchManager.findFirst({
-        where: { email: username, isActive: true },
+        where: { email: username },
         include: { branch: { select: { id: true, isActive: true, retailerId: true, retailer: { select: { isActive: true, registrationStatus: true } } } } },
       })
     : await prisma.branchManager.findFirst({
-        where: { phone: username, isActive: true },
+        where: { phone: username },
         orderBy: { createdAt: 'asc' },
         include: { branch: { select: { id: true, isActive: true, retailerId: true, retailer: { select: { isActive: true, registrationStatus: true } } } } },
       });
@@ -69,6 +73,7 @@ branchManagerRoutes.post('/login', zValidator('json', LoginBody), async (c) => {
   const ok = await verifyPassword(password, bm.passwordHash);
   if (!ok) return sendError(c, 'unauthorized', 'Invalid email or password', 401);
 
+  if (!bm.isActive) return sendError(c, 'forbidden', 'This account has been deactivated. Please contact your Retailer Admin.', 403);
   if (!bm.branch.isActive) return sendError(c, 'forbidden', 'This store is not active.', 403);
   if (!bm.branch.retailer.isActive || bm.branch.retailer.registrationStatus !== 'APPROVED') {
     return sendError(c, 'forbidden', 'The retailer is not active yet.', 403);

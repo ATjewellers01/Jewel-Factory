@@ -59,11 +59,17 @@ storeAuthRoutes.post('/login', zValidator('json', LoginBody), async (c) => {
         where: { ownerPhone: username },
         orderBy: { createdAt: 'asc' },
       });
-  if (!store || !store.isActive) {
+  if (!store) {
     return sendError(c, 'unauthorized', 'Invalid email or password', 401);
   }
   if (store.registrationStatus !== 'APPROVED') {
     return sendError(c, 'forbidden', 'Your store registration is awaiting manufacturer approval.', 403);
+  }
+  // A deactivated account previously fell into the generic "Invalid email or
+  // password" branch above, which made a perfectly good password (including a
+  // freshly reset one) look wrong. Say what is actually happening instead.
+  if (!store.isActive) {
+    return sendError(c, 'forbidden', 'This account has been deactivated. Please contact the manufacturer.', 403);
   }
   const ok = await verifyPassword(password, store.passwordHash);
   if (!ok) return sendError(c, 'unauthorized', 'Invalid email or password', 401);
@@ -197,8 +203,23 @@ storeAuthRoutes.post('/forgot-password', zValidator('json', ForgotBody), async (
   const email = c.req.valid('json').email.toLowerCase().trim();
   const store = await prisma.store.findUnique({
     where: { email },
-    select: { id: true, name: true, logoUrl: true },
+    select: { id: true, name: true, logoUrl: true, isActive: true },
   });
+
+  // A deactivated account can reset its password successfully and still be
+  // unable to sign in, which reads as "the reset is broken". Say so up front
+  // instead of sending a link that cannot help. This intentionally breaks the
+  // anti-enumeration silence, but only for a state the account holder already
+  // knows about and must contact us to resolve anyway.
+  if (store && !store.isActive) {
+    return sendError(
+      c,
+      'forbidden',
+      'This account is deactivated, so a password reset will not restore access. Please contact us to reactivate it first.',
+      403,
+    );
+  }
+
   if (store) {
     const token = await createResetToken(email, 'STORE_OWNER', store.id);
     const url = buildAppUrl(env.NEXT_PUBLIC_APP_URL, `/store/reset-password?token=${encodeURIComponent(token)}`);
@@ -211,6 +232,34 @@ storeAuthRoutes.post('/forgot-password', zValidator('json', ForgotBody), async (
     void sendEmail({ to: email, subject, html }); // fire-and-forget
   }
   return sendData(c, { ok: true });
+});
+
+// ── Recover the sign-in email from a mobile number ────────────────────────────
+// For a Retailer Admin who forgot WHICH email they registered with. Only works
+// for accounts that actually have an email on file — a retailer who registered
+// with a mobile number only signs in with that number as both username and
+// password, so there is nothing to recover for them.
+const LookupBody = z.object({
+  mobileNumber: z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number'),
+});
+
+// POST /api/store/lookup-email
+storeAuthRoutes.post('/lookup-email', zValidator('json', LookupBody), async (c) => {
+  const { mobileNumber } = c.req.valid('json');
+  const store = await prisma.store.findFirst({
+    where: { ownerPhone: mobileNumber },
+    orderBy: { createdAt: 'asc' },
+    select: { email: true, registrationStatus: true },
+  });
+
+  if (!store || store.registrationStatus !== 'APPROVED') {
+    return sendError(c, 'not_found', 'No approved account is registered with this mobile number.', 404);
+  }
+  if (!store.email) {
+    // Registered with a mobile number only — the number IS the username.
+    return sendData(c, { email: null, usesMobileLogin: true });
+  }
+  return sendData(c, { email: store.email, usesMobileLogin: false });
 });
 
 const ResetBody = z.object({

@@ -73,7 +73,7 @@ export default function StoreCustomDesignsPage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4">
       <div>
-        <h1 className="text-2xl font-medium tracking-tight">Customised Design Requests</h1>
+        <h1 className="text-2xl font-medium tracking-tight">Customised Orders</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">Approve to forward specs to the manufacturer (no customer data sent).</p>
       </div>
       {data && data.length > 0 && (

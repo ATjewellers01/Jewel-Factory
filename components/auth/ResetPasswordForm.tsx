@@ -1,10 +1,11 @@
 'use client';
 
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
+import { Wordmark } from '@/components/landing/Wordmark';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -53,57 +54,76 @@ export function ResetPasswordForm({
     }
   }
 
+  // Chrome intentionally mirrors ForgotPasswordForm — same glow, watermark, top
+  // bar and card treatment — so the two halves of one flow look like one flow.
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-3 py-10">
-      <div className="w-full max-w-sm space-y-5 rounded-2xl border bg-card p-8 shadow-sm">
-        <div className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            <span className="text-[#C9A84C]">Jewel</span> Factory
-          </p>
-          <h1 className="mt-2 text-2xl font-medium tracking-tight">{title}</h1>
-        </div>
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(52rem_32rem_at_50%_-10%,rgba(201,168,76,0.16),transparent_60%)]" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/JF.avif" alt="" aria-hidden className="pointer-events-none absolute -right-16 top-10 hidden w-[28rem] max-w-none opacity-[0.04] lg:block" />
 
-        {done ? (
-          <p className="text-center text-sm text-green-700">Password reset. Redirecting to sign in…</p>
-        ) : (
-          <form onSubmit={submit} className="space-y-4">
-            <div className="relative">
+      {/* Top bar */}
+      <div className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-6">
+        <Wordmark href="/" size="sm" />
+        <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
+          <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Back to Jewel Factory</span><span className="sm:hidden">Home</span>
+        </Link>
+      </div>
+
+      <div className="relative z-10 flex flex-1 items-center justify-center px-4 pb-16">
+        <div className="w-full max-w-sm space-y-5 rounded-3xl border bg-card p-6 shadow-xl sm:p-8">
+          <div className="text-center">
+            {done && (
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-700">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+            )}
+            <h1 className="font-display text-2xl font-medium tracking-tight">{title}</h1>
+            <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
+              {done ? 'Password reset. Redirecting to sign in…' : 'Choose a new password for your account.'}
+            </p>
+          </div>
+
+          {done ? null : (
+            <form onSubmit={submit} className="space-y-4">
+              <div className="relative">
+                <Input
+                  type={show ? 'text' : 'password'}
+                  placeholder="New password (min 6)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShow((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  tabIndex={-1}
+                >
+                  {show ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
               <Input
                 type={show ? 'text' : 'password'}
-                placeholder="New password (min 6)"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Confirm password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
                 required
-                className="pr-10"
               />
-              <button
-                type="button"
-                onClick={() => setShow((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                tabIndex={-1}
-              >
-                {show ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-            <Input
-              type={show ? 'text' : 'password'}
-              placeholder="Confirm password"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              required
-            />
-            {error && <p className="text-center text-sm text-red-600">{error}</p>}
-            <Button type="submit" className="h-11 w-full metal-sheen text-[#17120b] font-semibold" disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Set new password'}
-            </Button>
-          </form>
-        )}
+              {error && <p className="text-center text-sm text-red-600">{error}</p>}
+              <Button type="submit" className="h-11 w-full metal-sheen text-[#17120b] font-semibold" disabled={loading}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Set new password'}
+              </Button>
+            </form>
+          )}
 
-        <p className="text-center text-sm text-muted-foreground">
-          <Link href={loginHref} className="font-medium underline underline-offset-4">
-            Back to sign in
-          </Link>
-        </p>
+          <p className="text-center text-sm text-muted-foreground">
+            <Link href={loginHref} className="font-medium text-primary underline underline-offset-4">
+              Back to sign in
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

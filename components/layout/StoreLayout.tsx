@@ -26,7 +26,7 @@ const DRAWER_NAV = [
   { label: 'Pending Approvals', href: '/store/pending-approvals', icon: ClipboardCheck, section: 'Operations' },
   { label: 'Catalog Orders', href: '/store/b2b-orders', icon: Package, section: 'Operations' },
   { label: 'Kiosk Orders', href: '/store/kiosk-orders', icon: ShoppingBag, section: 'Operations' },
-  { label: 'Customised Designs', href: '/store/custom-designs', icon: PencilLine, section: 'Operations' },
+  { label: 'Customised Orders', href: '/store/custom-designs', icon: PencilLine, section: 'Operations' },
   { label: 'Intelligence', href: '/store/intelligence', icon: Lightbulb, section: 'Insights' },
   // Kiosk PIN is managed per-Store on the Stores (Branches) page.
   { label: 'Stores (Branches)', href: '/store/branches', icon: Building2, section: 'Account' },
