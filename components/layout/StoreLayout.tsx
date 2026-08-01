@@ -2,13 +2,14 @@
 
 import {
   LayoutDashboard, Package, ShoppingBag, PencilLine, ClipboardCheck,
-  Lightbulb, Store as StoreIcon, Settings, Gem, Building2, Search,
+  Lightbulb, Store as StoreIcon, Settings, Building2, Search,
   X, LogOut,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 
+import { JewelleryStoreIcon } from '@/components/icons/JewelleryStoreIcon';
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
 import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
 
@@ -16,7 +17,7 @@ const FALLBACK_STORE_LOGO = '/storeRe-logo.avif';
 
 // Top navbar — the Retailer's day-to-day browsing/discovery actions, always visible.
 const TOP_NAV = [
-  { label: 'Manufacturer Catalog', href: '/store/manufacturer-catalog', icon: Gem },
+  { label: 'Manufacturer Catalog', href: '/store/manufacturer-catalog', icon: JewelleryStoreIcon },
   { label: 'Similar Design Search', href: '/store/similar-search', icon: Search },
 ];
 
