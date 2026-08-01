@@ -3,7 +3,7 @@
 import {
   LayoutDashboard, Package, ShoppingBag, PencilLine, ClipboardCheck,
   Lightbulb, Store as StoreIcon, Settings, Gem, Building2, Search,
-  Menu, X, LogOut,
+  X, LogOut,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -43,7 +43,6 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [store, setStore] = useState<StoreMe>({ name: 'Your Store' });
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -56,14 +55,14 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
     })();
   }, [router]);
 
-  useEffect(() => { setDrawerOpen(false); setMobileNavOpen(false); }, [pathname]);
+  useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
   useEffect(() => {
-    if (!drawerOpen && !mobileNavOpen) return;
+    if (!drawerOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = previousOverflow; };
-  }, [drawerOpen, mobileNavOpen]);
+  }, [drawerOpen]);
 
   async function signOut() {
     await fetch('/api/store/logout', { method: 'POST' });
@@ -99,15 +98,9 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
             </span>
           </Link>
 
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="ml-2 hidden shrink-0 items-center gap-2 rounded-full border border-[#e3ddd3] bg-white px-4 py-2 text-[13px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea] lg:flex"
-          >
-            <LayoutDashboard className="h-4 w-4" /> Dashboard
-          </button>
-
-          <nav className="ml-2 hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
+          {/* Browsing pages sit next to the logo — icon-only below lg, icon + label
+              from lg up. No burger: every top-level destination stays reachable. */}
+          <nav className="ml-1 flex min-w-0 items-center gap-1 sm:ml-2" aria-label="Primary navigation">
             {TOP_NAV.map(({ label, href, icon: Icon }) => {
               const active = isActive(href);
               return (
@@ -115,22 +108,31 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
                   key={href}
                   href={href}
                   aria-current={active ? 'page' : undefined}
-                  className={`flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium transition-colors ${active ? 'bg-[#c99d37] text-white shadow-[0_5px_16px_rgba(174,127,30,0.18)]' : 'text-[#5f5750] hover:bg-[#f3efe8] hover:text-[#26221e]'}`}
+                  aria-label={label}
+                  title={label}
+                  className={`flex h-10 shrink-0 items-center justify-center gap-2 rounded-full px-2.5 text-[13px] font-medium transition-colors lg:px-4 ${active ? 'bg-[#c99d37] text-white shadow-[0_5px_16px_rgba(174,127,30,0.18)]' : 'text-[#5f5750] hover:bg-[#f3efe8] hover:text-[#26221e]'}`}
                 >
-                  <Icon className="h-4 w-4" /> {label}
+                  <Icon className="h-[18px] w-[18px] shrink-0 lg:h-4 lg:w-4" />
+                  <span className="hidden lg:inline">{label}</span>
                 </Link>
               );
             })}
           </nav>
 
+          {/* Dashboard lives on the far right at every width and is the only thing
+              that opens a panel. */}
           <div className="ml-auto flex shrink-0 items-center gap-2">
             <button
               type="button"
-              onClick={() => setMobileNavOpen(true)}
-              className="rounded-lg border border-[#e3ddd3] bg-white p-2 text-[#554e47] shadow-sm lg:hidden"
-              aria-label="Open navigation"
+              onClick={() => setDrawerOpen(true)}
+              aria-label="Open dashboard"
+              aria-haspopup="dialog"
+              aria-expanded={drawerOpen}
+              title="Dashboard"
+              className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-full border border-[#e3ddd3] bg-white px-2.5 text-[13px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea] lg:px-4"
             >
-              <Menu className="h-5 w-5" />
+              <LayoutDashboard className="h-[18px] w-[18px] shrink-0 lg:h-4 lg:w-4" />
+              <span className="hidden lg:inline">Dashboard</span>
             </button>
           </div>
         </div>
@@ -192,39 +194,6 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
         </div>
       ) : null}
 
-      {/* Mobile primary nav (top navbar items, since they're hidden below lg) */}
-      {mobileNavOpen ? (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
-          <button type="button" className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" />
-          <aside className="absolute left-0 top-0 flex h-full w-[min(90vw,280px)] flex-col bg-[#fffdfa] shadow-2xl">
-            <div className="flex h-[66px] items-center justify-between border-b border-[#eee9e1] px-5">
-              <p className="truncate text-sm font-semibold text-[#26221e]">{storeName}</p>
-              <button type="button" onClick={() => setMobileNavOpen(false)} className="rounded-lg p-2 text-[#746b62] hover:bg-[#f2eee7]" aria-label="Close navigation"><X className="h-4 w-4" /></button>
-            </div>
-            <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Mobile navigation">
-              <div className="space-y-1">
-                {TOP_NAV.map(({ label, href, icon: Icon }) => {
-                  const active = isActive(href);
-                  return (
-                    <Link key={href} href={href} aria-current={active ? 'page' : undefined} className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-colors ${active ? 'bg-[#c99d37] text-white shadow-[0_5px_16px_rgba(174,127,30,0.18)]' : 'text-[#5f5750] hover:bg-[#f3efe8] hover:text-[#26221e]'}`}>
-                      <Icon className={`h-4 w-4 shrink-0 ${active ? 'text-white' : 'text-[#756d65] group-hover:text-[#a77d31]'}`} />
-                      <span className="truncate">{label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-              <div className="my-4 border-t border-[#eee9e1]" />
-              <button
-                type="button"
-                onClick={() => { setMobileNavOpen(false); setDrawerOpen(true); }}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#5f5750] hover:bg-[#f3efe8] hover:text-[#26221e]"
-              >
-                <LayoutDashboard className="h-4 w-4 shrink-0 text-[#756d65]" /> Dashboard
-              </button>
-            </nav>
-          </aside>
-        </div>
-      ) : null}
     </div>
   );
 }
