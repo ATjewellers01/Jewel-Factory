@@ -6,7 +6,7 @@ import { useState } from 'react';
 
 import { useKioskStore } from './StoreContext';
 import { useGuestCart } from '@/hooks/use-guest-cart';
-import { productMetaLine } from '@/lib/format';
+import { productMetaParts } from '@/lib/format';
 
 export type KioskProduct = {
   id: string;
@@ -53,9 +53,16 @@ export function ProductCard({ product }: { product: KioskProduct }) {
         </div>
         <div className="p-3">
           <p className="truncate text-sm font-semibold group-hover:text-primary">{product.designNumber}</p>
-          <p className="truncate text-xs text-muted-foreground">
-            {productMetaLine({ category: product.category ?? 'Jewellery', subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams })}
-          </p>
+          {/* Weight on its own non-truncating line — see productMetaParts. */}
+          {(() => {
+            const meta = productMetaParts({ category: product.category ?? 'Jewellery', subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams });
+            return (
+              <>
+                <p className="truncate text-xs text-muted-foreground">{meta.descriptor}</p>
+                {meta.weight && <p className="text-xs font-medium text-muted-foreground">{meta.weight}</p>}
+              </>
+            );
+          })()}
           <button onClick={addToCart} className="metal-sheen mt-2 w-full rounded-full py-1.5 text-xs font-semibold text-[#17120b] transition-transform hover:scale-[1.02]">
             {added ? <><Check className="mr-1 inline h-3.5 w-3.5" />Added</> : <><Plus className="mr-1 inline h-3.5 w-3.5" />Add to Bag</>}
           </button>

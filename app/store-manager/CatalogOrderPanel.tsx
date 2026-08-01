@@ -405,7 +405,10 @@ export function CatalogOrderPanel({
                     <p className="line-clamp-1 text-sm font-semibold text-[#211c17] hover:text-[#b68a3e]">{p.designNumber}</p>
                     {inCart ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#15803d]" /> : null}
                   </button>
-                    <p className="truncate text-xs text-muted-foreground">{p.category ? `${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}{formatWeight(p.weightGrams) ? ` · ${formatWeight(p.weightGrams)}` : ''}</p>
+                    {/* Weight gets its own non-truncating line so it stays visible
+                        on narrow phone cards, where it used to be clipped first. */}
+                    <p className="truncate text-xs text-muted-foreground">{p.category ? `${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}</p>
+                    {formatWeight(p.weightGrams) && <p className="text-xs font-medium text-muted-foreground">{formatWeight(p.weightGrams)}</p>}
                     {showPopularity && salesMap[p.id] ? (
                       <div className="flex items-center gap-1.5 pt-0.5">
                         <StarRating count={salesMap[p.id].stars} size="sm" />

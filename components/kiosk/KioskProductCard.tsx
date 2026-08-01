@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 
-import { productMetaLine } from '@/lib/format';
+import { productMetaParts } from '@/lib/format';
 
 export type KioskCardProduct = {
   id: string;
@@ -143,9 +143,17 @@ export function KioskProductCard({
             {product.designNumber}
           </p>
         </button>
-        <p className="truncate text-xs text-muted-foreground">
-          {productMetaLine({ category: product.category, subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams })}
-        </p>
+        {/* Descriptor truncates; the weight sits on its own line so a narrow
+            phone card never clips it (it used to be last on one truncated line). */}
+        {(() => {
+          const meta = productMetaParts({ category: product.category, subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams });
+          return (
+            <>
+              <p className="truncate text-xs text-muted-foreground">{meta.descriptor}</p>
+              {meta.weight && <p className="text-xs font-medium text-muted-foreground">{meta.weight}</p>}
+            </>
+          );
+        })()}
       </div>
     </motion.div>
   );

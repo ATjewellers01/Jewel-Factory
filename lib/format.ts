@@ -50,3 +50,24 @@ export function productMetaLine(opts: {
   if (w) parts.push(w);
   return parts.join(' · ');
 }
+
+/**
+ * Split version of {@link productMetaLine} for narrow catalogue cards.
+ *
+ * On a phone the single-line variant is `truncate`d, and because the weight is
+ * last it is the FIRST thing clipped — exactly the information a jeweller needs.
+ * Callers render `descriptor` on a truncating line and `weight` on its own line
+ * that never truncates, so the weight is always readable at any card width.
+ */
+export function productMetaParts(opts: {
+  category?: string | null;
+  subCategory?: string | null;
+  purity?: string | null;
+  weight?: string | number | null;
+}): { descriptor: string; weight: string | null } {
+  const parts: string[] = [];
+  if (opts.category) parts.push(opts.category);
+  if (opts.subCategory) parts.push(opts.subCategory);
+  parts.push(`Gold${opts.purity ? ` ${opts.purity}` : ''}`);
+  return { descriptor: parts.join(' · '), weight: formatWeight(opts.weight) };
+}

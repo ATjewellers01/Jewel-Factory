@@ -246,9 +246,12 @@ export default function ManufacturerCatalogBrowsePage() {
                 <div className="p-3 space-y-2">
                   <button type="button" onClick={() => setDetail(p)} className="block w-full text-left">
                     <p className="truncate text-sm font-medium hover:text-primary">{p.designNumber}</p>
+                    {/* Weight on its own non-truncating line so narrow phone
+                        cards can't clip it (it was last on one truncated line). */}
                     <p className="truncate text-xs text-muted-foreground">
-                      {p.category ? `${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}{formatWeight(p.weightGrams) ? ` · ${formatWeight(p.weightGrams)}` : ''}
+                      {p.category ? `${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}
                     </p>
+                    {formatWeight(p.weightGrams) && <p className="text-xs font-medium text-muted-foreground">{formatWeight(p.weightGrams)}</p>}
                     {salesMap[p.id] ? (
                       <div className="mt-1 flex items-center gap-1.5">
                         <StarRating count={salesMap[p.id].stars} size="sm" />
