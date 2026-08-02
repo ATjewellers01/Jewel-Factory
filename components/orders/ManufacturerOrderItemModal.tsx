@@ -10,6 +10,7 @@ export type OrderItemProduct = {
   category: string | null;
   subCategory: string | null;
   weightGrams: string | number | null;
+  size: string | null;
   purity: string | null;
   description: string | null;
   karigarCode: string | null;
@@ -52,6 +53,7 @@ export function ManufacturerOrderItemModal({ product, onClose }: { product: Orde
             <div className="overflow-hidden rounded-lg border text-sm">
               {product.purity && <div className="flex justify-between px-4 py-2"><span className="text-muted-foreground">Purity</span><span className="font-medium">{product.purity}</span></div>}
               {formatWeight(product.weightGrams) && <div className="flex justify-between bg-muted/40 px-4 py-2"><span className="text-muted-foreground">Weight</span><span className="font-medium">{formatWeight(product.weightGrams)}</span></div>}
+              {product.size && <div className="flex justify-between px-4 py-2"><span className="text-muted-foreground">Size</span><span className="font-medium">{product.size}</span></div>}
               <div className="flex justify-between px-4 py-2"><span className="text-muted-foreground">Category</span><span className="text-right font-medium">{product.category ?? '—'}{product.subCategory ? ` › ${product.subCategory}` : ''}</span></div>
               {product.karigarCode && (
                 <div className="flex justify-between bg-amber-50 px-4 py-2"><span className="text-amber-800">Karigar</span><span className="font-semibold text-amber-900">{product.karigarCode}</span></div>

@@ -41,13 +41,15 @@ export function productMetaLine(opts: {
   subCategory?: string | null;
   purity?: string | null;
   weight?: string | number | null;
+  size?: string | null; // bangles only
 }): string {
   const parts: string[] = [];
   if (opts.category) parts.push(opts.category);
   if (opts.subCategory) parts.push(opts.subCategory);
   parts.push(`Gold${opts.purity ? ` ${opts.purity}` : ''}`);
   const w = formatWeight(opts.weight);
-  if (w) parts.push(w);
+  if (w) parts.push(opts.size ? `${w} · Size ${opts.size}` : w);
+  else if (opts.size) parts.push(`Size ${opts.size}`);
   return parts.join(' · ');
 }
 
@@ -64,10 +66,13 @@ export function productMetaParts(opts: {
   subCategory?: string | null;
   purity?: string | null;
   weight?: string | number | null;
+  size?: string | null; // bangles only
 }): { descriptor: string; weight: string | null } {
   const parts: string[] = [];
   if (opts.category) parts.push(opts.category);
   if (opts.subCategory) parts.push(opts.subCategory);
   parts.push(`Gold${opts.purity ? ` ${opts.purity}` : ''}`);
-  return { descriptor: parts.join(' · '), weight: formatWeight(opts.weight) };
+  const w = formatWeight(opts.weight);
+  const weight = opts.size ? `${w ? `${w} · ` : ''}Size ${opts.size}` : w;
+  return { descriptor: parts.join(' · '), weight };
 }

@@ -67,6 +67,7 @@ export function CatalogOrderPanel({
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
+  const [size, setSize] = useState('');
   const [sort, setSort] = useState<'relevance' | 'newest' | 'name' | 'popularity'>(showPopularity ? 'popularity' : 'relevance');
   const [mobileFilters, setMobileFilters] = useState(false);
   const [showCart, setShowCart] = useState(false);
@@ -123,11 +124,17 @@ export function CatalogOrderPanel({
     [data],
   );
 
+  const availableSizes = useMemo(
+    () => [...new Set((data ?? []).map((product) => product.size).filter((value): value is string => Boolean(value)))].sort(),
+    [data],
+  );
+
   const filtered = useMemo(() => {
     const items = (data ?? []).filter((p) =>
       (!search || p.designNumber.toLowerCase().includes(search.toLowerCase())) &&
       (!category || p.category === category) &&
-      (!subCategory || p.subCategory === subCategory),
+      (!subCategory || p.subCategory === subCategory) &&
+      (!size || p.size === size),
     );
     if (sort === 'newest') return [...items].sort((a, b) => b.designNumber.localeCompare(a.designNumber));
     if (sort === 'name') return [...items].sort((a, b) => a.designNumber.localeCompare(b.designNumber));
@@ -139,7 +146,7 @@ export function CatalogOrderPanel({
       });
     }
     return items;
-  }, [category, data, search, sort, subCategory, salesMap]);
+  }, [category, data, search, size, sort, subCategory, salesMap]);
 
   const cart = orderCart.items;
   const count = orderCart.count;
@@ -232,7 +239,7 @@ export function CatalogOrderPanel({
           </div>
         </div>
 
-        {mobileFilters ? <div className="mb-6 rounded-lg border border-black/10 bg-[#fffdf8] p-4 lg:hidden"><CatalogFilters categories={availableCategories} category={category} subCategory={subCategory} setCategory={setCategory} setSubCategory={setSubCategory} /></div> : null}
+        {mobileFilters ? <div className="mb-6 rounded-lg border border-black/10 bg-[#fffdf8] p-4 lg:hidden"><CatalogFilters categories={availableCategories} category={category} subCategory={subCategory} size={size} sizes={availableSizes} setCategory={setCategory} setSubCategory={setSubCategory} setSize={setSize} /></div> : null}
         {error ? <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
 
       {showCart && (
@@ -274,6 +281,7 @@ export function CatalogOrderPanel({
                             {fullProduct?.category ?? '—'}
                             {fullProduct?.subCategory ? ` › ${fullProduct.subCategory}` : ''}
                             {fullProduct?.weightGrams != null ? ` · ${fullProduct.weightGrams}g` : ''}
+                            {fullProduct?.size ? ` · Size ${fullProduct.size}` : ''}
                           </span>
                         </span>
                       </button>
@@ -336,6 +344,7 @@ export function CatalogOrderPanel({
                             {f.manufacturerProduct.category ?? '—'}
                             {f.manufacturerProduct.subCategory ? ` › ${f.manufacturerProduct.subCategory}` : ''}
                             {f.manufacturerProduct.weightGrams != null ? ` · ${f.manufacturerProduct.weightGrams}g` : ''}
+                            {f.manufacturerProduct.size ? ` · Size ${f.manufacturerProduct.size}` : ''}
                           </span>
                         </span>
                       </button>
@@ -373,7 +382,7 @@ export function CatalogOrderPanel({
 
       <div className="flex items-start gap-8">
         <aside className="sticky top-28 hidden w-60 shrink-0 border-r border-black/10 pr-6 lg:block">
-          <CatalogFilters categories={availableCategories} category={category} subCategory={subCategory} setCategory={setCategory} setSubCategory={setSubCategory} />
+          <CatalogFilters categories={availableCategories} category={category} subCategory={subCategory} size={size} sizes={availableSizes} setCategory={setCategory} setSubCategory={setSubCategory} setSize={setSize} />
         </aside>
         <div className="min-w-0 flex-1">
       {loading ? (
@@ -411,7 +420,7 @@ export function CatalogOrderPanel({
                     {/* Weight gets its own non-truncating line so it stays visible
                         on narrow phone cards, where it used to be clipped first. */}
                     <p className="truncate text-xs text-muted-foreground">{p.category ? `${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}</p>
-                    {formatWeight(p.weightGrams) && <p className="text-xs font-medium text-muted-foreground">{formatWeight(p.weightGrams)}</p>}
+                    {formatWeight(p.weightGrams) && <p className="text-xs font-medium text-muted-foreground">{formatWeight(p.weightGrams)}{p.size ? ` · Size ${p.size}` : ''}</p>}
                     {showPopularity && salesMap[p.id] ? (
                       <div className="flex items-center gap-1.5 pt-0.5">
                         <StarRating count={salesMap[p.id].stars} size="sm" />
@@ -471,24 +480,31 @@ function CatalogFilters({
   categories,
   category,
   subCategory,
+  size,
+  sizes,
   setCategory,
   setSubCategory,
+  setSize,
 }: {
   categories: string[];
   category: string;
   subCategory: string;
+  size: string;
+  sizes: string[];
   setCategory: (value: string) => void;
   setSubCategory: (value: string) => void;
+  setSize: (value: string) => void;
 }) {
   const [categoriesOpen, setCategoriesOpen] = useState(true);
   const [subCategoriesOpen, setSubCategoriesOpen] = useState(true);
+  const [sizesOpen, setSizesOpen] = useState(true);
   const subCategories = subCategoriesFor(category);
 
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between border-b border-black/10 pb-3">
         <span className="text-sm font-semibold">Filters</span>
-        {(category || subCategory) ? <button onClick={() => { setCategory(''); setSubCategory(''); }} className="text-xs font-medium text-[#b68a3e] hover:underline">Clear all</button> : null}
+        {(category || subCategory || size) ? <button onClick={() => { setCategory(''); setSubCategory(''); setSize(''); }} className="text-xs font-medium text-[#b68a3e] hover:underline">Clear all</button> : null}
       </div>
       <button onClick={() => setCategoriesOpen((value) => !value)} className="flex w-full items-center justify-between py-3 text-sm font-semibold">Category <ChevronDown className={`h-4 w-4 text-[#8d8174] transition-transform ${categoriesOpen ? 'rotate-180' : ''}`} /></button>
       {categoriesOpen ? (
@@ -501,6 +517,12 @@ function CatalogFilters({
         <div className="border-t border-black/10">
           <button onClick={() => setSubCategoriesOpen((value) => !value)} className="flex w-full items-center justify-between py-3 text-sm font-semibold">Sub-category <ChevronDown className={`h-4 w-4 text-[#8d8174] transition-transform ${subCategoriesOpen ? 'rotate-180' : ''}`} /></button>
           {subCategoriesOpen ? <div className="space-y-1 pb-4"><button onClick={() => setSubCategory('')} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${!subCategory ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>All</button>{subCategories.map((value) => <button key={value} onClick={() => setSubCategory(value)} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${subCategory === value ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>{value}</button>)}</div> : null}
+        </div>
+      ) : null}
+      {sizes.length > 0 ? (
+        <div className="border-t border-black/10">
+          <button onClick={() => setSizesOpen((value) => !value)} className="flex w-full items-center justify-between py-3 text-sm font-semibold">Size <ChevronDown className={`h-4 w-4 text-[#8d8174] transition-transform ${sizesOpen ? 'rotate-180' : ''}`} /></button>
+          {sizesOpen ? <div className="space-y-1 pb-4"><button onClick={() => setSize('')} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${!size ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>All sizes</button>{sizes.map((value) => <button key={value} onClick={() => setSize(value)} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${size === value ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>{value}</button>)}</div> : null}
         </div>
       ) : null}
     </div>

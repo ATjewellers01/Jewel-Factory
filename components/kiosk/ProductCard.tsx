@@ -16,6 +16,7 @@ export type KioskProduct = {
   subCategory: string | null;
   purity: string | null;
   weightGrams: string | null;
+  size?: string | null;
   hasTryon: boolean;
   images: { secureUrl: string; isPrimary: boolean }[];
 };
@@ -55,7 +56,7 @@ export function ProductCard({ product }: { product: KioskProduct }) {
           <p className="truncate text-sm font-semibold group-hover:text-primary">{product.designNumber}</p>
           {/* Weight on its own non-truncating line — see productMetaParts. */}
           {(() => {
-            const meta = productMetaParts({ category: product.category ?? 'Jewellery', subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams });
+            const meta = productMetaParts({ category: product.category ?? 'Jewellery', subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams, size: product.size });
             return (
               <>
                 <p className="truncate text-xs text-muted-foreground">{meta.descriptor}</p>

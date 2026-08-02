@@ -163,7 +163,7 @@ function ProductBlock({
             </Button>
           ) : null}
         </div>
-        <p className="text-[11px] text-muted-foreground">{productMetaLine({ category: product.category, subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams })}</p>
+        <p className="text-[11px] text-muted-foreground">{productMetaLine({ category: product.category, subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams, size: product.size })}</p>
       </div>
     </div>
   );

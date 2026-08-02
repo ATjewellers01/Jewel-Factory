@@ -17,6 +17,7 @@ type Product = {
   category: string | null;
   subCategory: string | null;
   weightGrams: string | null;
+  size: string | null;
   karigarCode: string | null;
   status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
   hasTryon: boolean;
@@ -42,6 +43,7 @@ export default function ManufacturerCatalogPage() {
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
   const [karigarCode, setKarigarCode] = useState('');
+  const [size, setSize] = useState('');
   const [status, setStatus] = useState<'' | 'ACTIVE' | 'DRAFT' | 'ARCHIVED'>('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [activating, setActivating] = useState(false);
@@ -69,8 +71,9 @@ export default function ManufacturerCatalogPage() {
     const matchCat = !category || p.category === category;
     const matchSub = !subCategory || p.subCategory === subCategory;
     const matchKarigar = !karigarCode || p.karigarCode === karigarCode;
+    const matchSize = !size || p.size === size;
     const matchStatus = !status || p.status === status;
-    return matchSearch && matchCat && matchSub && matchKarigar && matchStatus;
+    return matchSearch && matchCat && matchSub && matchKarigar && matchSize && matchStatus;
   });
 
   // Selecting designs only makes sense while a single status is in view — the
@@ -109,6 +112,9 @@ export default function ManufacturerCatalogPage() {
 
   const karigarOptions = Array.from(
     new Set((products ?? []).map((p) => p.karigarCode).filter((k): k is string => !!k)),
+  ).sort();
+  const sizeOptions = Array.from(
+    new Set((products ?? []).map((p) => p.size).filter((s): s is string => !!s)),
   ).sort();
 
   return (
@@ -155,6 +161,17 @@ export default function ManufacturerCatalogPage() {
             {karigarOptions.map((k) => <option key={k} value={k}>{k}</option>)}
           </select>
         )}
+        {sizeOptions.length > 0 && (
+          <select
+            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+            value={size}
+            onChange={(e) => setSize(e.target.value)}
+            aria-label="Filter by size"
+          >
+            <option value="">All sizes</option>
+            {sizeOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        )}
         <select
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
           value={status}
@@ -166,8 +183,8 @@ export default function ManufacturerCatalogPage() {
           <option value="DRAFT">Inactive</option>
           <option value="ARCHIVED">Archived</option>
         </select>
-        {(category || subCategory || search || karigarCode || status) && (
-          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setKarigarCode(''); setStatus(''); setSelected(new Set()); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+        {(category || subCategory || search || karigarCode || size || status) && (
+          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setKarigarCode(''); setSize(''); setStatus(''); setSelected(new Set()); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
         )}
       </div>
 
@@ -253,7 +270,7 @@ export default function ManufacturerCatalogPage() {
                   <div className="p-3">
                     <p className="truncate text-sm font-medium">{p.designNumber}</p>
                     <p className="truncate text-xs text-muted-foreground">{p.category ?? ''}{p.subCategory ? ` › ${p.subCategory}` : ''}</p>
-                    {formatWeight(p.weightGrams) && <p className="text-xs text-muted-foreground">{formatWeight(p.weightGrams)}</p>}
+                    {formatWeight(p.weightGrams) && <p className="text-xs text-muted-foreground">{formatWeight(p.weightGrams)}{p.size ? ` · Size ${p.size}` : ''}</p>}
                     {p.karigarCode && <p className="text-xs text-muted-foreground/70">Karigar: {p.karigarCode}</p>}
                   </div>
                 </div>

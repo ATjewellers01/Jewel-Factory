@@ -15,6 +15,7 @@ export type FavoriteEntry = {
     subCategory: string | null;
     purity: string | null;
     weightGrams: string | null;
+    size: string | null;
     hasTryon: boolean;
     images: FavoriteImg[];
   };

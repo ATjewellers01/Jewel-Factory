@@ -15,6 +15,7 @@ export type KioskCardProduct = {
   subCategory: string | null;
   purity: string | null;
   weightGrams: string | null;
+  size?: string | null;
   hasTryon: boolean;
   images: { secureUrl: string; isPrimary: boolean }[];
 };
@@ -146,7 +147,7 @@ export function KioskProductCard({
         {/* Descriptor truncates; the weight sits on its own line so a narrow
             phone card never clips it (it used to be last on one truncated line). */}
         {(() => {
-          const meta = productMetaParts({ category: product.category, subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams });
+          const meta = productMetaParts({ category: product.category, subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams, size: product.size });
           return (
             <>
               <p className="truncate text-xs text-muted-foreground">{meta.descriptor}</p>

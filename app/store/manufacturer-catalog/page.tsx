@@ -40,6 +40,7 @@ function CatalogBrowse() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState(params.get('category') ?? '');
   const [subCategory, setSubCategory] = useState(params.get('subCategory') ?? '');
+  const [size, setSize] = useState('');
   const [showCart, setShowCart] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [notes, setNotes] = useState('');
@@ -64,8 +65,13 @@ function CatalogBrowse() {
     const matchSearch = !search || p.designNumber.toLowerCase().includes(search.toLowerCase());
     const matchCat = !category || p.category === category;
     const matchSub = !subCategory || p.subCategory === subCategory;
-    return matchSearch && matchCat && matchSub;
+    const matchSize = !size || p.size === size;
+    return matchSearch && matchCat && matchSub && matchSize;
   });
+
+  const sizeOptions = Array.from(
+    new Set((data ?? []).map((p) => p.size).filter((s): s is string => !!s)),
+  ).sort();
 
   async function placeOrder() {
     setPlacing(true);
@@ -111,8 +117,14 @@ function CatalogBrowse() {
             {subCategoriesFor(category).map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         )}
-        {(category || subCategory || search) && (
-          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+        {sizeOptions.length > 0 && (
+          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={size} onChange={(e) => setSize(e.target.value)} aria-label="Filter by size">
+            <option value="">All sizes</option>
+            {sizeOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        )}
+        {(category || subCategory || search || size) && (
+          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setSize(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
         )}
       </div>
 
@@ -148,6 +160,7 @@ function CatalogBrowse() {
                           {f.manufacturerProduct.category ?? '—'}
                           {f.manufacturerProduct.subCategory ? ` › ${f.manufacturerProduct.subCategory}` : ''}
                           {f.manufacturerProduct.weightGrams != null ? ` · ${f.manufacturerProduct.weightGrams}g` : ''}
+                          {f.manufacturerProduct.size ? ` · Size ${f.manufacturerProduct.size}` : ''}
                         </span>
                       </span>
                     </button>
@@ -215,6 +228,7 @@ function CatalogBrowse() {
                             {fullProduct?.category ?? '—'}
                             {fullProduct?.subCategory ? ` › ${fullProduct.subCategory}` : ''}
                             {fullProduct?.weightGrams != null ? ` · ${fullProduct.weightGrams}g` : ''}
+                            {fullProduct?.size ? ` · Size ${fullProduct.size}` : ''}
                           </span>
                         </span>
                       </button>
@@ -269,7 +283,7 @@ function CatalogBrowse() {
                     <p className="truncate text-xs text-muted-foreground">
                       {p.category ? `${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}
                     </p>
-                    {formatWeight(p.weightGrams) && <p className="text-xs font-medium text-muted-foreground">{formatWeight(p.weightGrams)}</p>}
+                    {formatWeight(p.weightGrams) && <p className="text-xs font-medium text-muted-foreground">{formatWeight(p.weightGrams)}{p.size ? ` · Size ${p.size}` : ''}</p>}
                     {salesMap[p.id] ? (
                       <div className="mt-1 flex items-center gap-1.5">
                         <StarRating count={salesMap[p.id].stars} size="sm" />
