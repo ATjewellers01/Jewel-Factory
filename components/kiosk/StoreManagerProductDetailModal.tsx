@@ -15,6 +15,7 @@ export type StoreManagerProduct = {
   subCategory: string | null;
   purity?: string | null;
   weightGrams: string | null;
+  size?: string | null; // bangles only — hidden when absent
   description?: string | null;
   hasTryon: boolean;
   images: { secureUrl: string; isPrimary: boolean }[];
@@ -150,6 +151,7 @@ function ProductBlock({
         <div className="overflow-hidden rounded-lg border text-sm">
           {product.purity ? <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">Purity</span><span className="font-medium">{product.purity}</span></div> : null}
           {formatWeight(product.weightGrams) ? <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">Weight</span><span className="font-medium">{formatWeight(product.weightGrams)}</span></div> : null}
+          {product.size ? <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">Size</span><span className="font-medium">{product.size}</span></div> : null}
           <div className="flex justify-between gap-4 bg-muted/40 px-4 py-2.5"><span className="text-muted-foreground">Category</span><span className="text-right font-medium">{product.category ?? '—'}{product.subCategory ? ` › ${product.subCategory}` : ''}</span></div>
         </div>
         {product.description && product.description.trim().length >= 4 ? <p className="text-sm leading-relaxed text-muted-foreground">{product.description}</p> : null}

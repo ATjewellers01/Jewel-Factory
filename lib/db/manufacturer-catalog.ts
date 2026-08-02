@@ -88,6 +88,7 @@ export type CreateProductInput = {
   styleTags?: string[];
   minOrderQty?: number;
   pieces?: number;
+  size?: string | null; // bangle size — only collected for the Bangles category
   karigarCode?: string;
   status?: ProductStatus;
 };
@@ -108,9 +109,27 @@ export async function createManufacturerProduct(manufacturerId: string, input: C
       styleTags: input.styleTags ?? [],
       minOrderQty: input.minOrderQty ?? 1,
       pieces: input.pieces ?? 1,
+      size: input.size ?? null,
       karigarCode: input.karigarCode ?? null,
       status: input.status ?? 'DRAFT',
     },
+  });
+}
+
+/**
+ * Flip the status of many designs at once (the catalogue's bulk "Make active").
+ * Scoped by manufacturerId, so ids belonging to someone else are simply skipped
+ * rather than trusted — the caller only ever learns how many rows it changed.
+ */
+export async function setManufacturerProductsStatus(
+  manufacturerId: string,
+  ids: string[],
+  status: ProductStatus,
+) {
+  if (ids.length === 0) return { count: 0 };
+  return prisma.manufacturerProduct.updateMany({
+    where: { id: { in: ids }, manufacturerId },
+    data: { status },
   });
 }
 
@@ -137,6 +156,7 @@ export async function updateManufacturerProduct(
       ...(input.styleTags !== undefined ? { styleTags: input.styleTags } : {}),
       ...(input.minOrderQty !== undefined ? { minOrderQty: input.minOrderQty } : {}),
       ...(input.pieces !== undefined ? { pieces: input.pieces } : {}),
+      ...(input.size !== undefined ? { size: input.size } : {}),
       ...(input.karigarCode !== undefined ? { karigarCode: input.karigarCode } : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
     },

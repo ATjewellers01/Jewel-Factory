@@ -40,6 +40,7 @@ export type ProductFormData = {
   purity: string;
   minOrderQty: string;
   pieces: string;
+  size: string; // bangle size — only shown/sent for the Bangles category
   karigarCode: string;
   status: 'DRAFT' | 'ACTIVE';
   designNumber?: string;
@@ -57,7 +58,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   const [form, setForm] = useState<ProductFormData>(
     initial ?? {
       name: '', category: '', subCategory: '', description: '',
-      weightGrams: '', purity: '', minOrderQty: '1', pieces: '1', karigarCode: '',
+      weightGrams: '', purity: '', minOrderQty: '1', pieces: '1', size: '', karigarCode: '',
       status: 'ACTIVE', // new designs are visible by default
     },
   );
@@ -291,6 +292,8 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
   // Sub-categories depend on the chosen category. Changing category resets sub-cat.
   const subOptions = subCategoriesFor(form.category);
+  // Size is a bangle-only spec (2.2, 2.4, 2.6 …) — no other category uses it.
+  const showSize = form.category === 'Bangles';
   // "Custom" sub-category mode: no preset list, or an existing value that isn't in
   // the list (e.g. free text the user typed, or a legacy value). Then show a text box.
   const [subCustom, setSubCustom] = useState<boolean>(
@@ -351,6 +354,9 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
       purity: form.purity || undefined,
       minOrderQty: form.minOrderQty ? Number(form.minOrderQty) : 1,
       pieces: form.pieces ? Number(form.pieces) : 1,
+      // Sent as null off the Bangles category so switching category clears a
+      // size that was entered earlier, rather than leaving it orphaned.
+      size: showSize ? (form.size.trim() || null) : null,
       karigarCode: form.karigarCode || undefined,
       status: form.status,
     };
@@ -523,6 +529,37 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
             <Input className="mt-1" type="number" min="1" step="1" placeholder="1" value={form.pieces} onChange={set('pieces')} title="How many physical pieces make up the weight above (e.g. a bangle pair = 2)" />
           </div>
         </div>
+        {/* Sits directly under Weight — it's a dimension of the piece, and only
+            the Bangles category collects it. */}
+        {showSize && (
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Size <span className="font-normal">(optional)</span></label>
+              <Input className="mt-1" placeholder="e.g. 2.4" value={form.size} onChange={set('size')} title="Bangle size — free text, e.g. 2.4 or 2.6" />
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Min Order Qty + Status fields */}
+      <section className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Min Order Qty</label>
+            <Input className="mt-1" type="number" min="1" value={form.minOrderQty} onChange={set('minOrderQty')} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Status</label>
+            <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.status} onChange={set('status')}>
+              <option value="ACTIVE">Active (visible)</option>
+              <option value="DRAFT">Inactive (hidden from stores)</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground">Karigar Code <span className="text-[10px] normal-case text-muted-foreground/70">(internal only — never shown to purchase managers)</span></label>
+          <Input className="mt-1" placeholder="e.g. K-104" value={form.karigarCode} onChange={set('karigarCode')} />
+        </div>
       </section>
 
       {/* ── Generate with AI (optional) ─────────────────────────────────────
@@ -601,27 +638,6 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
           )}
         </section>
       )}
-
-      {/* Min Order Qty + Status fields */}
-      <section className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Min Order Qty</label>
-            <Input className="mt-1" type="number" min="1" value={form.minOrderQty} onChange={set('minOrderQty')} />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Status</label>
-            <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.status} onChange={set('status')}>
-              <option value="ACTIVE">Active (visible)</option>
-              <option value="DRAFT">Draft (hidden from stores)</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">Karigar Code <span className="text-[10px] normal-case text-muted-foreground/70">(internal only — never shown to purchase managers)</span></label>
-          <Input className="mt-1" placeholder="e.g. K-104" value={form.karigarCode} onChange={set('karigarCode')} />
-        </div>
-      </section>
 
       {/* Photos */}
       <section className="space-y-2">

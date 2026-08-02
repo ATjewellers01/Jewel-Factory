@@ -16,7 +16,7 @@ import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 import { formatWeight } from '@/lib/format';
 
 type Img = { secureUrl: string; isPrimary: boolean };
-type Product = { id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
+type Product = { id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; size?: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
 // Sales info across ALL of this retailer's branches, keyed by manufacturerProductId.
 type SalesInfo = { stars: number; unitsLast30d: number };
 

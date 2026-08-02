@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Loader2, Package, Sparkles } from 'lucide-react';
+import { Plus, Loader2, Package, Sparkles, Check, CheckSquare, Square } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -29,12 +29,22 @@ const STATUS_COLORS: Record<string, string> = {
   ARCHIVED: 'bg-red-100 text-red-700',
 };
 
+// The DB enum still says DRAFT; the manufacturer reads it as "Inactive".
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT: 'inactive',
+  ACTIVE: 'active',
+  ARCHIVED: 'archived',
+};
+
 export default function ManufacturerCatalogPage() {
   const [products, setProducts] = useState<Product[] | null>(null);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
   const [karigarCode, setKarigarCode] = useState('');
+  const [status, setStatus] = useState<'' | 'ACTIVE' | 'DRAFT' | 'ARCHIVED'>('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [activating, setActivating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
@@ -59,8 +69,43 @@ export default function ManufacturerCatalogPage() {
     const matchCat = !category || p.category === category;
     const matchSub = !subCategory || p.subCategory === subCategory;
     const matchKarigar = !karigarCode || p.karigarCode === karigarCode;
-    return matchSearch && matchCat && matchSub && matchKarigar;
+    const matchStatus = !status || p.status === status;
+    return matchSearch && matchCat && matchSub && matchKarigar && matchStatus;
   });
+
+  // Selecting designs only makes sense while a single status is in view — the
+  // bulk action is "make these active", so it's offered on the Inactive filter.
+  const selectionMode = status === 'DRAFT';
+  const selectedInView = filtered.filter((p) => selected.has(p.id));
+  const allInViewSelected = filtered.length > 0 && selectedInView.length === filtered.length;
+
+  function toggle(id: string) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function activateSelected() {
+    if (selectedInView.length === 0) return;
+    setActivating(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/manufacturer/products/bulk-status', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedInView.map((p) => p.id), status: 'ACTIVE' }),
+      });
+      const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+      if (!res.ok || json?.error) { setError(json?.error?.message ?? 'Could not activate the selected designs.'); return; }
+      setSelected(new Set());
+      await load();
+    } catch {
+      setError('Network error — the selected designs were not activated.');
+    } finally { setActivating(false); }
+  }
 
   const karigarOptions = Array.from(
     new Set((products ?? []).map((p) => p.karigarCode).filter((k): k is string => !!k)),
@@ -110,10 +155,50 @@ export default function ManufacturerCatalogPage() {
             {karigarOptions.map((k) => <option key={k} value={k}>{k}</option>)}
           </select>
         )}
-        {(category || subCategory || search || karigarCode) && (
-          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setKarigarCode(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+        <select
+          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+          value={status}
+          onChange={(e) => { setStatus(e.target.value as typeof status); setSelected(new Set()); }}
+          aria-label="Filter by status"
+        >
+          <option value="">All statuses</option>
+          <option value="ACTIVE">Active</option>
+          <option value="DRAFT">Inactive</option>
+          <option value="ARCHIVED">Archived</option>
+        </select>
+        {(category || subCategory || search || karigarCode || status) && (
+          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setKarigarCode(''); setStatus(''); setSelected(new Set()); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
         )}
       </div>
+
+      {/* Bulk bar — only on the Inactive filter, where "make active" is the
+          one action that applies to every design in view. */}
+      {selectionMode && filtered.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSelected(allInViewSelected ? new Set() : new Set(filtered.map((p) => p.id)))}
+              className="inline-flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary"
+            >
+              {allInViewSelected ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4 text-muted-foreground" />}
+              {allInViewSelected ? 'Clear selection' : `Select all ${filtered.length}`}
+            </button>
+            <span className="text-sm text-muted-foreground">
+              {selectedInView.length > 0 ? `${selectedInView.length} selected` : 'Tap a design to select it'}
+            </span>
+          </div>
+          <Button
+            size="sm"
+            onClick={activateSelected}
+            disabled={selectedInView.length === 0 || activating}
+            className="metal-sheen font-semibold text-[#17120b]"
+          >
+            {activating ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Check className="mr-1.5 h-4 w-4" />}
+            Make active{selectedInView.length > 0 ? ` (${selectedInView.length})` : ''}
+          </Button>
+        </div>
+      )}
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
@@ -139,9 +224,9 @@ export default function ManufacturerCatalogPage() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((p) => {
             const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
-            return (
-              <Link key={p.id} href={`/manufacturer/catalog/${p.id}`}>
-                <div className="group overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md">
+            const isSelected = selected.has(p.id);
+            const card = (
+                <div className={`group overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md ${isSelected ? 'border-primary ring-2 ring-primary/30' : ''}`}>
                   <div className="relative aspect-[3/4] bg-[#ece5da]">
                     {img ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -157,8 +242,13 @@ export default function ManufacturerCatalogPage() {
                       </span>
                     )}
                     <span className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_COLORS[p.status]}`}>
-                      {p.status.toLowerCase()}
+                      {STATUS_LABELS[p.status] ?? p.status.toLowerCase()}
                     </span>
+                    {selectionMode && (
+                      <span className={`absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full border-2 ${isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-white/80 bg-black/30 text-transparent'}`}>
+                        <Check className="h-4 w-4" />
+                      </span>
+                    )}
                   </div>
                   <div className="p-3">
                     <p className="truncate text-sm font-medium">{p.designNumber}</p>
@@ -167,7 +257,15 @@ export default function ManufacturerCatalogPage() {
                     {p.karigarCode && <p className="text-xs text-muted-foreground/70">Karigar: {p.karigarCode}</p>}
                   </div>
                 </div>
-              </Link>
+            );
+            // On the Inactive filter the card selects instead of navigating —
+            // editing a design is still one click away from anywhere else.
+            return selectionMode ? (
+              <button key={p.id} type="button" onClick={() => toggle(p.id)} aria-pressed={isSelected} className="text-left">
+                {card}
+              </button>
+            ) : (
+              <Link key={p.id} href={`/manufacturer/catalog/${p.id}`}>{card}</Link>
             );
           })}
         </div>

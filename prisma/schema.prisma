@@ -290,6 +290,10 @@ model ManufacturerProduct {
   styleTags    String[]      @default([]) @map("style_tags")
   minOrderQty  Int           @default(1) @map("min_order_qty")
   pieces       Int           @default(1) // how many physical pieces make up weightGrams (e.g. a bangle pair = 2)
+  // Bangle sizing (2.2, 2.4, 2.6 …). Free text and optional — the Add Design
+  // form only shows the field for the Bangles category, but nothing enforces
+  // that here, so an older/other-category row may still carry a value.
+  size         String?
   karigarCode  String?       @map("karigar_code") // manufacturer-internal only — never exposed to retailer/store manager
   hasTryon     Boolean       @default(false) @map("has_tryon")
   status       ProductStatus @default(DRAFT)

@@ -20,7 +20,7 @@ export default function EditProductPage() {
           data?: {
             id: string; designNumber: string; name: string | null; category: string | null;
             subCategory: string | null; description: string | null; weightGrams: string | null;
-            purity: string | null; minOrderQty: number; pieces: number | null; karigarCode: string | null;
+            purity: string | null; minOrderQty: number; pieces: number | null; size: string | null; karigarCode: string | null;
             status: string; hasTryon: boolean;
             images: { id: string; secureUrl: string; isPrimary: boolean }[];
             tryonAssets: { assetUrl: string; jewelleryType: string }[];
@@ -40,6 +40,7 @@ export default function EditProductPage() {
           purity: p.purity ?? '',
           minOrderQty: String(p.minOrderQty ?? 1),
           pieces: String(p.pieces ?? 1),
+          size: p.size ?? '',
           karigarCode: p.karigarCode ?? '',
           status: (p.status === 'ACTIVE' ? 'ACTIVE' : 'DRAFT'),
           images: p.images,

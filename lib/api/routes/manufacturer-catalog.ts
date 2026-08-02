@@ -7,6 +7,7 @@ import {
   getManufacturerProduct,
   createManufacturerProduct,
   updateManufacturerProduct,
+  setManufacturerProductsStatus,
   deleteManufacturerProduct,
   addProductImage,
   removeProductImage,
@@ -72,6 +73,8 @@ const ProductBody = z.object({
   styleTags: z.array(z.string()).optional(),
   minOrderQty: z.number().int().positive().optional(),
   pieces: z.number().int().positive().optional(),
+  // Bangle size. Nullable so clearing the field on a category change wipes it.
+  size: z.string().max(40).nullish(),
   karigarCode: z.string().optional(),
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional(),
 });
@@ -89,6 +92,19 @@ manufacturerCatalogRoutes.patch('/products/:id', zValidator('json', ProductBody.
   );
   if (!updated) return sendError(c, 'not_found', 'Product not found', 404);
   return sendData(c, updated);
+});
+
+// Bulk status change from the catalogue list — one request instead of one PATCH
+// per design, so activating a filtered page of drafts is a single round trip.
+const BulkStatusBody = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(500),
+  status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']),
+});
+
+manufacturerCatalogRoutes.post('/products/bulk-status', zValidator('json', BulkStatusBody), async (c) => {
+  const { ids, status } = c.req.valid('json');
+  const result = await setManufacturerProductsStatus(c.get('manufacturerId'), ids, status);
+  return sendData(c, { updated: result.count });
 });
 
 manufacturerCatalogRoutes.delete('/products/:id', async (c) => {
