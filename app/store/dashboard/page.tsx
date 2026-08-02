@@ -40,9 +40,10 @@ export default function StoreDashboardPage() {
               </div>
             </Link>
           )}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Card href="/store/kiosk-orders" icon={ShoppingBag} label="Kiosk Orders" total={data.totalKiosk} pending={data.pendingKiosk} />
-            <Card href="/store/b2b-orders" icon={Package} label="Catalogue Orders" total={data.totalB2b} pending={data.pendingB2b} />
+          {/* Kiosk folds into Catalogue Orders — one page now holds both, so the
+              card sums the two rather than sending the retailer to a dead route. */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Card href="/store/b2b-orders" icon={Package} label="Catalogue Orders" total={data.totalB2b + data.totalKiosk} pending={data.pendingB2b + data.pendingKiosk} />
             <Card href="/store/custom-designs" icon={PencilLine} label="Customised Orders" total={data.totalCustom} pending={data.pendingCustom} />
           </div>
           <section className="grid gap-3 border-t border-[#e6e0d7] pt-6 sm:grid-cols-2">

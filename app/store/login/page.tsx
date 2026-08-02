@@ -7,7 +7,7 @@ export default function StoreLoginPage() {
     <PortalLoginScreen
       portal="retailer"
       loginPath="/api/store/login"
-      redirectTo="/store/manufacturer-catalog"
+      redirectTo="/store/home"
       forgotHref="/store/forgot-password"
       footerLinks={[
         { prompt: 'New Retailer Admin?', label: 'Register here', href: '/store/register' },

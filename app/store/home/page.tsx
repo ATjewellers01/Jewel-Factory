@@ -144,7 +144,7 @@ function CatalogueStrip({ products }: { products: Product[] }) {
               // and off the accessibility tree so nothing is announced twice.
               aria-hidden={i >= products.length}
               tabIndex={i >= products.length ? -1 : undefined}
-              className="group/card relative block h-32 w-28 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-black/5 transition-shadow hover:shadow-[0_10px_30px_rgba(31,24,15,0.16)] sm:h-40 sm:w-36"
+              className="group/card relative block h-44 w-36 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-black/5 transition-shadow hover:shadow-[0_10px_30px_rgba(31,24,15,0.16)] sm:h-56 sm:w-48 lg:h-64 lg:w-56"
               title={p.designNumber}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -154,7 +154,7 @@ function CatalogueStrip({ products }: { products: Product[] }) {
                 loading="lazy"
                 className="h-full w-full object-cover transition-transform duration-500 group-hover/card:scale-105"
               />
-              <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-2 pb-1.5 pt-5 text-[10px] font-semibold text-white">
+              <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-2.5 pb-2 pt-6 text-[11px] font-semibold tabular-nums text-white sm:text-xs">
                 {p.designNumber}
               </span>
             </Link>

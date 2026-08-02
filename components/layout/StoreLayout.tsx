@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  LayoutDashboard, Package, ShoppingBag, PencilLine, ClipboardCheck,
+  LayoutDashboard, Package, PencilLine, ClipboardCheck,
   Lightbulb, Store as StoreIcon, Settings, Building2, Search,
   Home, X, LogOut,
 } from 'lucide-react';
@@ -25,10 +25,13 @@ const TOP_NAV = [
 // Dashboard drawer — operations/admin/account pages, opened via the "Dashboard" button.
 const DRAWER_NAV = [
   { label: 'Dashboard', href: '/store/dashboard', icon: LayoutDashboard, section: 'Overview' },
-  { label: 'Pending Approvals', href: '/store/pending-approvals', icon: ClipboardCheck, section: 'Operations' },
+  // Operations runs in the order the work actually flows: browse the orders that
+  // came in, then the bespoke ones, then what still needs signing off. Kiosk
+  // Orders is gone — it is merged into Catalogue Orders (same as the
+  // manufacturer portal), since both are orders from this retailer's stores.
   { label: 'Catalogue Orders', href: '/store/b2b-orders', icon: Package, section: 'Operations' },
-  { label: 'Kiosk Orders', href: '/store/kiosk-orders', icon: ShoppingBag, section: 'Operations' },
   { label: 'Customised Orders', href: '/store/custom-designs', icon: PencilLine, section: 'Operations' },
+  { label: 'Pending Approvals', href: '/store/pending-approvals', icon: ClipboardCheck, section: 'Operations' },
   { label: 'Intelligence', href: '/store/intelligence', icon: Lightbulb, section: 'Insights' },
   // Kiosk PIN is managed per-Store on the Stores (Branches) page.
   { label: 'Stores (Branches)', href: '/store/branches', icon: Building2, section: 'Account' },
