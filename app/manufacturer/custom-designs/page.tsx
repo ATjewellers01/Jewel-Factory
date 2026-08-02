@@ -4,6 +4,7 @@ import { Loader2, PencilLine, ChevronDown, ChevronUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
+import { CustomSpecList } from '@/components/orders/CustomSpecList';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,10 @@ type Order = {
   id: string; orderNumber: string; storeNameSnapshot: string; storeAddressSnapshot: string;
   category: string; weightGramsMin: string | null; weightGramsMax: string | null; purity: string | null;
   referenceImageUrl: string | null; designNotes: string | null;
+  orderRef: string | null; deliveryDate: string | null; quantity: number | null;
+  meena: string | null; length: string | null; size: string | null;
+  broadness: string | null; screw: string | null; sampleWeightGrams: string | null;
+  subCategory: string | null;
   status: string; trackingNumber: string | null; createdAt: string;
   karigarCode: string | null;
 };
@@ -113,7 +118,7 @@ export default function ManufacturerCustomDesignsPage() {
                 <div className="grid flex-1 grid-cols-2 gap-x-4 sm:grid-cols-4">
                   <div><p className="text-xs text-muted-foreground">Order</p><p className="text-sm font-medium">{o.orderNumber}</p></div>
                   <div><p className="text-xs text-muted-foreground">Store</p><p className="text-sm font-medium text-primary truncate">{o.storeNameSnapshot}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Category</p><p className="text-sm">{o.category}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Category</p><p className="text-sm">{o.category}{o.subCategory ? ` › ${o.subCategory}` : ''}</p></div>
                   <div className="flex items-start gap-1.5">
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{o.status.replace('_', ' ').toLowerCase()}</span>
                     {o.karigarCode && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Karigar: {o.karigarCode}</span>}
@@ -143,7 +148,8 @@ export default function ManufacturerCustomDesignsPage() {
                     </div>
                   </div>
                   <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to (store address)</p><p className="text-sm">{o.storeAddressSnapshot}</p></div>
-                  {o.designNotes && <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Design Notes</p><p className="text-sm">{o.designNotes}</p></div>}
+                  <CustomSpecList spec={o} />
+                  {o.designNotes && <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Remarks</p><p className="text-sm">{o.designNotes}</p></div>}
                   {o.referenceImageUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img

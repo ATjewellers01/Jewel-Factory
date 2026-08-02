@@ -145,7 +145,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
     } finally { setAiBusy(null); }
   }
 
-  // Catalog: generate an attractive image and add it as a product photo.
+  // Catalogue: generate an attractive image and add it as a product photo.
   async function aiCatalog(withInstr = false): Promise<boolean> {
     if (!aiRaw) { setAiError('Choose a raw photo first.'); return false; }
     setAiBusy('catalog'); setAiError(null);
@@ -153,13 +153,13 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
       const res = await fetch('/api/manufacturer/ai/catalog', { method: 'POST', credentials: 'same-origin', body: aiFormWithCategory(withInstr) });
       const json = (await res.json()) as { data?: { imageBase64: string }; error?: { message: string } };
       console.log('[ai:catalog]', res.status, { ...json, data: json.data ? '<image omitted>' : json.data });
-      if (!res.ok || !json.data) throw new Error(`Catalog generation failed (HTTP ${res.status}): ${json.error?.message ?? 'no details returned'}`);
+      if (!res.ok || !json.data) throw new Error(`Catalogue generation failed (HTTP ${res.status}): ${json.error?.message ?? 'no details returned'}`);
       const file = await b64ToFile(json.data.imageBase64, 'ai-catalog.png');
       await handleImageUpload(file);
       return true;
     } catch (e) {
       console.error('[ai:catalog] failed', e);
-      setAiError(e instanceof Error ? e.message : 'Catalog generation failed');
+      setAiError(e instanceof Error ? e.message : 'Catalogue generation failed');
       return false;
     } finally { setAiBusy(null); }
   }
@@ -527,7 +527,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
       {/* ── Generate with AI (optional) ─────────────────────────────────────
           Specs are filled above → upload a raw photo → AI fills name + description,
-          and makes an attractive catalog image + a transparent try-on PNG. Everything
+          and makes an attractive catalogue image + a transparent try-on PNG. Everything
           stays editable. If AI isn't configured, this whole block is hidden and manual
           add works exactly as before. */}
       {aiEnabled && (
@@ -564,7 +564,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
                   {aiBusy === 'describe' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Description</>}
                 </Button>
                 <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy} onClick={() => aiCatalog(false)}>
-                  {aiBusy === 'catalog' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Catalog image</>}
+                  {aiBusy === 'catalog' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Sparkles className="mr-1 h-3.5 w-3.5" />Catalogue image</>}
                 </Button>
                 <Button type="button" size="sm" disabled={!aiRaw || !!aiBusy} onClick={aiGenerateAll} className="bg-primary text-primary-foreground hover:bg-primary/90">
                   {aiBusy === 'all' ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Generating…</> : <><Wand2 className="mr-1 h-3.5 w-3.5" />Generate all</>}
@@ -575,7 +575,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <Input value={aiInstr} onChange={(e) => setAiInstr(e.target.value)} placeholder="Regenerate note, e.g. simpler background, warmer light" className="h-8 max-w-xs text-xs" />
                 <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiCatalog(true)} title="Regenerate catalog with this instruction">
-                  <RefreshCw className="mr-1 h-3.5 w-3.5" />Catalog
+                  <RefreshCw className="mr-1 h-3.5 w-3.5" />Catalogue
                 </Button>
                 <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiTransparent(true)} title="Regenerate try-on with this instruction">
                   <RefreshCw className="mr-1 h-3.5 w-3.5" />Try-on
@@ -625,7 +625,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
       {/* Photos */}
       <section className="space-y-2">
-        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Catalog Photos</label>
+        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Catalogue Photos</label>
         <div className="flex flex-wrap gap-3">
           {images.map((img) => (
             <div key={img.id} className="flex flex-col gap-2">

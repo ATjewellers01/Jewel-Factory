@@ -42,7 +42,7 @@ const FALLBACK_STORE_LOGO = '/storeRe-logo.avif';
 // Browser-tab label per store-manager route (title becomes "<label> | <Store>").
 const PAGE_LABELS: Record<string, string> = {
   '/store-manager': 'Home',
-  '/store-manager/kiosk': 'Catalog',
+  '/store-manager/kiosk': 'Catalogue',
   '/store-manager/search': 'Search by Photo',
   '/store-manager/custom-design': 'Custom Design',
   '/store-manager/try-on': 'Try-On',
@@ -57,7 +57,7 @@ function pageLabelFor(pathname: string): string {
 }
 
 const nav = [
-  { href: '/store-manager/kiosk', label: 'Catalog', icon: LayoutGrid },
+  { href: '/store-manager/kiosk', label: 'Catalogue', icon: LayoutGrid },
   { href: '/store-manager/search', label: 'Photo Search', icon: ScanSearch },
   { href: '/store-manager/custom-design', label: 'Custom Design', icon: PencilRuler },
   { href: '/store-manager/my-orders', label: 'My Orders', icon: ClipboardList },
@@ -258,7 +258,7 @@ function Shell({ children }: { children: ReactNode }) {
                 {data.retailer.city ? <p className="mt-3 text-xs text-white/35">Visit us in {data.retailer.city}</p> : null}
               </div>
               <FooterColumn title="Discover" links={[
-                ['/store-manager/kiosk', 'Catalog'],
+                ['/store-manager/kiosk', 'Catalogue'],
                 ['/store-manager/search', 'Search by Photo'],
                 ['/store-manager/try-on', 'Virtual Try-On'],
               ]} />

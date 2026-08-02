@@ -237,14 +237,27 @@ branchManagerRoutes.post('/kiosk-orders', branchManagerGuard, zValidator('json',
 
 // ── Custom design request (from the kiosk, on behalf of a customer) ───────────
 
+const emptyToUndefined = (v: unknown) => (typeof v === 'string' && v.trim() === '' ? undefined : v);
+const optionalText = (max: number) => z.preprocess(emptyToUndefined, z.string().max(max).optional());
+
 const CustomBody = z.object({
   category: z.string().min(1),
-  subCategory: z.string().optional(),
+  subCategory: optionalText(120),
   weightGramsMin: z.number().positive().optional(),
   weightGramsMax: z.number().positive().optional(),
-  purity: z.string().optional(),
-  designNotes: z.string().max(2000).optional(),
-  referenceImageUrl: z.string().url().optional(),
+  purity: optionalText(40),
+  designNotes: optionalText(2000), // shown as "Remarks" on the form
+  referenceImageUrl: z.preprocess(emptyToUndefined, z.string().url().optional()),
+  // Counter spec — free text where the shop writes units ("18 inch", "2.5 mm").
+  orderRef: optionalText(60),
+  deliveryDate: z.preprocess(emptyToUndefined, z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a valid date').optional()),
+  quantity: z.coerce.number().int().positive().max(9999).optional(),
+  meena: optionalText(60),
+  length: optionalText(60),
+  size: optionalText(60),
+  broadness: optionalText(60),
+  screw: optionalText(60),
+  sampleWeightGrams: z.coerce.number().positive().max(99999).optional(),
 });
 
 // Signed Cloudinary upload for the customer's reference photo (branch-scoped).
@@ -261,16 +274,29 @@ branchManagerRoutes.post('/custom-designs', branchManagerGuard, zValidator('json
   const retailerId = c.get('storeId');
   const branchId = c.get('branchId');
   const body = c.req.valid('json');
-  const category = body.subCategory?.trim() ? `${body.category} — ${body.subCategory.trim()}` : body.category;
+  // Sub-category has its own column now; it used to be glued onto `category` as
+  // "Bangles — Fusion Bangle". Older rows keep that glued form, which is why
+  // readers still print `category` as-is.
   const req = await placeCustomRequest({
     storeId: retailerId,
     branchId,
-    category,
+    category: body.category,
+    subCategory: body.subCategory as string | undefined,
     weightGramsMin: body.weightGramsMin,
     weightGramsMax: body.weightGramsMax,
-    purity: body.purity,
-    designNotes: body.designNotes,
-    referenceImageUrl: body.referenceImageUrl,
+    purity: body.purity as string | undefined,
+    designNotes: body.designNotes as string | undefined,
+    referenceImageUrl: body.referenceImageUrl as string | undefined,
+    orderRef: body.orderRef as string | undefined,
+    // Parsed as a plain calendar date (no timezone shifting on a DATE column).
+    deliveryDate: body.deliveryDate ? new Date(`${body.deliveryDate as string}T00:00:00Z`) : undefined,
+    quantity: body.quantity,
+    meena: body.meena as string | undefined,
+    length: body.length as string | undefined,
+    size: body.size as string | undefined,
+    broadness: body.broadness as string | undefined,
+    screw: body.screw as string | undefined,
+    sampleWeightGrams: body.sampleWeightGrams,
   });
   return sendData(c, req, 201);
 });

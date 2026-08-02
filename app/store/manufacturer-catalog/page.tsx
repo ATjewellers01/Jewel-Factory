@@ -1,10 +1,11 @@
 'use client';
 
-import { Loader2, Gem, Heart, ShoppingCart, Check, Minus, Plus, Trash2, Sparkles } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Loader2, Gem, Heart, ShoppingCart, Minus, Plus, Trash2, Sparkles } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 
 import { StoreManagerProductDetailModal } from '@/components/kiosk/StoreManagerProductDetailModal';
+import { CartQtyControl } from '@/components/orders/CartQtyControl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StarRating } from '@/components/ui/StarRating';
@@ -19,14 +20,26 @@ type Product = { id: string; designNumber: string; name?: string | null; categor
 // Sales info across ALL of this retailer's branches, keyed by manufacturerProductId.
 type SalesInfo = { stars: number; unitsLast30d: number };
 
+// useSearchParams needs a Suspense boundary in the App Router.
 export default function ManufacturerCatalogBrowsePage() {
+  return (
+    <Suspense fallback={<div className="flex items-center gap-2 py-16 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}>
+      <CatalogBrowse />
+    </Suspense>
+  );
+}
+
+function CatalogBrowse() {
   const { data, error, loading } = useApi<Product[]>('/api/store/catalog', '/store/login');
   const cart = useB2bCart();
   const favorites = useFavorites('/api/store/favorites');
   const router = useRouter();
+  // Seeded from the URL so /store/home category tiles can deep-link into a
+  // pre-filtered catalog (?category=Bangles&subCategory=Fusion%20Bangle).
+  const params = useSearchParams();
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
-  const [subCategory, setSubCategory] = useState('');
+  const [category, setCategory] = useState(params.get('category') ?? '');
+  const [subCategory, setSubCategory] = useState(params.get('subCategory') ?? '');
   const [showCart, setShowCart] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [notes, setNotes] = useState('');
@@ -73,7 +86,7 @@ export default function ManufacturerCatalogBrowsePage() {
     <div className="mx-auto w-full max-w-5xl space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-medium tracking-tight">Manufacturer Catalog</h1>
+          <h1 className="text-2xl font-medium tracking-tight">Manufacturer Catalogue</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">Browse designs and place a restock order.</p>
         </div>
         <div className="flex items-center gap-2">
@@ -171,11 +184,16 @@ export default function ManufacturerCatalogBrowsePage() {
 
       {showCart && (
         <div className="rounded-xl border bg-card p-4 space-y-3">
-          <h2 className="text-sm font-semibold">Your Catalog Cart</h2>
+          <h2 className="text-sm font-semibold">Your Catalogue Cart</h2>
           {cart.items.length === 0 ? (
             <p className="text-sm text-muted-foreground">Cart is empty.</p>
           ) : (
             <>
+              {/* Column header for the steppers — without it the bare numbers
+                  read as a count of something unspecified. */}
+              <div className="flex items-center justify-end gap-3 pr-7 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <span className="w-[104px] text-center">Qty</span>
+              </div>
               <div className="space-y-2">
                 {cart.items.map((i) => {
                   const fullProduct = (data ?? []).find((p) => p.id === i.productId);
@@ -200,10 +218,10 @@ export default function ManufacturerCatalogBrowsePage() {
                           </span>
                         </span>
                       </button>
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => (i.quantity <= 1 ? cart.remove(i.productId) : cart.setQty(i.productId, i.quantity - 1))} className="rounded border p-1"><Minus className="h-3 w-3" /></button>
+                      <div className="flex w-[104px] shrink-0 items-center justify-center gap-1">
+                        <button onClick={() => (i.quantity <= 1 ? cart.remove(i.productId) : cart.setQty(i.productId, i.quantity - 1))} aria-label="One less" className="rounded border p-1"><Minus className="h-3 w-3" /></button>
                         <span className="w-8 text-center text-sm tabular-nums">{i.quantity}</span>
-                        <button onClick={() => cart.setQty(i.productId, i.quantity + 1)} className="rounded border p-1"><Plus className="h-3 w-3" /></button>
+                        <button onClick={() => cart.setQty(i.productId, i.quantity + 1)} aria-label="One more" className="rounded border p-1"><Plus className="h-3 w-3" /></button>
                       </div>
                       <button onClick={() => cart.remove(i.productId)} className="text-muted-foreground hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
                     </div>
@@ -224,7 +242,7 @@ export default function ManufacturerCatalogBrowsePage() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((p) => {
             const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
-            const inCart = cart.items.some((i) => i.productId === p.id);
+            const inCartQty = cart.items.find((i) => i.productId === p.id)?.quantity ?? 0;
             return (
               <div key={p.id} className="overflow-hidden rounded-xl border bg-card">
                 <button type="button" onClick={() => setDetail(p)} className="relative block aspect-[3/4] w-full bg-[#ece5da]" title="View details">
@@ -259,10 +277,13 @@ export default function ManufacturerCatalogBrowsePage() {
                       </div>
                     ) : null}
                   </button>
-                  <Button size="sm" variant={inCart ? 'outline' : 'default'} className={`w-full ${inCart ? 'border-green-300 text-green-700' : 'metal-sheen text-[#17120b] font-semibold'}`}
-                    onClick={() => cart.add({ productId: p.id, name: p.designNumber, designNumber: p.designNumber, imageUrl: img?.secureUrl })}>
-                    {inCart ? <><Check className="mr-1 h-3.5 w-3.5" />In cart</> : <><Plus className="mr-1 h-3.5 w-3.5" />Add</>}
-                  </Button>
+                  <CartQtyControl
+                    size="sm"
+                    designNumber={p.designNumber}
+                    quantity={inCartQty}
+                    onAdd={() => cart.add({ productId: p.id, name: p.designNumber, designNumber: p.designNumber, imageUrl: img?.secureUrl })}
+                    onSetQuantity={(quantity) => (quantity <= 0 ? cart.remove(p.id) : cart.setQty(p.id, quantity))}
+                  />
                 </div>
               </div>
             );
@@ -277,16 +298,19 @@ export default function ManufacturerCatalogBrowsePage() {
           products={data ?? []}
           onClose={() => setDetail(null)}
           tryOnBack="/store/manufacturer-catalog"
+          /* The popup stays open on add — similar designs are listed below it,
+             so several can be added (and adjusted) while scrolling. */
           primaryAction={(product) => {
-            const inCart = cart.items.some((i) => i.productId === product.id);
+            const quantity = cart.items.find((i) => i.productId === product.id)?.quantity ?? 0;
             const img = product.images.find((i) => i.isPrimary) ?? product.images[0];
             return (
-              <Button
-                onClick={() => { cart.add({ productId: product.id, name: product.designNumber, designNumber: product.designNumber, imageUrl: img?.secureUrl }); setDetail(null); }}
-                className="metal-sheen flex-1 font-semibold text-[#17120b]"
-              >
-                {inCart ? <><Check className="mr-1.5 h-4 w-4" />In cart</> : <><Plus className="mr-1.5 h-4 w-4" />Add</>}
-              </Button>
+              <CartQtyControl
+                className="flex-1"
+                designNumber={product.designNumber}
+                quantity={quantity}
+                onAdd={() => cart.add({ productId: product.id, name: product.designNumber, designNumber: product.designNumber, imageUrl: img?.secureUrl })}
+                onSetQuantity={(next) => (next <= 0 ? cart.remove(product.id) : cart.setQty(product.id, next))}
+              />
             );
           }}
         />

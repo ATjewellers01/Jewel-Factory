@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { StoreManagerProductDetailModal, type StoreManagerProduct } from '@/components/kiosk/StoreManagerProductDetailModal';
+import { CartQtyControl } from '@/components/orders/CartQtyControl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StarRating } from '@/components/ui/StarRating';
@@ -247,6 +248,11 @@ export function CatalogOrderPanel({
             <div className="flex h-full flex-col items-center justify-center text-center"><ShoppingCart className="h-9 w-9 text-[#b68a3e]/35" /><p className="mt-3 text-sm text-muted-foreground">Your order is empty.</p></div>
           ) : (
             <>
+              {/* Column header for the steppers — bare numbers alone don't say
+                  what they count. */}
+              <div className="flex items-center justify-end gap-3 pr-7 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                <span className="w-[104px] text-center">Qty</span>
+              </div>
               <div className="space-y-2">
                 {cart.map((l) => {
                   const fullProduct = (data ?? []).find((p) => p.id === l.productId);
@@ -271,10 +277,10 @@ export function CatalogOrderPanel({
                           </span>
                         </span>
                       </button>
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => setQty(l.productId, l.quantity - 1)} className="rounded border p-1"><Minus className="h-3 w-3" /></button>
+                      <div className="flex w-[104px] shrink-0 items-center justify-center gap-1">
+                        <button onClick={() => setQty(l.productId, l.quantity - 1)} aria-label="One less" className="rounded border p-1"><Minus className="h-3 w-3" /></button>
                         <span className="w-8 text-center text-sm tabular-nums">{l.quantity}</span>
-                        <button onClick={() => setQty(l.productId, l.quantity + 1)} className="rounded border p-1"><Plus className="h-3 w-3" /></button>
+                        <button onClick={() => setQty(l.productId, l.quantity + 1)} aria-label="One more" className="rounded border p-1"><Plus className="h-3 w-3" /></button>
                       </div>
                       <button onClick={() => setQty(l.productId, 0)} className="text-muted-foreground hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
                     </div>
@@ -376,7 +382,7 @@ export function CatalogOrderPanel({
         <div className={`grid gap-4 md:gap-6 ${gridCols}`}>
           {filtered.map((p) => {
             const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
-            const inCart = cart.some((l) => l.productId === p.id);
+            const inCartQty = cart.find((l) => l.productId === p.id)?.quantity ?? 0;
             return (
               <motion.article key={p.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="group">
                 <button type="button" onClick={() => setDetail(p)} className="relative block aspect-[3/4] w-full overflow-hidden rounded-lg bg-[#ece5da] shadow-[0_1px_0_rgba(25,21,17,0.08)] ring-1 ring-black/5 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_18px_40px_rgba(31,24,15,0.16)]" title="View details">
@@ -396,14 +402,11 @@ export function CatalogOrderPanel({
                     <Heart className={`h-3.5 w-3.5 ${favorites.isFavorite(p.id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
                   </span>
                   <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-[#f7fff8]/90 px-1.5 py-0.5 text-[9px] font-semibold text-[#15803d]"><Award className="h-2.5 w-2.5" /> BIS</span>
-                  <span className="absolute inset-x-3 bottom-3 flex translate-y-2 gap-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-                    <span onClick={(event) => { event.stopPropagation(); add(p); }} className="metal-sheen flex flex-1 items-center justify-center rounded-lg py-2 text-xs font-semibold text-[#17120b]"><ShoppingCart className="mr-1.5 h-3.5 w-3.5" />{inCart ? 'Add another' : 'Add to Order'}</span>
-                  </span>
                 </button>
                 <div className="mt-3 space-y-1.5">
                   <button type="button" onClick={() => setDetail(p)} className="flex w-full items-start justify-between gap-2 text-left">
                     <p className="line-clamp-1 text-sm font-semibold text-[#211c17] hover:text-[#b68a3e]">{p.designNumber}</p>
-                    {inCart ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#15803d]" /> : null}
+                    {inCartQty > 0 ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#15803d]" /> : null}
                   </button>
                     {/* Weight gets its own non-truncating line so it stays visible
                         on narrow phone cards, where it used to be clipped first. */}
@@ -415,6 +418,17 @@ export function CatalogOrderPanel({
                         <span className="text-[10px] text-muted-foreground">{salesMap[p.id].unitsLast30d} sold · 30d</span>
                       </div>
                     ) : null}
+                    {/* Always visible, not hover-only: these run on touch screens,
+                        and the stepper is the only way back out of the order. */}
+                    <CartQtyControl
+                      size="sm"
+                      className="mt-1"
+                      designNumber={p.designNumber}
+                      quantity={inCartQty}
+                      addLabel="Add to Order"
+                      onAdd={() => add(p)}
+                      onSetQuantity={(quantity) => setQty(p.id, quantity)}
+                    />
                 </div>
               </motion.article>
             );
@@ -435,11 +449,16 @@ export function CatalogOrderPanel({
           /* The modal stays open after adding — similar designs are listed below
              the opened one, so several can be added while scrolling. */
           primaryAction={(product) => {
-            const inCart = cart.some((line) => line.productId === product.id);
+            const quantity = cart.find((line) => line.productId === product.id)?.quantity ?? 0;
             return (
-              <Button onClick={() => add(product as Product)} className="metal-sheen flex-1 font-semibold text-[#17120b]">
-                <Plus className="mr-1.5 h-4 w-4" />{inCart ? 'Add another' : 'Add to order'}
-              </Button>
+              <CartQtyControl
+                className="flex-1"
+                designNumber={product.designNumber}
+                quantity={quantity}
+                addLabel="Add to order"
+                onAdd={() => add(product as Product)}
+                onSetQuantity={(next) => setQty(product.id, next)}
+              />
             );
           }}
         />

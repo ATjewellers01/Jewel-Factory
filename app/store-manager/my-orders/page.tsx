@@ -4,6 +4,7 @@ import { Loader2, Package, ChevronDown, ChevronUp, CheckCircle2, MessageCircle, 
 import { useMemo, useState } from 'react';
 
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
+import { CustomSpecList } from '@/components/orders/CustomSpecList';
 import { OrderChat } from '@/components/orders/OrderChat';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/orders/OrderItemDetailModal';
@@ -25,6 +26,10 @@ type BaseOrder = {
 type CustomOrder = {
   id: string; category: string; status: string; completedAt: string | null; createdAt: string;
   referenceImageUrl: string | null; designNotes: string | null;
+  orderRef: string | null; deliveryDate: string | null; quantity: number | null;
+  meena: string | null; length: string | null; size: string | null;
+  broadness: string | null; screw: string | null; sampleWeightGrams: string | null;
+  subCategory: string | null;
   order: { orderNumber: string; status: string } | null;
 };
 
@@ -220,12 +225,13 @@ function CustomList() {
                   />
                 ) : <div className="h-14 w-14 rounded-lg border bg-muted" />}
                 <div>
-                  <p className="text-sm font-medium">{r.category}</p>
+                  <p className="text-sm font-medium">{r.category}{r.subCategory ? ` › ${r.subCategory}` : ''}</p>
                   <p className="text-xs text-muted-foreground">{r.order?.orderNumber ?? 'Custom request'} · {new Date(r.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</p>
                 </div>
               </div>
               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${st.cls}`}>{st.label}</span>
             </div>
+            <CustomSpecList spec={r} className="mt-3" />
             {r.designNotes && <p className="mt-2 text-sm text-muted-foreground">{r.designNotes}</p>}
             <div className="mt-3 flex flex-wrap gap-2">
               <Button size="sm" variant="outline" onClick={() => setChat(r.id)}><MessageCircle className="mr-1.5 h-4 w-4" />Message Head Office</Button>

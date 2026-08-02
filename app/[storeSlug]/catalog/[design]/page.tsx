@@ -55,7 +55,7 @@ export default function KioskProductDetailPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
-      <Link href={`${base}/catalog`} className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Catalog</Link>
+      <Link href={`${base}/catalog`} className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Catalogue</Link>
       <div className="grid gap-8 md:grid-cols-2">
         {/* Gallery */}
         <div>

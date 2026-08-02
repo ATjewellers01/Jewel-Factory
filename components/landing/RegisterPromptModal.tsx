@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 const SEEN_KEY = 'jf_register_prompt_seen';
 
 const CHIPS = [
-  { icon: Gem, label: 'Full gold catalog' },
+  { icon: Gem, label: 'Full gold catalogue' },
   { icon: Camera, label: 'Virtual Try-On' },
   { icon: Search, label: 'Similar-design search' },
 ];

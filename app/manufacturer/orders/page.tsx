@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { apiSend } from '@/hooks/use-api';
 import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
-// Catalog Orders merges the manufacturer's two order sources — B2B/restock
+// Catalogue Orders merges the manufacturer's two order sources — B2B/restock
 // orders and kiosk (customer) orders — into one list. Both originate from a
 // Purchase manager either way, so the manufacturer has no reason to see them
 // as separate pages; `source` is tracked only to route detail-fetch/advance
@@ -159,7 +159,7 @@ export default function ManufacturerOrdersPage() {
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4">
       <div>
-        <h1 className="text-2xl font-medium tracking-tight">Catalog Orders</h1>
+        <h1 className="text-2xl font-medium tracking-tight">Catalogue Orders</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">Orders placed by customers from your catalog.</p>
       </div>
       {rows && rows.length > 0 && (

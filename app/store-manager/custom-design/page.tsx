@@ -9,6 +9,18 @@ import { apiPost } from '@/hooks/use-api';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 
 const PURITIES = ['24K', '22K', '18K', '14K', '916', '750', '585'];
+// Shop vocabulary. Both lists are plain constants — edit here to change the
+// options; nothing downstream validates against them (the columns are free text).
+const MEENA_OPTIONS = ['No meena', 'Single colour', 'Two colour', 'Multi colour', 'Full meena'];
+const SCREW_OPTIONS = ['Screw', 'Non-screw', 'Push back', 'Bolt', 'Hook'];
+
+const EMPTY_FORM = {
+  orderRef: '', deliveryDate: '',
+  category: CATEGORIES[0], subCategory: '',
+  quantity: '', weightFrom: '', weightTo: '', purity: '',
+  meena: '', length: '', size: '', broadness: '', screw: '', sampleWeight: '',
+  notes: '', imageUrl: '',
+};
 
 /**
  * Only preview a pasted URL once it parses as an absolute http(s) URL — otherwise
@@ -26,7 +38,7 @@ function isPreviewableUrl(value: string): boolean {
 }
 
 export default function StoreManagerCustomDesignPage() {
-  const [form, setForm] = useState({ category: CATEGORIES[0], subCategory: '', weightFrom: '', weightTo: '', purity: '', notes: '', imageUrl: '' });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [subCustom, setSubCustom] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +96,15 @@ export default function StoreManagerCustomDesignPage() {
         purity: form.purity || undefined,
         designNotes: form.notes.trim() || undefined,
         referenceImageUrl: form.imageUrl.trim() || undefined,
+        orderRef: form.orderRef.trim() || undefined,
+        deliveryDate: form.deliveryDate || undefined,
+        quantity: form.quantity ? Number(form.quantity) : undefined,
+        meena: form.meena || undefined,
+        length: form.length.trim() || undefined,
+        size: form.size.trim() || undefined,
+        broadness: form.broadness.trim() || undefined,
+        screw: form.screw || undefined,
+        sampleWeightGrams: form.sampleWeight ? Number(form.sampleWeight) : undefined,
       });
       setDone(true);
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not submit'); } finally { setLoading(false); }
@@ -95,7 +116,7 @@ export default function StoreManagerCustomDesignPage() {
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-700"><CheckCircle2 className="h-7 w-7" /></div>
         <h1 className="mt-4 font-display text-2xl font-medium">Request sent</h1>
         <p className="mt-2 text-sm text-muted-foreground">Sent to Head Office for approval.</p>
-        <Button className="mt-6 metal-sheen text-[#17120b] font-semibold" onClick={() => { setDone(false); setForm({ category: CATEGORIES[0], subCategory: '', weightFrom: '', weightTo: '', purity: '', notes: '', imageUrl: '' }); }}>New request</Button>
+        <Button className="mt-6 metal-sheen text-[#17120b] font-semibold" onClick={() => { setDone(false); setForm(EMPTY_FORM); }}>New request</Button>
       </div>
     );
   }
@@ -118,6 +139,16 @@ export default function StoreManagerCustomDesignPage() {
       <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_0.85fr] lg:gap-8">
         {/* Form */}
         <form onSubmit={submit} className="space-y-5 rounded-2xl border border-black/10 bg-[#fffdf8] p-5 shadow-sm sm:p-7">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Order number <span className="font-normal">(optional)</span></label>
+              <Input className="mt-1 h-10" placeholder="Your shop's order no." value={form.orderRef} onChange={(e) => set('orderRef', e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Delivery date <span className="font-normal">(optional)</span></label>
+              <Input type="date" className="mt-1 h-10" value={form.deliveryDate} onChange={(e) => set('deliveryDate', e.target.value)} />
+            </div>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="text-xs font-medium text-muted-foreground">Category</label>
@@ -143,6 +174,19 @@ export default function StoreManagerCustomDesignPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
+              <label className="text-xs font-medium text-muted-foreground">Quantity <span className="font-normal">(optional)</span></label>
+              <div className="mt-1 flex items-center gap-2">
+                <Input type="number" min="1" step="1" inputMode="numeric" placeholder="0" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} className="h-10" />
+                <span className="shrink-0 text-xs text-muted-foreground">PCS</span>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Sample weight (g) <span className="font-normal">(optional)</span></label>
+              <Input type="number" step="0.01" min="0" inputMode="decimal" placeholder="0.00" value={form.sampleWeight} onChange={(e) => set('sampleWeight', e.target.value)} className="mt-1 h-10" />
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
               <label className="text-xs font-medium text-muted-foreground">Weight range (g) <span className="font-normal">(optional)</span></label>
               <div className="mt-1 flex items-center gap-2">
                 <Input type="number" step="0.01" min="0" inputMode="decimal" placeholder="From" value={form.weightFrom} onChange={(e) => set('weightFrom', e.target.value)} className="h-10" />
@@ -152,11 +196,44 @@ export default function StoreManagerCustomDesignPage() {
               <p className="mt-1 text-[11px] text-muted-foreground">Leave &ldquo;To&rdquo; blank for an exact weight.</p>
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Purity</label>
+              <label className="text-xs font-medium text-muted-foreground">Melting / purity</label>
               <select className="mt-1 h-10 w-full rounded-lg border border-black/15 bg-white/60 px-3 text-sm" value={form.purity} onChange={(e) => set('purity', e.target.value)}>
                 <option value="">—</option>
                 {PURITIES.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
+            </div>
+          </div>
+
+          {/* Piece spec. Free text so the shop can write its own units —
+              "18 inch", "2.5 mm", "size 14". */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Meena / colouring <span className="font-normal">(optional)</span></label>
+              <select className="mt-1 h-10 w-full rounded-lg border border-black/15 bg-white/60 px-3 text-sm" value={form.meena} onChange={(e) => set('meena', e.target.value)}>
+                <option value="">—</option>
+                {MEENA_OPTIONS.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Screw <span className="font-normal">(optional)</span></label>
+              <select className="mt-1 h-10 w-full rounded-lg border border-black/15 bg-white/60 px-3 text-sm" value={form.screw} onChange={(e) => set('screw', e.target.value)}>
+                <option value="">—</option>
+                {SCREW_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Length <span className="font-normal">(optional)</span></label>
+              <Input className="mt-1 h-10" placeholder="e.g. 18 inch" value={form.length} onChange={(e) => set('length', e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Size <span className="font-normal">(optional)</span></label>
+              <Input className="mt-1 h-10" placeholder="e.g. 2.6" value={form.size} onChange={(e) => set('size', e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Broadness <span className="font-normal">(optional)</span></label>
+              <Input className="mt-1 h-10" placeholder="e.g. 8 mm" value={form.broadness} onChange={(e) => set('broadness', e.target.value)} />
             </div>
           </div>
 
@@ -218,7 +295,7 @@ export default function StoreManagerCustomDesignPage() {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Requirement / notes</label>
+            <label className="text-xs font-medium text-muted-foreground">Remarks</label>
             <textarea className="mt-1 min-h-[130px] w-full rounded-lg border border-black/15 bg-white/60 px-3 py-2 text-sm" placeholder="Describe the design the customer wants — style, size, engraving, timeline…" value={form.notes} onChange={(e) => set('notes', e.target.value)} />
           </div>
 

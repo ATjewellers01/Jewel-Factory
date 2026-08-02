@@ -7,17 +7,17 @@ import { PublicNav } from '@/components/landing/PublicNav';
 export const metadata = { title: 'About' };
 
 const ROLES = [
-  { icon: Factory, title: 'Manufacturer', desc: 'Owns the gold design catalog, approves Retailer Admins, and fulfils every order — without ever seeing a customer’s personal details.' },
+  { icon: Factory, title: 'Manufacturer', desc: 'Owns the gold design catalogue, approves Retailer Admins, and fulfils every order — without ever seeing a customer’s personal details.' },
   { icon: Store, title: 'Retailer Admin (Head Office)', desc: 'A jewellery business that runs many stores. Approves all orders, manages branches & staff, and restocks from the manufacturer.' },
   { icon: Users, title: 'Retailer User', desc: 'Runs one store’s kiosk — helps walk-in customers browse, try on, and place orders that flow up for approval.' },
-  { icon: Gem, title: 'Customer', desc: 'Walks into a store, browses the catalog and tries pieces on with AR. No login, and none of their personal data is stored.' },
+  { icon: Gem, title: 'Customer', desc: 'Walks into a store, browses the catalogue and tries pieces on with AR. No login, and none of their personal data is stored.' },
 ];
 
 const PRINCIPLES = [
   { icon: Gem, title: 'No price anywhere', desc: 'Gold rates change daily, so the platform never shows a price. The store quotes the customer directly.' },
   { icon: ShieldCheck, title: 'Customer privacy by design', desc: 'Orders carry only products + an editable requirement note. Customer name and phone never reach the manufacturer.' },
   { icon: Sparkles, title: 'AR try-on', desc: 'Every eligible design has a transparent asset so it can be tried on live at the store kiosk.' },
-  { icon: Search, title: 'Similar-design search', desc: 'Upload a photo at the kiosk to instantly find matching designs in the catalog by visual similarity.' },
+  { icon: Search, title: 'Similar-design search', desc: 'Upload a photo at the kiosk to instantly find matching designs in the catalogue by visual similarity.' },
   { icon: Building2, title: 'One Retailer Admin, many stores', desc: 'Approvals, restock and custom orders are tracked across every branch, end to end.' },
 ];
 
@@ -55,7 +55,7 @@ export default function AboutPage() {
             Jewel Factory is a B2B platform that connects a gold-jewellery
             manufacturer to its purchase manager network and their in-store customers.
             Instead of orders scattered across phone calls and WhatsApp, every
-            catalog design, order, approval and custom request lives in one place —
+            catalogue design, order, approval and custom request lives in one place —
             with full tracking, and strict rules that keep pricing and customer data
             exactly where they belong.
           </p>
@@ -119,7 +119,7 @@ export default function AboutPage() {
           <div className="relative">
             <h2 className="font-display text-2xl font-normal tracking-tight sm:text-3xl">Ready to join?</h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-              Register your jewellery business to browse the full gold catalog and start ordering.
+              Register your jewellery business to browse the full gold catalogue and start ordering.
             </p>
             <Link href="/store/register" className="metal-sheen mt-6 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#17120b] shadow-sm transition-transform hover:scale-[1.02]">
               Register here <ArrowRight className="h-4 w-4" />

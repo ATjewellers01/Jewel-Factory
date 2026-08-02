@@ -22,7 +22,7 @@ export default function StoreDashboardPage() {
           <p className="mt-1.5 text-sm text-muted-foreground">Approvals and order activity across your retail network.</p>
         </div>
         <Link href="/store/manufacturer-catalog" className="inline-flex items-center gap-2 rounded-xl border border-[#e4ddd3] bg-white px-4 py-2.5 text-sm font-semibold text-[#4f4841] shadow-sm transition-colors hover:border-[#d7c49a] hover:text-[#946d28]">
-          Browse catalog <ArrowUpRight className="h-4 w-4" />
+          Browse catalogue <ArrowUpRight className="h-4 w-4" />
         </Link>
       </div>
 
@@ -42,7 +42,7 @@ export default function StoreDashboardPage() {
           )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Card href="/store/kiosk-orders" icon={ShoppingBag} label="Kiosk Orders" total={data.totalKiosk} pending={data.pendingKiosk} />
-            <Card href="/store/b2b-orders" icon={Package} label="Catalog Orders" total={data.totalB2b} pending={data.pendingB2b} />
+            <Card href="/store/b2b-orders" icon={Package} label="Catalogue Orders" total={data.totalB2b} pending={data.pendingB2b} />
             <Card href="/store/custom-designs" icon={PencilLine} label="Customised Orders" total={data.totalCustom} pending={data.pendingCustom} />
           </div>
           <section className="grid gap-3 border-t border-[#e6e0d7] pt-6 sm:grid-cols-2">

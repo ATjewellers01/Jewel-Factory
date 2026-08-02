@@ -23,10 +23,21 @@ export async function placeCustomRequest(input: {
   referenceImageUrl?: string;
   referenceImagePublicId?: string;
   category: string;
+  subCategory?: string;
   weightGramsMin?: number;
   weightGramsMax?: number;
   purity?: string;
   designNotes?: string;
+  // Counter spec — all optional (see the custom_design_spec_fields migration).
+  orderRef?: string;
+  deliveryDate?: Date;
+  quantity?: number;
+  meena?: string;
+  length?: string;
+  size?: string;
+  broadness?: string;
+  screw?: string;
+  sampleWeightGrams?: number;
 }) {
   return prisma.customDesignRequest.create({
     data: {
@@ -38,10 +49,20 @@ export async function placeCustomRequest(input: {
       referenceImageUrl: input.referenceImageUrl ?? null,
       referenceImagePublicId: input.referenceImagePublicId ?? null,
       category: input.category,
+      subCategory: input.subCategory ?? null,
       weightGramsMin: input.weightGramsMin ?? null,
       weightGramsMax: input.weightGramsMax ?? null,
       purity: input.purity ?? null,
       designNotes: input.designNotes ?? null,
+      orderRef: input.orderRef ?? null,
+      deliveryDate: input.deliveryDate ?? null,
+      quantity: input.quantity ?? null,
+      meena: input.meena ?? null,
+      length: input.length ?? null,
+      size: input.size ?? null,
+      broadness: input.broadness ?? null,
+      screw: input.screw ?? null,
+      sampleWeightGrams: input.sampleWeightGrams ?? null,
     },
     select: { id: true },
   });
@@ -110,11 +131,22 @@ export async function forwardCustomRequest(storeId: string, requestId: string, r
         storeNameSnapshot: store.name,
         storeAddressSnapshot: formatStoreAddress(store),
         category: req.category,
+        subCategory: req.subCategory,
         weightGramsMin: req.weightGramsMin,
         weightGramsMax: req.weightGramsMax,
         purity: req.purity,
         referenceImageUrl: req.referenceImageUrl,
         designNotes: req.designNotes,
+        // The whole counter spec travels to the manufacturer — it carries no PII.
+        orderRef: req.orderRef,
+        deliveryDate: req.deliveryDate,
+        quantity: req.quantity,
+        meena: req.meena,
+        length: req.length,
+        size: req.size,
+        broadness: req.broadness,
+        screw: req.screw,
+        sampleWeightGrams: req.sampleWeightGrams,
         orderNumber: orderNumber(),
       },
     });
@@ -144,7 +176,10 @@ export async function listCustomOrdersByManufacturer(manufacturerId: string) {
     orderBy: { createdAt: 'desc' },
     select: {
       id: true, orderNumber: true, storeNameSnapshot: true, storeAddressSnapshot: true,
-      category: true, weightGramsMin: true, weightGramsMax: true, purity: true, referenceImageUrl: true, designNotes: true,
+      category: true, subCategory: true, weightGramsMin: true, weightGramsMax: true, purity: true,
+      referenceImageUrl: true, designNotes: true,
+      orderRef: true, deliveryDate: true, quantity: true, meena: true,
+      length: true, size: true, broadness: true, screw: true, sampleWeightGrams: true,
       status: true, trackingNumber: true, karigarCode: true, createdAt: true,
     },
   });

@@ -598,6 +598,19 @@ model CustomDesignRequest {
   referenceImageUrl      String?      @map("reference_image_url")
   referenceImagePublicId String?      @map("reference_image_public_id")
   category               String
+  subCategory            String?      @map("sub_category")
+
+  // Order spec captured by the Retailer User with the customer at the counter.
+  // All optional — a request can still be just "this photo, roughly this weight".
+  orderRef          String?   @map("order_ref") // the shop's own order number
+  deliveryDate      DateTime? @map("delivery_date") @db.Date
+  quantity          Int? // pieces
+  meena             String? // colouring
+  length            String?
+  size              String?
+  broadness         String?
+  screw             String?
+  sampleWeightGrams Decimal?  @map("sample_weight_grams") @db.Decimal(8, 3)
   // Jewellery weight is rarely exact — captured as a range (equal min/max if
   // the store manager only knows one figure).
   weightGramsMin         Decimal?     @map("weight_grams_min") @db.Decimal(8, 3)
@@ -632,11 +645,25 @@ model CustomDesignOrder {
   storeNameSnapshot    String  @map("store_name_snapshot")
   storeAddressSnapshot String  @map("store_address_snapshot")
   category             String
+  subCategory          String? @map("sub_category")
   weightGramsMin       Decimal? @map("weight_grams_min") @db.Decimal(8, 3)
   weightGramsMax       Decimal? @map("weight_grams_max") @db.Decimal(8, 3)
   purity               String?
   referenceImageUrl    String? @map("reference_image_url")
   designNotes          String? @map("design_notes")
+
+  // Copied verbatim from the request on approval so the manufacturer builds to
+  // the same spec the shop wrote down. `orderRef` is the SHOP's order number —
+  // distinct from `orderNumber` below, which this system generates.
+  orderRef          String?   @map("order_ref")
+  deliveryDate      DateTime? @map("delivery_date") @db.Date
+  quantity          Int?
+  meena             String?
+  length            String?
+  size              String?
+  broadness         String?
+  screw             String?
+  sampleWeightGrams Decimal?  @map("sample_weight_grams") @db.Decimal(8, 3)
 
   status         CustomOrderStatus @default(PENDING)
   orderNumber    String            @unique @map("order_number") // CD-YYYYMMDD-XXXX

@@ -20,7 +20,7 @@ export function KioskHeader() {
 
   const navLinks = [
     { href: base, label: 'Home', icon: Home },
-    { href: `${base}/catalog`, label: 'Catalog', icon: Gem },
+    { href: `${base}/catalog`, label: 'Catalogue', icon: Gem },
     { href: `${base}/custom-design`, label: 'Custom Design', icon: PencilLine },
     { href: `${base}/try-on`, label: 'Try-On', icon: Sparkles },
     { href: `${base}/search`, label: 'Search', icon: Search },
@@ -60,7 +60,7 @@ export function KioskHeader() {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-6 text-sm md:flex">
-          <Link href={`${base}/catalog`} className="luxury-link-underline">Catalog</Link>
+          <Link href={`${base}/catalog`} className="luxury-link-underline">Catalogue</Link>
           <Link href={`${base}/custom-design`} className="luxury-link-underline">Custom Design</Link>
           <Link href={`${base}/try-on`} className="luxury-link-underline">Try-On</Link>
         </nav>

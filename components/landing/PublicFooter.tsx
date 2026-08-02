@@ -45,7 +45,7 @@ export function PublicFooter({ onLogin }: { onLogin?: () => void }) {
         <div>
           <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">Discover</p>
           <ul className="space-y-2.5 text-sm text-white/70">
-            <li><Link href="/#showcase" className="transition-colors hover:text-white">Catalog showcase</Link></li>
+            <li><Link href="/#showcase" className="transition-colors hover:text-white">Catalogue showcase</Link></li>
             <li><Link href="/about" className="transition-colors hover:text-white">How it works</Link></li>
           </ul>
         </div>

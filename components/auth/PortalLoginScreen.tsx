@@ -37,7 +37,7 @@ const portalContent = {
     features: [
       { icon: Building2, text: 'Keep branches and teams connected' },
       { icon: ClipboardCheck, text: 'Review requests and approvals' },
-      { icon: Gem, text: 'Source from the manufacturer catalog' },
+      { icon: Gem, text: 'Source from the manufacturer catalogue' },
     ],
   },
   manager: {
@@ -53,13 +53,13 @@ const portalContent = {
     icon: Users,
     features: [
       { icon: Search, text: 'Assist customers with visual discovery' },
-      { icon: Gem, text: 'Launch the curated in-store catalog' },
+      { icon: Gem, text: 'Launch the curated in-store catalogue' },
       { icon: Boxes, text: 'Request and track store restocks' },
     ],
   },
   manufacturer: {
     eyebrow: 'Manufacturer workspace',
-    title: 'Catalog control, purchase manager approvals, and fulfilment.',
+    title: 'Catalogue control, purchase manager approvals, and fulfilment.',
     description: 'A private operational workspace for the Jewel Factory manufacturing team.',
     loginTitle: 'Manufacturer sign in',
     loginDescription: 'Use your Jewel Factory administrator credentials to continue.',
@@ -69,7 +69,7 @@ const portalContent = {
     rightFooter: 'Your credentials are used only to access this protected workspace.',
     icon: Factory,
     features: [
-      { icon: Boxes, text: 'Manage the master jewellery catalog' },
+      { icon: Boxes, text: 'Manage the master jewellery catalogue' },
       { icon: ClipboardCheck, text: 'Review purchase manager registrations' },
       { icon: Truck, text: 'Track production and fulfilment' },
     ],

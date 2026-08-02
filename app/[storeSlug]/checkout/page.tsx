@@ -64,7 +64,7 @@ export default function KioskCheckoutPage() {
       <div className="mx-auto max-w-md px-4 py-24 text-center">
         <ShoppingBag className="mx-auto h-10 w-10 text-muted-foreground/40" />
         <p className="mt-3 text-sm text-muted-foreground">Your bag is empty.</p>
-        <Link href={`${base}/catalog`}><Button variant="outline" className="mt-4">Browse Catalog</Button></Link>
+        <Link href={`${base}/catalog`}><Button variant="outline" className="mt-4">Browse Catalogue</Button></Link>
       </div>
     );
   }

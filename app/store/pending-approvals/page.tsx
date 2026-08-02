@@ -62,7 +62,7 @@ export default function PendingApprovalsPage() {
 
       {!loading && (b2b.data?.length ?? 0) > 0 && (
         <section className="space-y-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Catalog Restock Orders</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Catalogue Restock Orders</h2>
           {b2b.data!.map((o) => (
             <Row key={o.id} kind="b2b" id={o.id} title={o.orderNumber} branch={o.branchNameSnapshot}
               sub={`${o.totalItems} item(s)`} note={o.requirementNote}

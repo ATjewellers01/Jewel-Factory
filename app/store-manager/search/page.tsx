@@ -1,11 +1,12 @@
 'use client';
 
-import { Camera, ImageIcon, Loader2, Plus, Sparkles } from 'lucide-react';
+import { Camera, ImageIcon, Loader2, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 
 import { KioskProductCard } from '@/components/kiosk/KioskProductCard';
 import { StoreManagerProductDetailModal } from '@/components/kiosk/StoreManagerProductDetailModal';
+import { CartQtyControl } from '@/components/orders/CartQtyControl';
 import { Button } from '@/components/ui/button';
 import { useStoreManagerKioskCart } from '@/hooks/use-store-manager-cart';
 import { useStoreManager } from '../store-manager-context';
@@ -116,7 +117,7 @@ export default function StoreManagerSearchPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#a0824a]">Results</p>
               <h2 className="mt-1 font-display text-2xl font-normal">{results.length} similar piece{results.length !== 1 ? 's' : ''}</h2>
             </div>
-            <Link href="/store-manager/kiosk" className="metal-sheen inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#17120b]">Go to Catalog to order</Link>
+            <Link href="/store-manager/kiosk" className="metal-sheen inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#17120b]">Go to Catalogue to order</Link>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {visibleResults.map((p, i) => (
@@ -140,23 +141,24 @@ export default function StoreManagerSearchPage() {
           products={results ?? []}
           onClose={() => setDetail(null)}
           tryOnBack="/store-manager/search"
-          primaryAction={(product) => (
-            <Button
-              onClick={() => {
-                kioskCart.add({
+          primaryAction={(product) => {
+            const quantity = kioskCart.items.find((line) => line.productId === product.id)?.quantity ?? 0;
+            return (
+              <CartQtyControl
+                className="flex-1"
+                designNumber={product.designNumber}
+                quantity={quantity}
+                addLabel="Add to Order"
+                onAdd={() => kioskCart.add({
                   productId: product.id,
                   name: product.designNumber,
                   designNumber: product.designNumber,
-                  imageUrl: product.images.find(i => i.isPrimary)?.secureUrl,
-                });
-                setDetail(null);
-              }}
-              className="metal-sheen flex-1 font-semibold text-[#17120b]"
-            >
-              <Plus className="mr-1.5 h-4 w-4" />
-              Add to Order
-            </Button>
-          )}
+                  imageUrl: product.images.find((i) => i.isPrimary)?.secureUrl,
+                })}
+                onSetQuantity={(next) => kioskCart.setQuantity(product.id, next)}
+              />
+            );
+          }}
         />
       ) : null}
     </main>

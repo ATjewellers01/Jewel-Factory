@@ -20,9 +20,9 @@ import { useDocumentIdentity } from '@/hooks/use-document-identity';
 const NAV = [
   { label: 'Dashboard', href: '/manufacturer/dashboard', icon: LayoutDashboard, section: 'Overview' },
   { label: 'Intelligence', href: '/manufacturer/intelligence', icon: BarChart3, section: 'Overview' },
-  { label: 'Catalog', href: '/manufacturer/catalog', icon: Package, section: 'Catalog & orders' },
-  { label: 'Catalog Orders', href: '/manufacturer/orders', icon: ShoppingBag, section: 'Catalog & orders' },
-  { label: 'Customised Orders', href: '/manufacturer/custom-designs', icon: PencilLine, section: 'Catalog & orders' },
+  { label: 'Catalogue', href: '/manufacturer/catalog', icon: Package, section: 'Catalogue & orders' },
+  { label: 'Catalogue Orders', href: '/manufacturer/orders', icon: ShoppingBag, section: 'Catalogue & orders' },
+  { label: 'Customised Orders', href: '/manufacturer/custom-designs', icon: PencilLine, section: 'Catalogue & orders' },
   { label: 'Customers', href: '/manufacturer/stores', icon: StoreIcon, section: 'Customer network' },
   { label: 'Customer Registrations', href: '/manufacturer/store-registrations', icon: ClipboardCheck, section: 'Customer network' },
 ];

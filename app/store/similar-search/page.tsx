@@ -1,11 +1,12 @@
 'use client';
 
-import { Camera, Check, ImageIcon, Loader2, Plus, Sparkles } from 'lucide-react';
+import { Camera, ImageIcon, Loader2, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 
 import { KioskProductCard } from '@/components/kiosk/KioskProductCard';
 import { StoreManagerProductDetailModal } from '@/components/kiosk/StoreManagerProductDetailModal';
+import { CartQtyControl } from '@/components/orders/CartQtyControl';
 import { Button } from '@/components/ui/button';
 import { useB2bCart } from '@/hooks/use-b2b-cart';
 
@@ -114,7 +115,7 @@ export default function RetailerSimilarSearchPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#a0824a]">Results</p>
               <h2 className="mt-1 font-display text-2xl font-normal">{results.length} similar piece{results.length !== 1 ? 's' : ''}</h2>
             </div>
-            <Link href="/store/manufacturer-catalog" className="metal-sheen inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#17120b]">View Full Catalog</Link>
+            <Link href="/store/manufacturer-catalog" className="metal-sheen inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#17120b]">View Full Catalogue</Link>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {visibleResults.map((p, i) => (
@@ -139,23 +140,21 @@ export default function RetailerSimilarSearchPage() {
           onClose={() => setDetail(null)}
           tryOnBack="/store/similar-search"
           primaryAction={(product) => {
-            const inCart = cart.items.some((i) => i.productId === product.id);
+            const quantity = cart.items.find((i) => i.productId === product.id)?.quantity ?? 0;
             return (
-              <Button
-                onClick={() => {
-                  if (inCart) return;
-                  cart.add({
-                    productId: product.id,
-                    name: product.designNumber,
-                    designNumber: product.designNumber,
-                    imageUrl: product.images.find((i) => i.isPrimary)?.secureUrl,
-                  });
-                  setDetail(null);
-                }}
-                className="metal-sheen flex-1 font-semibold text-[#17120b]"
-              >
-                {inCart ? <><Check className="mr-1.5 h-4 w-4" />In cart</> : <><Plus className="mr-1.5 h-4 w-4" />Add to Cart</>}
-              </Button>
+              <CartQtyControl
+                className="flex-1"
+                designNumber={product.designNumber}
+                quantity={quantity}
+                addLabel="Add to Cart"
+                onAdd={() => cart.add({
+                  productId: product.id,
+                  name: product.designNumber,
+                  designNumber: product.designNumber,
+                  imageUrl: product.images.find((i) => i.isPrimary)?.secureUrl,
+                })}
+                onSetQuantity={(next) => (next <= 0 ? cart.remove(product.id) : cart.setQty(product.id, next))}
+              />
             );
           }}
         />

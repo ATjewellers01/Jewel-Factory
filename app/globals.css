@@ -198,3 +198,28 @@
     scrollbar-width: none;
   }
 }
+
+/* Running catalogue strip on /store/home. The track holds the image list twice,
+   so translating by -50% lands exactly on the duplicate and loops seamlessly.
+   Pauses on hover so a retailer can actually click a piece, and respects
+   prefers-reduced-motion. */
+@keyframes jf-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.jf-marquee-track {
+  animation: jf-marquee 60s linear infinite;
+  width: max-content;
+}
+
+.jf-marquee-track:hover,
+.jf-marquee-track:focus-within {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jf-marquee-track {
+    animation: none;
+  }
+}

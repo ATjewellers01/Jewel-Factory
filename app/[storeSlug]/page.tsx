@@ -34,7 +34,7 @@ export default function KioskHomePage() {
       {/* Quick actions */}
       <section className="mx-auto max-w-4xl px-6 py-12">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Card href={`${base}/catalog`} icon={ArrowRight} title="Browse Catalog" desc="Explore all designs" />
+          <Card href={`${base}/catalog`} icon={ArrowRight} title="Browse Catalogue" desc="Explore all designs" />
           <Card href={`${base}/search`} icon={Search} title="Search by Photo" desc="Find a matching piece" />
           <Card href={`${base}/custom-design`} icon={Sparkles} title="Custom Design" desc="Request a bespoke piece" />
         </div>

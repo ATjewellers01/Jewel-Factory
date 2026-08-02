@@ -94,7 +94,7 @@ export default function CustomDesignPage() {
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-700"><CheckCircle2 className="h-7 w-7" /></div>
         <h1 className="mt-4 font-display text-2xl font-medium">Request submitted</h1>
         <p className="mt-2 text-sm text-muted-foreground">The store will review your custom design request and contact you.</p>
-        <Link href={`${base}/catalog`} className="mt-6"><Button className="metal-sheen text-[#17120b] font-semibold">Back to Catalog</Button></Link>
+        <Link href={`${base}/catalog`} className="mt-6"><Button className="metal-sheen text-[#17120b] font-semibold">Back to Catalogue</Button></Link>
       </main>
     );
   }

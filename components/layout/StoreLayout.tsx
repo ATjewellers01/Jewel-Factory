@@ -3,7 +3,7 @@
 import {
   LayoutDashboard, Package, ShoppingBag, PencilLine, ClipboardCheck,
   Lightbulb, Store as StoreIcon, Settings, Building2, Search,
-  X, LogOut,
+  Home, X, LogOut,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -17,7 +17,8 @@ const FALLBACK_STORE_LOGO = '/storeRe-logo.avif';
 
 // Top navbar — the Retailer's day-to-day browsing/discovery actions, always visible.
 const TOP_NAV = [
-  { label: 'Manufacturer Catalog', href: '/store/manufacturer-catalog', icon: JewelleryStoreIcon },
+  { label: 'Home', href: '/store/home', icon: Home },
+  { label: 'Manufacturer Catalogue', href: '/store/manufacturer-catalog', icon: JewelleryStoreIcon },
   { label: 'Similar Design Search', href: '/store/similar-search', icon: Search },
 ];
 
@@ -25,7 +26,7 @@ const TOP_NAV = [
 const DRAWER_NAV = [
   { label: 'Dashboard', href: '/store/dashboard', icon: LayoutDashboard, section: 'Overview' },
   { label: 'Pending Approvals', href: '/store/pending-approvals', icon: ClipboardCheck, section: 'Operations' },
-  { label: 'Catalog Orders', href: '/store/b2b-orders', icon: Package, section: 'Operations' },
+  { label: 'Catalogue Orders', href: '/store/b2b-orders', icon: Package, section: 'Operations' },
   { label: 'Kiosk Orders', href: '/store/kiosk-orders', icon: ShoppingBag, section: 'Operations' },
   { label: 'Customised Orders', href: '/store/custom-designs', icon: PencilLine, section: 'Operations' },
   { label: 'Intelligence', href: '/store/intelligence', icon: Lightbulb, section: 'Insights' },
@@ -72,7 +73,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
 
   const storeName = store.name || 'Your Store';
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
-  const pageLabel = ALL_NAV.find((item) => isActive(item.href))?.label ?? 'Manufacturer Catalog';
+  const pageLabel = ALL_NAV.find((item) => isActive(item.href))?.label ?? 'Manufacturer Catalogue';
 
   useDocumentIdentity(pageLabel, { storeName, logoUrl: store.logoUrl });
 

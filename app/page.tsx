@@ -29,9 +29,9 @@ type ShowcaseProduct = {
 };
 
 const FEATURES = [
-  { icon: Gem, title: 'Gold-only catalog', desc: 'One manufacturer catalog, auto design numbers, no price clutter — quotes stay with the store.' },
+  { icon: Gem, title: 'Gold-only catalogue', desc: 'One manufacturer catalogue, auto design numbers, no price clutter — quotes stay with the store.' },
   { icon: Sparkles, title: 'AR virtual try-on', desc: 'Customers see how a piece looks on them, right at the store kiosk.' },
-  { icon: Search, title: 'Similar-design search', desc: 'Upload a photo and instantly find matching designs in the catalog by visual similarity.' },
+  { icon: Search, title: 'Similar-design search', desc: 'Upload a photo and instantly find matching designs in the catalogue by visual similarity.' },
   { icon: ShieldCheck, title: 'Customer privacy', desc: 'Walk-in customer details never leave the store — the manufacturer only sees products.' },
   { icon: Building2, title: 'Multi-store ready', desc: 'One purchase manager, many stores — approvals, restock and orders tracked end to end.' },
 ];
@@ -120,7 +120,7 @@ export default function LandingPage() {
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-muted-foreground lg:mx-0">
               The B2B platform connecting a gold-jewellery manufacturer to its purchase manager
-              network and their in-store customers — catalog, AR try-on, orders and
+              network and their in-store customers — catalogue, AR try-on, orders and
               approvals, all in one place.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
@@ -255,7 +255,7 @@ export default function LandingPage() {
           <div className="mb-10 text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#a0824a]">Featured designs</p>
             <h2 className="mt-2 font-display text-3xl font-normal tracking-tight sm:text-4xl">A glimpse of the collection</h2>
-            <p className="mt-3 text-sm text-muted-foreground">Register or sign in to browse the full catalog and place orders.</p>
+            <p className="mt-3 text-sm text-muted-foreground">Register or sign in to browse the full catalogue and place orders.</p>
           </div>
 
           {showcase === null ? (
@@ -265,7 +265,7 @@ export default function LandingPage() {
               ))}
             </div>
           ) : showcase.length === 0 ? (
-            <p className="text-center text-sm text-muted-foreground">Catalog coming soon.</p>
+            <p className="text-center text-sm text-muted-foreground">Catalogue coming soon.</p>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {showcase.map((p, i) => {
@@ -301,7 +301,7 @@ export default function LandingPage() {
 
           <div className="mt-12 text-center">
             <Link href="/store/register" className="metal-sheen inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#17120b] shadow-sm transition-transform hover:scale-[1.02]">
-              See the full catalog — Register <ArrowRight className="h-4 w-4" />
+              See the full catalogue — Register <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>

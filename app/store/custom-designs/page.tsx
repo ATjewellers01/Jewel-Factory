@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle, Loader2, PencilLine, ChevronDown, ChevronUp, Mes
 import { useMemo, useState } from 'react';
 
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
+import { CustomSpecList } from '@/components/orders/CustomSpecList';
 import { OrderChat } from '@/components/orders/OrderChat';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,10 @@ type Order = { id: string; status: string; orderNumber: string; trackingNumber: 
 type Request = {
   id: string; customerName: string; customerPhone: string; category: string;
   weightGramsMin: string | null; weightGramsMax: string | null; purity: string | null; designNotes: string | null;
+  orderRef: string | null; deliveryDate: string | null; quantity: number | null;
+  meena: string | null; length: string | null; size: string | null;
+  broadness: string | null; screw: string | null; sampleWeightGrams: string | null;
+  subCategory: string | null;
   referenceImageUrl: string | null; status: string; createdAt: string; order: Order | null;
   branch: { name: string } | null;
 };
@@ -105,13 +110,14 @@ export default function StoreCustomDesignsPage() {
                     {r.branch?.name && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{r.branch.name}</span>}
                     <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${REQ_STATUS[r.status] ?? ''}`}>{r.status.toLowerCase()}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">{r.customerPhone} · {r.category}{formatWeightRange(r.weightGramsMin, r.weightGramsMax) ? ` · ${formatWeightRange(r.weightGramsMin, r.weightGramsMax)}` : ''}{r.purity ? ` · ${r.purity}` : ''}</p>
+                  <p className="text-xs text-muted-foreground">{r.customerPhone} · {r.category}{r.subCategory ? ` › ${r.subCategory}` : ''}{formatWeightRange(r.weightGramsMin, r.weightGramsMax) ? ` · ${formatWeightRange(r.weightGramsMin, r.weightGramsMax)}` : ''}{r.purity ? ` · ${r.purity}` : ''}</p>
                 </div>
                 {expanded === r.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
               </button>
               {expanded === r.id && (
                 <div className="border-t px-4 pb-4 pt-3 space-y-3 bg-muted/10">
-                  {r.designNotes && <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Notes</p><p className="text-sm">{r.designNotes}</p></div>}
+                  <CustomSpecList spec={r} />
+                  {r.designNotes && <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Remarks</p><p className="text-sm">{r.designNotes}</p></div>}
                   {r.referenceImageUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
