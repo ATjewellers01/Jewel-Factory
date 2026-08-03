@@ -196,6 +196,8 @@ branchManagerRoutes.post('/search/image', branchManagerGuard, zValidator('json',
 
 const KioskOrderBody = z.object({
   requirementNote: z.string().max(2000).optional(),
+  salesCode: z.string().max(60).optional(),
+  salesPersonName: z.string().max(120).optional(),
   items: z.array(z.object({ manufacturerProductId: z.string().uuid(), quantity: z.number().int().positive() })).min(1),
 });
 
@@ -227,6 +229,8 @@ branchManagerRoutes.post('/kiosk-orders', branchManagerGuard, zValidator('json',
     storeEmailSnapshot: retailer.email ?? undefined,
     pickupStore: true, // store-managed order; delivery handled between HO and branch
     requirementNote: body.requirementNote,
+    salesCode: body.salesCode,
+    salesPersonName: body.salesPersonName,
     items: body.items.map((i) => {
       const p = byId.get(i.manufacturerProductId)!;
       return { manufacturerProductId: i.manufacturerProductId, productNameSnapshot: p.name ?? p.designNumber, productImageSnapshot: p.images[0]?.secureUrl, categorySnapshot: p.category ?? undefined, quantity: i.quantity };
@@ -251,7 +255,7 @@ const CustomBody = z.object({
   // Counter spec — free text where the shop writes units ("18 inch", "2.5 mm").
   orderRef: optionalText(60),
   deliveryDate: z.preprocess(emptyToUndefined, z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a valid date').optional()),
-  quantity: z.coerce.number().int().positive().max(9999).optional(),
+  quantity: optionalText(30), // free text — "2 pcs", not a strict count
   meena: optionalText(60),
   length: optionalText(60),
   size: optionalText(60),

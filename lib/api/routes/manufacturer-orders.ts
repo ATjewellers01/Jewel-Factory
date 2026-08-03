@@ -3,8 +3,8 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 
 import {
-  getB2bOrdersByManufacturer, getB2bOrderForManufacturer, advanceB2bOrderStatus,
-  getKioskOrdersByManufacturer, getKioskOrderForManufacturer, advanceKioskOrderStatus,
+  getB2bOrdersByManufacturer, getB2bOrderForManufacturer, advanceB2bOrderStatus, advanceB2bOrderItemStatus,
+  getKioskOrdersByManufacturer, getKioskOrderForManufacturer, advanceKioskOrderStatus, advanceKioskOrderItemStatus,
 } from '@/lib/db/orders';
 import { listCustomOrdersByManufacturer, advanceCustomOrderStatus, setCustomOrderKarigarCode } from '@/lib/db/custom-design';
 import { getStoreById } from '@/lib/db/store-read';
@@ -16,7 +16,7 @@ export const manufacturerOrderRoutes = new Hono<AppEnv>();
 manufacturerOrderRoutes.use('*', manufacturerGuard);
 
 const StatusBody = z.object({
-  status: z.enum(['CONFIRMED', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']),
+  status: z.enum(['IN_PROCESS', 'GHAT_RECEIVED', 'READY_FOR_DELIVERY', 'DISPATCHED', 'COMPLETED', 'CANCELLED']),
   trackingNumber: z.string().optional(),
 });
 
@@ -33,6 +33,17 @@ manufacturerOrderRoutes.patch('/orders/:id', zValidator('json', StatusBody), asy
   const { status, trackingNumber } = c.req.valid('json');
   const ok = await advanceB2bOrderStatus(c.get('manufacturerId'), c.req.param('id'), status as OrderStatus, trackingNumber);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
+  return sendData(c, { ok: true });
+});
+
+const ItemStatusBody = z.object({
+  status: z.enum(['IN_PROCESS', 'GHAT_RECEIVED', 'READY_FOR_DELIVERY', 'DISPATCHED', 'COMPLETED', 'CANCELLED']),
+});
+
+manufacturerOrderRoutes.patch('/orders/:id/items/:itemId', zValidator('json', ItemStatusBody), async (c) => {
+  const { status } = c.req.valid('json');
+  const ok = await advanceB2bOrderItemStatus(c.get('manufacturerId'), c.req.param('id'), c.req.param('itemId'), status as OrderStatus);
+  if (!ok) return sendError(c, 'not_found', 'Order item not found', 404);
   return sendData(c, { ok: true });
 });
 
@@ -82,9 +93,16 @@ manufacturerOrderRoutes.patch('/kiosk-orders/:id', zValidator('json', StatusBody
   return sendData(c, { ok: true });
 });
 
+manufacturerOrderRoutes.patch('/kiosk-orders/:id/items/:itemId', zValidator('json', ItemStatusBody), async (c) => {
+  const { status } = c.req.valid('json');
+  const ok = await advanceKioskOrderItemStatus(c.get('manufacturerId'), c.req.param('id'), c.req.param('itemId'), status as OrderStatus);
+  if (!ok) return sendError(c, 'not_found', 'Order item not found', 404);
+  return sendData(c, { ok: true });
+});
+
 // ── Custom design orders (sanitized) ──────────────────────────────────────────
 const CustomStatusBody = z.object({
-  status: z.enum(['CONFIRMED', 'IN_PRODUCTION', 'PACKED', 'SHIPPED', 'DELIVERED', 'CANCELLED']),
+  status: z.enum(['IN_PROCESS', 'GHAT_RECEIVED', 'READY_FOR_DELIVERY', 'DISPATCHED', 'COMPLETED', 'CANCELLED']),
   trackingNumber: z.string().optional(),
 });
 

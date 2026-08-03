@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/orders/OrderItemDetailModal';
+import { CustomSpecList } from '@/components/orders/CustomSpecList';
 import { Button } from '@/components/ui/button';
 import { useApi, apiPost, apiSend } from '@/hooks/use-api';
 import { OrderChat } from '@/components/orders/OrderChat';
@@ -15,10 +16,21 @@ type Item = {
 };
 type KioskOrder = { id: string; orderNumber: string; customerName: string | null; branchNameSnapshot: string | null; requirementNote: string | null; totalItems: number; pickupStore: boolean; createdAt: string; items: Item[] };
 type B2bOrder = { id: string; orderNumber: string; branchNameSnapshot: string | null; requirementNote: string | null; totalItems: number; createdAt: string; items: Item[] };
+type CustomRequest = {
+  id: string; customerName: string; customerPhone: string; category: string;
+  weightGramsMin: string | null; weightGramsMax: string | null; purity: string | null; designNotes: string | null;
+  orderRef: string | null; deliveryDate: string | null; quantity: string | null;
+  meena: string | null; length: string | null; size: string | null;
+  broadness: string | null; screw: string | null; sampleWeightGrams: string | null;
+  subCategory: string | null;
+  referenceImageUrl: string | null; status: string; createdAt: string;
+  branch: { name: string } | null;
+};
 
 export default function PendingApprovalsPage() {
   const kiosk = useApi<KioskOrder[]>('/api/store/kiosk-orders/pending', '/store/login');
   const b2b = useApi<B2bOrder[]>('/api/store/b2b-orders/pending', '/store/login');
+  const custom = useApi<CustomRequest[]>('/api/store/custom-designs', '/store/login');
   const [busy, setBusy] = useState<string | null>(null);
 
   async function act(kind: 'kiosk' | 'b2b', id: string, action: 'approve' | 'reject') {
@@ -29,8 +41,18 @@ export default function PendingApprovalsPage() {
     } catch { /* ignore */ } finally { setBusy(null); }
   }
 
-  const loading = kiosk.loading || b2b.loading;
-  const empty = (kiosk.data?.length ?? 0) === 0 && (b2b.data?.length ?? 0) === 0;
+  async function actCustom(id: string, action: 'approve' | 'reject') {
+    if (action === 'reject' && !confirm('Reject this customised order request?')) return;
+    setBusy(id + action);
+    try {
+      await apiPost(`/api/store/custom-designs/${id}/${action}`);
+      void custom.reload();
+    } catch { /* ignore */ } finally { setBusy(null); }
+  }
+
+  const pendingCustom = (custom.data ?? []).filter((r) => r.status === 'PENDING');
+  const loading = kiosk.loading || b2b.loading || custom.loading;
+  const empty = (kiosk.data?.length ?? 0) === 0 && (b2b.data?.length ?? 0) === 0 && pendingCustom.length === 0;
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
@@ -68,6 +90,16 @@ export default function PendingApprovalsPage() {
               sub={`${o.totalItems} item(s)`} note={o.requirementNote}
               items={o.items} busy={busy?.startsWith(o.id) ?? false} onNoteSaved={() => b2b.reload()}
               onApprove={() => act('b2b', o.id, 'approve')} onReject={() => act('b2b', o.id, 'reject')} />
+          ))}
+        </section>
+      )}
+
+      {!loading && pendingCustom.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Customised Orders</h2>
+          {pendingCustom.map((r) => (
+            <CustomRow key={r.id} req={r} busy={busy?.startsWith(r.id) ?? false}
+              onApprove={() => actCustom(r.id, 'approve')} onReject={() => actCustom(r.id, 'reject')} />
           ))}
         </section>
       )}
@@ -122,7 +154,7 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
       {/* Requirement note — editable by HO before approving */}
       <div className="mt-3 rounded-lg border bg-muted/20 p-2.5">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Requirement note (sent to manufacturer)</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Remark (sent to manufacturer)</p>
           {!editing && (
             <button onClick={() => { setDraft(note ?? ''); setEditing(true); }} className="inline-flex items-center gap-1 text-xs text-primary hover:underline"><Pencil className="h-3 w-3" />Edit</button>
           )}
@@ -184,6 +216,62 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
       )}
 
       {productModal && <OrderItemDetailModal product={productModal} onClose={() => setProductModal(null)} />}
+    </div>
+  );
+}
+
+function CustomRow({ req, busy, onApprove, onReject }: {
+  req: CustomRequest; busy: boolean; onApprove: () => void; onReject: () => void;
+}) {
+  const [chatOpen, setChatOpen] = useState(false);
+  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
+
+  return (
+    <div className="rounded-xl border bg-card px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-medium">{req.customerName}</p>
+            {req.branch?.name && <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-800"><Store className="h-3 w-3" />{req.branch.name}</span>}
+          </div>
+          <p className="text-xs text-muted-foreground">{req.customerPhone} · {req.category}{req.subCategory ? ` › ${req.subCategory}` : ''}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" disabled={busy} onClick={onApprove} className="metal-sheen text-[#17120b] font-semibold">
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><CheckCircle2 className="mr-1 h-3.5 w-3.5" />Approve</>}
+          </Button>
+          <Button size="sm" variant="outline" disabled={busy} onClick={onReject} className="border-red-200 text-red-700 hover:bg-red-50">
+            <XCircle className="mr-1 h-3.5 w-3.5" />Reject
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setChatOpen(true)}>
+            <MessageCircle className="mr-1 h-3.5 w-3.5" />Message
+          </Button>
+        </div>
+      </div>
+      {chatOpen && <OrderChat basePath="/api/store/messages" kind="custom" orderId={req.id} orderLabel={req.customerName} viewer="HO" onClose={() => setChatOpen(false)} />}
+
+      <div className="mt-3 border-t pt-3">
+        <CustomSpecList spec={req} />
+        {req.designNotes && (
+          <div className="mt-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Remark</p>
+            <p className="text-sm">{req.designNotes}</p>
+          </div>
+        )}
+        {req.referenceImageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={req.referenceImageUrl}
+            alt="reference"
+            className="mt-2 max-h-56 rounded-lg border object-contain cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => setZoomUrl(req.referenceImageUrl)}
+          />
+        )}
+      </div>
+
+      {zoomUrl && (
+        <ImageZoomModal isOpen={!!zoomUrl} images={[zoomUrl]} productName="Reference Image" onClose={() => setZoomUrl(null)} />
+      )}
     </div>
   );
 }

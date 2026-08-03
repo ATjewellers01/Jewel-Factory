@@ -15,15 +15,15 @@ const ROLES = [
 
 const PRINCIPLES = [
   { icon: Gem, title: 'No price anywhere', desc: 'Gold rates change daily, so the platform never shows a price. The store quotes the customer directly.' },
-  { icon: ShieldCheck, title: 'Customer privacy by design', desc: 'Orders carry only products + an editable requirement note. Customer name and phone never reach the manufacturer.' },
+  { icon: ShieldCheck, title: 'Customer privacy by design', desc: 'Orders carry only products + an editable remark. Customer name and phone never reach the manufacturer.' },
   { icon: Sparkles, title: 'AR try-on', desc: 'Every eligible design has a transparent asset so it can be tried on live at the store kiosk.' },
   { icon: Search, title: 'Similar-design search', desc: 'Upload a photo at the kiosk to instantly find matching designs in the catalogue by visual similarity.' },
   { icon: Building2, title: 'One Retailer Admin, many stores', desc: 'Approvals, restock and custom orders are tracked across every branch, end to end.' },
 ];
 
 const STEPS = [
-  'A customer browses the store kiosk; the Retailer User builds an order — products, quantity and a requirement note (no personal data).',
-  'The Retailer Admin (Head Office) reviews it, can edit the note, and approves.',
+  'A customer browses the store kiosk; the Retailer User builds an order — products, quantity and a remark (no personal data).',
+  'The Retailer Admin (Head Office) reviews it, can edit the remark, and approves.',
   'The approved order reaches the Manufacturer — showing the Retailer Admin and branch, never the customer.',
   'The Manufacturer ships to the Retailer Admin’s fixed Head Office address; the Retailer Admin distributes to the branch.',
   'The Retailer User tracks status, chats with Head Office on the order, and marks it Completed when the customer has the piece.',

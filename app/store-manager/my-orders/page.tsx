@@ -10,11 +10,20 @@ import { OrderFilters } from '@/components/orders/OrderFilters';
 import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/orders/OrderItemDetailModal';
 import { Button } from '@/components/ui/button';
 import { useApi, apiPost } from '@/hooks/use-api';
-import { titleCaseName } from '@/lib/format';
+import { formatOrderStatus, titleCaseName } from '@/lib/format';
 import { SM_STATUS_OPTIONS, inDateRange, statusOf, bucketOf, customBucketOf } from '@/lib/order-filters';
+
+// Per-product status, set by the manufacturer — a single order can have items
+// at different stages (one piece Ghat Received while another is Dispatched).
+const ITEM_STATUS: Record<string, string> = {
+  PENDING: 'bg-yellow-100 text-yellow-800', IN_PROCESS: 'bg-blue-100 text-blue-800',
+  GHAT_RECEIVED: 'bg-purple-100 text-purple-800', READY_FOR_DELIVERY: 'bg-indigo-100 text-indigo-800',
+  DISPATCHED: 'bg-amber-100 text-amber-800', COMPLETED: 'bg-green-100 text-green-800', CANCELLED: 'bg-red-100 text-red-700',
+};
 
 type Item = {
   id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; quantity: number;
+  status: string;
   product: OrderItemProductSafe | null;
 };
 type BaseOrder = {
@@ -26,7 +35,7 @@ type BaseOrder = {
 type CustomOrder = {
   id: string; category: string; status: string; completedAt: string | null; createdAt: string;
   referenceImageUrl: string | null; designNotes: string | null;
-  orderRef: string | null; deliveryDate: string | null; quantity: number | null;
+  orderRef: string | null; deliveryDate: string | null; quantity: string | null;
   meena: string | null; length: string | null; size: string | null;
   broadness: string | null; screw: string | null; sampleWeightGrams: string | null;
   subCategory: string | null;
@@ -138,7 +147,10 @@ function OrderList({ kind, endpoint }: { kind: Kind; endpoint: string }) {
                           </span>
                         )}
                       </span>
-                      <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${ITEM_STATUS[it.status] ?? ''}`}>{formatOrderStatus(it.status)}</span>
+                      </div>
                     </button>
                   ))}
                 </div>

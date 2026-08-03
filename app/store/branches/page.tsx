@@ -112,7 +112,7 @@ export default function BranchesPage() {
         </label>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className={labelClass}>Retail User Number *
+          <label className={labelClass}>User Mobile Number *
             <Input type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number" value={form.phone} onChange={set('phone')} required />
           </label>
           <label className={labelClass}>Retail User Email
@@ -243,7 +243,7 @@ function BranchRetailerUsers({ branch, onChange }: { branch: Branch; onChange: (
       )}
 
       <form onSubmit={add} className="grid gap-2 rounded-lg border bg-card p-3 sm:grid-cols-2">
-        <Input type="tel" inputMode="numeric" maxLength={10} placeholder="Retail User Number *" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} required />
+        <Input type="tel" inputMode="numeric" maxLength={10} placeholder="User Mobile Number *" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} required />
         <Input type="email" placeholder="Retail User Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
         {err && <p className="text-sm text-red-600 sm:col-span-2">{err}</p>}
         <div className="sm:col-span-2">

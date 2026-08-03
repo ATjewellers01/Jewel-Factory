@@ -7,10 +7,11 @@
 // Status buckets for kiosk guest orders + B2B orders (OrderStatus enum).
 export const KIOSK_B2B_STATUS_OPTIONS = [
   { value: 'PENDING', label: 'Pending' },
-  { value: 'CONFIRMED', label: 'Confirmed' },
-  { value: 'PACKED', label: 'Packed' },
-  { value: 'SHIPPED', label: 'Shipped' },
-  { value: 'DELIVERED', label: 'Delivered' },
+  { value: 'IN_PROCESS', label: 'In Process' },
+  { value: 'GHAT_RECEIVED', label: 'Ghat Received' },
+  { value: 'READY_FOR_DELIVERY', label: 'Ready For Delivery' },
+  { value: 'DISPATCHED', label: 'Dispatched' },
+  { value: 'COMPLETED', label: 'Completed' },
   { value: 'CANCELLED', label: 'Cancelled' },
 ];
 
@@ -25,11 +26,11 @@ export const CUSTOM_REQUEST_STATUS_OPTIONS = [
 // Status buckets for custom design ORDERS (Manufacturer side — CustomOrderStatus).
 export const CUSTOM_ORDER_STATUS_OPTIONS = [
   { value: 'PENDING', label: 'Pending' },
-  { value: 'CONFIRMED', label: 'Confirmed' },
-  { value: 'IN_PRODUCTION', label: 'In production' },
-  { value: 'PACKED', label: 'Packed' },
-  { value: 'SHIPPED', label: 'Shipped' },
-  { value: 'DELIVERED', label: 'Delivered' },
+  { value: 'IN_PROCESS', label: 'In Process' },
+  { value: 'GHAT_RECEIVED', label: 'Ghat Received' },
+  { value: 'READY_FOR_DELIVERY', label: 'Ready For Delivery' },
+  { value: 'DISPATCHED', label: 'Dispatched' },
+  { value: 'COMPLETED', label: 'Completed' },
   { value: 'CANCELLED', label: 'Cancelled' },
 ];
 
@@ -44,8 +45,10 @@ export const SM_STATUS_OPTIONS = [
 // ── Derived Store-Manager buckets (extraction of logic that used to live inline
 // in app/store-manager/my-orders/page.tsx:52-71). Moved here so web and mobile
 // share one readable source (decision #7). Behaviour is byte-for-byte identical:
-// `completedAt` is tested FIRST in both, so a DELIVERED-and-completed order reads
-// "Completed", and a DELIVERED-but-not-completed order reads "Approved" (intended).
+// `completedAt` is tested FIRST in both, so an order the manufacturer has
+// finished AND the Store Manager marked delivered-to-customer reads "Completed",
+// while one the manufacturer finished but isn't yet marked complete reads
+// "Approved" (intended — `completedAt` is a separate flag, not derived from status).
 type SmOrder = {
   completedAt?: string | null;
   pendingStoreApproval?: boolean;

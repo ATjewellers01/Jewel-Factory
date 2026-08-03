@@ -2,15 +2,7 @@ import type { CustomOrderStatus } from '@prisma/client';
 
 import { prisma } from '@/lib/prisma';
 import { formatStoreAddress } from '@/lib/db/stores';
-
-function orderNumber(): string {
-  const now = new Date();
-  const date = now.toISOString().slice(0, 10).replace(/-/g, '');
-  const suffix =
-    (Date.now() % 10000).toString().padStart(4, '0') +
-    Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `CD-${date}-${suffix}`;
-}
+import { nextCustomOrderNumber } from '@/lib/db/order-number';
 
 // ── Kiosk: customer submits a request (has PII) ───────────────────────────────
 
@@ -31,7 +23,7 @@ export async function placeCustomRequest(input: {
   // Counter spec — all optional (see the custom_design_spec_fields migration).
   orderRef?: string;
   deliveryDate?: Date;
-  quantity?: number;
+  quantity?: string; // free text — "2 pcs", not a strict count
   meena?: string;
   length?: string;
   size?: string;
@@ -122,6 +114,8 @@ export async function forwardCustomRequest(storeId: string, requestId: string, r
   if (!store) return { ok: false as const, reason: 'not_found' };
   if (!store.manufacturerId) return { ok: false as const, reason: 'no_manufacturer' };
 
+  const orderNum = await nextCustomOrderNumber(store.manufacturerId);
+
   await prisma.$transaction(async (tx) => {
     await tx.customDesignOrder.create({
       data: {
@@ -147,7 +141,7 @@ export async function forwardCustomRequest(storeId: string, requestId: string, r
         broadness: req.broadness,
         screw: req.screw,
         sampleWeightGrams: req.sampleWeightGrams,
-        orderNumber: orderNumber(),
+        orderNumber: orderNum,
       },
     });
     await tx.customDesignRequest.update({

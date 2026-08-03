@@ -8,6 +8,7 @@ import { ManufacturerOrderItemModal, type OrderItemProduct } from '@/components/
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { apiSend } from '@/hooks/use-api';
+import { formatOrderStatus } from '@/lib/format';
 import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
 // Catalogue Orders merges the manufacturer's two order sources — B2B/restock
@@ -32,6 +33,7 @@ type Row = {
 
 type Item = {
   id: string; productNameSnapshot: string; productImageSnapshot: string | null; categorySnapshot: string | null; quantity: number;
+  status: string;
   product: OrderItemProduct | null;
 };
 type Detail = {
@@ -39,11 +41,14 @@ type Detail = {
 };
 
 const STATUS: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800', CONFIRMED: 'bg-blue-100 text-blue-800',
-  PACKED: 'bg-purple-100 text-purple-800', SHIPPED: 'bg-indigo-100 text-indigo-800',
-  DELIVERED: 'bg-green-100 text-green-800', CANCELLED: 'bg-red-100 text-red-700',
+  PENDING: 'bg-yellow-100 text-yellow-800', IN_PROCESS: 'bg-blue-100 text-blue-800',
+  GHAT_RECEIVED: 'bg-purple-100 text-purple-800', READY_FOR_DELIVERY: 'bg-indigo-100 text-indigo-800',
+  DISPATCHED: 'bg-amber-100 text-amber-800', COMPLETED: 'bg-green-100 text-green-800', CANCELLED: 'bg-red-100 text-red-700',
 };
-const NEXT: Record<string, string> = { PENDING: 'CONFIRMED', CONFIRMED: 'PACKED', PACKED: 'SHIPPED', SHIPPED: 'DELIVERED' };
+const NEXT: Record<string, string> = {
+  PENDING: 'IN_PROCESS', IN_PROCESS: 'GHAT_RECEIVED', GHAT_RECEIVED: 'READY_FOR_DELIVERY',
+  READY_FOR_DELIVERY: 'DISPATCHED', DISPATCHED: 'COMPLETED',
+};
 
 function endpointFor(source: Source, id?: string) {
   return source === 'kiosk'
@@ -58,6 +63,7 @@ export default function ManufacturerOrdersPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [itemBusy, setItemBusy] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [retailer, setRetailer] = useState('');
@@ -136,6 +142,7 @@ export default function ManufacturerOrdersPage() {
           productImageSnapshot: (i.productImageSnapshot as string | null) ?? null,
           categorySnapshot: null,
           quantity: i.quantity as number,
+          status: (i.status as string) ?? 'PENDING',
           product: (i.manufacturerProduct as OrderItemProduct | null) ?? null,
         })),
       });
@@ -153,6 +160,20 @@ export default function ManufacturerOrdersPage() {
       alert(e instanceof Error ? e.message : 'Failed');
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function advanceItem(row: Row, item: Item) {
+    const next = NEXT[item.status];
+    if (!next) return;
+    setItemBusy(item.id);
+    try {
+      await apiSend('PATCH', `${endpointFor(row.source, row.id)}/items/${item.id}`, { status: next });
+      setDetail((prev) => prev ? { ...prev, items: prev.items.map((it) => it.id === item.id ? { ...it, status: next } : it) } : prev);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setItemBusy(null);
     }
   }
 
@@ -197,7 +218,7 @@ export default function ManufacturerOrdersPage() {
                   <div><p className="text-xs text-muted-foreground">Order</p><p className="text-sm font-medium">{o.orderNumber}</p></div>
                   <div><p className="text-xs text-muted-foreground">Customer</p><p className="text-sm font-medium text-primary truncate">{o.storeName ?? '—'}</p><p className="text-xs text-muted-foreground truncate">{o.branchName ?? o.storeCity ?? ''}</p></div>
                   <div><p className="text-xs text-muted-foreground">Items</p><p className="text-sm tabular-nums">{o.totalItems}</p></div>
-                  <div className="flex items-start"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{o.status.toLowerCase()}</span></div>
+                  <div className="flex items-start"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderStatus(o.status)}</span></div>
                 </div>
                 {expanded === o.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
               </button>
@@ -212,7 +233,7 @@ export default function ManufacturerOrdersPage() {
                   )}
                   {detail?.requirementNote && (
                     <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Requirement note</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Remark</p>
                       <p className="whitespace-pre-wrap text-sm">{detail.requirementNote}</p>
                     </div>
                   )}
@@ -227,42 +248,56 @@ export default function ManufacturerOrdersPage() {
                       <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Items</p>
                       <div className="space-y-2">
                         {detail.items.map((it) => (
-                          <button
-                            key={it.id}
-                            type="button"
-                            onClick={() => it.product && setProductModal(it.product)}
-                            disabled={!it.product}
-                            className="flex w-full items-center gap-3 rounded-lg text-left hover:bg-black/5 disabled:cursor-default disabled:hover:bg-transparent"
-                          >
-                            {it.productImageSnapshot ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={it.productImageSnapshot}
-                                alt={it.productNameSnapshot}
-                                className="h-20 w-20 shrink-0 rounded-lg border bg-white object-contain p-1 cursor-pointer hover:shadow-md transition-shadow"
-                                onClick={(e) => { e.stopPropagation(); setZoomItem(it); }}
-                              />
-                            ) : <div className="h-20 w-20 shrink-0 rounded-lg border bg-muted" />}
-                            <span className="flex-1">
-                              <span className="block text-sm font-medium">{it.product?.designNumber ?? it.productNameSnapshot}</span>
-                              <span className="block text-xs text-muted-foreground">
-                                {it.product?.category ?? it.categorySnapshot ?? '—'}
-                                {it.product?.subCategory ? ` › ${it.product.subCategory}` : ''}
-                                {it.product?.weightGrams != null ? ` · ${it.product.weightGrams}g` : ''}
+                          <div key={it.id} className="flex w-full items-center gap-3 rounded-lg hover:bg-black/5">
+                            <button
+                              type="button"
+                              onClick={() => it.product && setProductModal(it.product)}
+                              disabled={!it.product}
+                              className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
+                            >
+                              {it.productImageSnapshot ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={it.productImageSnapshot}
+                                  alt={it.productNameSnapshot}
+                                  className="h-20 w-20 shrink-0 rounded-lg border bg-white object-contain p-1 cursor-pointer hover:shadow-md transition-shadow"
+                                  onClick={(e) => { e.stopPropagation(); setZoomItem(it); }}
+                                />
+                              ) : <div className="h-20 w-20 shrink-0 rounded-lg border bg-muted" />}
+                              <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-medium">{it.product?.designNumber ?? it.productNameSnapshot}</span>
+                                <span className="block text-xs text-muted-foreground">
+                                  {it.product?.category ?? it.categorySnapshot ?? '—'}
+                                  {it.product?.subCategory ? ` › ${it.product.subCategory}` : ''}
+                                  {it.product?.weightGrams != null ? ` · ${it.product.weightGrams}g` : ''}
+                                </span>
+                                {it.product?.karigarCode && (
+                                  <span className="mt-0.5 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Karigar: {it.product.karigarCode}</span>
+                                )}
                               </span>
-                              {it.product?.karigarCode && (
-                                <span className="mt-0.5 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Karigar: {it.product.karigarCode}</span>
+                              <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
+                            </button>
+                            <div className="flex shrink-0 flex-col items-end gap-1">
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[it.status] ?? ''}`}>{formatOrderStatus(it.status)}</span>
+                              {NEXT[it.status] && (
+                                <button
+                                  type="button"
+                                  disabled={itemBusy === it.id}
+                                  onClick={() => advanceItem(o, it)}
+                                  className="text-[11px] font-medium text-primary hover:underline disabled:opacity-50"
+                                >
+                                  {itemBusy === it.id ? <Loader2 className="h-3 w-3 animate-spin" /> : `Mark as ${formatOrderStatus(NEXT[it.status])}`}
+                                </button>
                               )}
-                            </span>
-                            <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
-                          </button>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
                   )}
                   {NEXT[o.status] && (
                     <Button size="sm" disabled={busy === o.id} onClick={() => advance(o)} className="metal-sheen text-[#17120b] font-semibold">
-                      {busy === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Mark as ${NEXT[o.status].toLowerCase()}`}
+                      {busy === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Mark as ${formatOrderStatus(NEXT[o.status])}`}
                     </Button>
                   )}
                 </div>

@@ -12,7 +12,7 @@
 export type CustomSpec = {
   orderRef?: string | null;
   deliveryDate?: string | Date | null;
-  quantity?: number | null;
+  quantity?: string | null; // free text — "2 pcs", not a strict count
   meena?: string | null;
   length?: string | null;
   size?: string | null;
@@ -33,7 +33,7 @@ export function CustomSpecList({ spec, className = '' }: { spec: CustomSpec; cla
   const rows: Array<[string, string]> = [];
   if (spec.orderRef) rows.push(['Order no.', spec.orderRef]);
   if (spec.deliveryDate) rows.push(['Delivery', formatDate(spec.deliveryDate)]);
-  if (spec.quantity != null) rows.push(['Quantity', `${spec.quantity} PCS`]);
+  if (spec.quantity) rows.push(['Quantity', spec.quantity]);
   if (spec.sampleWeightGrams != null && spec.sampleWeightGrams !== '') rows.push(['Sample weight', `${spec.sampleWeightGrams} g`]);
   if (spec.meena) rows.push(['Meena', spec.meena]);
   if (spec.length) rows.push(['Length', spec.length]);

@@ -1,16 +1,7 @@
 import type { OrderStatus, Prisma } from '@prisma/client';
 
 import { prisma } from '@/lib/prisma';
-
-// High-entropy order number (no same-second collision).
-function orderNumber(prefix: string): string {
-  const now = new Date();
-  const date = now.toISOString().slice(0, 10).replace(/-/g, '');
-  const suffix =
-    (Date.now() % 10000).toString().padStart(4, '0') +
-    Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `${prefix}-${date}-${suffix}`;
-}
+import { nextCatalogOrderNumber } from '@/lib/db/order-number';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // KIOSK ORDERS (customer, guest)
@@ -40,9 +31,12 @@ export async function placeKioskOrder(input: {
   pickupStore: boolean;
   notes?: string;
   requirementNote?: string | null;
+  salesCode?: string | null;
+  salesPersonName?: string | null;
   items: KioskItemInput[];
 }) {
   const totalItems = input.items.reduce((s, i) => s + i.quantity, 0);
+  const orderNum = await nextCatalogOrderNumber(input.manufacturerId);
   return prisma.kioskOrder.create({
     data: {
       storeId: input.storeId,
@@ -60,7 +54,9 @@ export async function placeKioskOrder(input: {
       pickupStore: input.pickupStore,
       notes: input.notes ?? null,
       requirementNote: input.requirementNote ?? null,
-      orderNumber: orderNumber('GK'),
+      salesCode: input.salesCode ?? null,
+      salesPersonName: input.salesPersonName ?? null,
+      orderNumber: orderNum,
       totalItems,
       items: {
         create: input.items.map((i) => ({
@@ -260,6 +256,19 @@ export async function advanceKioskOrderStatus(manufacturerId: string, id: string
   return true;
 }
 
+// Per-line-item status — an order can have products at different stages.
+// Scoped by manufacturerId through the parent order so a manufacturer can't
+// touch another manufacturer's item by guessing an item id.
+export async function advanceKioskOrderItemStatus(manufacturerId: string, orderId: string, itemId: string, status: OrderStatus) {
+  const item = await prisma.kioskOrderItem.findFirst({
+    where: { id: itemId, orderId, order: { manufacturerId } },
+    select: { id: true },
+  });
+  if (!item) return false;
+  await prisma.kioskOrderItem.update({ where: { id: itemId }, data: { status } });
+  return true;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // B2B ORDERS (store restock)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -281,13 +290,14 @@ export async function placeB2bOrder(input: {
 }) {
   const totalItems = input.items.reduce((s, i) => s + i.quantity, 0);
   const preApproved = input.pendingManagerApproval === false;
+  const orderNum = await nextCatalogOrderNumber(input.manufacturerId);
   return prisma.b2bOrder.create({
     data: {
       storeId: input.storeId,
       manufacturerId: input.manufacturerId,
       branchId: input.branchId ?? null,
       branchNameSnapshot: input.branchNameSnapshot ?? null,
-      orderNumber: orderNumber('B2B'),
+      orderNumber: orderNum,
       deliveryAddress: input.deliveryAddress,
       notes: input.notes ?? null,
       requirementNote: input.requirementNote ?? null,
@@ -399,8 +409,19 @@ export async function advanceB2bOrderStatus(manufacturerId: string, id: string, 
     prisma.b2bOrder.update({ where: { id }, data: { status, ...(trackingNumber ? { trackingNumber } : {}) } }),
     prisma.b2bOrderStatusHistory.create({ data: { orderId: id, status } }),
   ]);
-  // On delivery, materialize into store inventory (fulfillment).
-  if (status === 'DELIVERED') await fulfillB2bOrder(id);
+  // On completion, materialize into store inventory (fulfillment).
+  if (status === 'COMPLETED') await fulfillB2bOrder(id);
+  return true;
+}
+
+// Per-line-item status — see the matching note on advanceKioskOrderItemStatus.
+export async function advanceB2bOrderItemStatus(manufacturerId: string, orderId: string, itemId: string, status: OrderStatus) {
+  const item = await prisma.b2bOrderItem.findFirst({
+    where: { id: itemId, orderId, order: { manufacturerId } },
+    select: { id: true },
+  });
+  if (!item) return false;
+  await prisma.b2bOrderItem.update({ where: { id: itemId }, data: { status } });
   return true;
 }
 

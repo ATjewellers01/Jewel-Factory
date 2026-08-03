@@ -8,6 +8,7 @@ import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/orders/OrderItemDetailModal';
 import { Button } from '@/components/ui/button';
+import { formatOrderStatus } from '@/lib/format';
 import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
 /**
@@ -29,6 +30,7 @@ type Source = 'b2b' | 'kiosk';
 type Item = {
   id: string; productNameSnapshot: string | null; productImageSnapshot: string | null;
   productDesignSnapshot?: string | null; categorySnapshot?: string | null; quantity: number;
+  status: string;
   product: OrderItemProductSafe | null;
 };
 
@@ -41,18 +43,20 @@ type KioskOrder = {
   id: string; orderNumber: string; status: string; totalItems: number;
   branchNameSnapshot: string | null;
   pendingStoreApproval: boolean; pickupStore: boolean; createdAt: string; items: Item[];
+  salesCode: string | null; salesPersonName: string | null;
 };
 
 type Row = {
   key: string; id: string; source: Source; orderNumber: string; status: string; totalItems: number;
   branchNameSnapshot: string | null; needsApproval: boolean; meta: string;
   createdAt: string; items: Item[];
+  salesCode?: string | null; salesPersonName?: string | null;
 };
 
 const STATUS: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800', CONFIRMED: 'bg-blue-100 text-blue-800',
-  PACKED: 'bg-purple-100 text-purple-800', SHIPPED: 'bg-indigo-100 text-indigo-800',
-  DELIVERED: 'bg-green-100 text-green-800', CANCELLED: 'bg-red-100 text-red-700',
+  PENDING: 'bg-yellow-100 text-yellow-800', IN_PROCESS: 'bg-blue-100 text-blue-800',
+  GHAT_RECEIVED: 'bg-purple-100 text-purple-800', READY_FOR_DELIVERY: 'bg-indigo-100 text-indigo-800',
+  DISPATCHED: 'bg-amber-100 text-amber-800', COMPLETED: 'bg-green-100 text-green-800', CANCELLED: 'bg-red-100 text-red-700',
 };
 
 export default function StoreCatalogueOrdersPage() {
@@ -100,6 +104,7 @@ export default function StoreCatalogueOrdersPage() {
           // No customer name/phone here — kiosk orders carry no PII by design.
           meta: `${o.totalItems} item(s) · ${o.pickupStore ? 'Pickup' : 'Delivery'}`,
           createdAt: o.createdAt, items: o.items,
+          salesCode: o.salesCode, salesPersonName: o.salesPersonName,
         }));
 
         setRows([...b2bRows, ...kioskRows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
@@ -158,12 +163,18 @@ export default function StoreCatalogueOrdersPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {o.needsApproval && <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-semibold text-yellow-800">Needs approval</span>}
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{o.status.toLowerCase()}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderStatus(o.status)}</span>
                   {open === o.key ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                 </div>
               </button>
               {open === o.key && (
                 <div className="border-t bg-muted/10 px-4 pb-4 pt-3">
+                  {(o.salesCode || o.salesPersonName) && (
+                    <div className="mb-3 flex flex-wrap gap-4 rounded-lg border bg-card px-3 py-2 text-xs">
+                      {o.salesPersonName && <span><span className="text-muted-foreground">Sales person: </span><span className="font-medium">{o.salesPersonName}</span></span>}
+                      {o.salesCode && <span><span className="text-muted-foreground">Sales code: </span><span className="font-medium">{o.salesCode}</span></span>}
+                    </div>
+                  )}
                   <p className="mb-1.5 text-xs uppercase tracking-wider text-muted-foreground">Items</p>
                   <div className="space-y-2">
                     {o.items.map((it) => (
@@ -191,7 +202,10 @@ export default function StoreCatalogueOrdersPage() {
                             {it.product?.weightGrams != null ? ` · ${it.product.weightGrams}g` : ''}
                           </p>
                         </div>
-                        <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                          <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[it.status] ?? ''}`}>{formatOrderStatus(it.status)}</span>
+                        </div>
                       </button>
                     ))}
                   </div>

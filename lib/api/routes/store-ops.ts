@@ -12,9 +12,10 @@ import {
   updateKioskRequirementNote, updateB2bRequirementNote,
 } from '@/lib/db/orders';
 import {
-  listCustomRequests, getCustomRequestForStore, forwardCustomRequest, rejectCustomRequest,
+  listCustomRequests, getCustomRequestForStore, forwardCustomRequest, rejectCustomRequest, placeCustomRequest,
 } from '@/lib/db/custom-design';
 import { listOrderMessages, addOrderMessage } from '@/lib/db/messages';
+import { signUpload, storeFolder } from '@/lib/storage';
 import { sendData, sendError } from '../envelope';
 import { managerGuard, approverIdOrNull, type AppEnv } from '../guards';
 
@@ -112,6 +113,72 @@ storeOpsRoutes.patch('/b2b-orders/:id/note', zValidator('json', NoteBody), async
 });
 
 // ── Custom designs ────────────────────────────────────────────────────────────
+
+const emptyToUndefined = (v: unknown) => (typeof v === 'string' && v.trim() === '' ? undefined : v);
+const optionalText = (max: number) => z.preprocess(emptyToUndefined, z.string().max(max).optional());
+
+// Retailer Admin placing their own customised order directly (no branch) — same
+// shape as the branch-manager CustomBody. Mirrors the b2b self-order fix: the
+// Retailer Admin is the approver, so their own request is auto-forwarded below
+// instead of sitting in their own pending-approvals queue.
+const StoreCustomBody = z.object({
+  category: z.string().min(1),
+  subCategory: optionalText(120),
+  weightGramsMin: z.number().positive().optional(),
+  weightGramsMax: z.number().positive().optional(),
+  purity: optionalText(40),
+  designNotes: optionalText(2000),
+  referenceImageUrl: z.preprocess(emptyToUndefined, z.string().url().optional()),
+  orderRef: optionalText(60),
+  deliveryDate: z.preprocess(emptyToUndefined, z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a valid date').optional()),
+  quantity: optionalText(30),
+  meena: optionalText(60),
+  length: optionalText(60),
+  size: optionalText(60),
+  broadness: optionalText(60),
+  screw: optionalText(60),
+  sampleWeightGrams: z.coerce.number().positive().max(99999).optional(),
+});
+
+storeOpsRoutes.post('/custom-designs/upload-sign', async (c) => {
+  try {
+    const signed = await signUpload({ folder: storeFolder(c.get('storeId'), 'custom'), bucket: 'custom' });
+    return sendData(c, signed);
+  } catch (err) {
+    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Object storage not configured', 503);
+  }
+});
+
+storeOpsRoutes.post('/custom-designs', zValidator('json', StoreCustomBody), async (c) => {
+  const storeId = c.get('storeId');
+  const body = c.req.valid('json');
+  const req = await placeCustomRequest({
+    storeId,
+    branchId: null,
+    category: body.category,
+    subCategory: body.subCategory as string | undefined,
+    weightGramsMin: body.weightGramsMin,
+    weightGramsMax: body.weightGramsMax,
+    purity: body.purity as string | undefined,
+    designNotes: body.designNotes as string | undefined,
+    referenceImageUrl: body.referenceImageUrl as string | undefined,
+    orderRef: body.orderRef as string | undefined,
+    deliveryDate: body.deliveryDate ? new Date(`${body.deliveryDate as string}T00:00:00Z`) : undefined,
+    quantity: body.quantity,
+    meena: body.meena as string | undefined,
+    length: body.length as string | undefined,
+    size: body.size as string | undefined,
+    broadness: body.broadness as string | undefined,
+    screw: body.screw as string | undefined,
+    sampleWeightGrams: body.sampleWeightGrams,
+  });
+  const result = await forwardCustomRequest(storeId, req.id, approverIdOrNull(c));
+  if (!result.ok && result.reason === 'no_manufacturer') {
+    return sendError(c, 'bad_request', 'Store is not linked to a manufacturer yet.', 400);
+  }
+  return sendData(c, { id: req.id }, 201);
+});
+
 storeOpsRoutes.get('/custom-designs', async (c) => {
   return sendData(c, await listCustomRequests(c.get('storeId')));
 });

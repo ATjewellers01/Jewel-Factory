@@ -4,6 +4,8 @@ import { ArrowRight, Package, ShoppingBag, ClipboardCheck, Store as StoreIcon, L
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
+import { formatOrderStatus } from '@/lib/format';
+
 type Dashboard = {
   totalDesigns: number;
   activeDesigns: number;
@@ -23,10 +25,11 @@ type Dashboard = {
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-yellow-100 text-yellow-800',
-  CONFIRMED: 'bg-blue-100 text-blue-800',
-  PACKED: 'bg-purple-100 text-purple-800',
-  SHIPPED: 'bg-indigo-100 text-indigo-800',
-  DELIVERED: 'bg-green-100 text-green-800',
+  IN_PROCESS: 'bg-blue-100 text-blue-800',
+  GHAT_RECEIVED: 'bg-purple-100 text-purple-800',
+  READY_FOR_DELIVERY: 'bg-indigo-100 text-indigo-800',
+  DISPATCHED: 'bg-amber-100 text-amber-800',
+  COMPLETED: 'bg-green-100 text-green-800',
   CANCELLED: 'bg-red-100 text-red-800',
 };
 
@@ -114,7 +117,7 @@ export default function ManufacturerDashboardPage() {
                         </p>
                       </div>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_COLORS[o.status] ?? ''}`}>
-                        {o.status.toLowerCase()}
+                        {formatOrderStatus(o.status)}
                       </span>
                     </div>
                   </Link>

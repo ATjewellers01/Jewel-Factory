@@ -20,6 +20,15 @@ export function titleCaseName(name: string | null | undefined): string {
 }
 
 /**
+ * Turn an OrderStatus/CustomOrderStatus enum value into a display label:
+ * "READY_FOR_DELIVERY" -> "ready for delivery". Some values now carry more
+ * than one underscore, so a plain single `.replace('_', ' ')` is not enough.
+ */
+export function formatOrderStatus(status: string): string {
+  return status.replace(/_/g, ' ').toLowerCase();
+}
+
+/**
  * Format a weight (Prisma Decimal arrives as a string like "12.500") to a clean
  * "12.5 g". Returns null when there's no usable weight.
  */

@@ -44,10 +44,11 @@ enum JewelleryType {
 
 enum OrderStatus {
   PENDING
-  CONFIRMED
-  PACKED
-  SHIPPED
-  DELIVERED
+  IN_PROCESS
+  GHAT_RECEIVED
+  READY_FOR_DELIVERY
+  DISPATCHED
+  COMPLETED
   CANCELLED
 }
 
@@ -60,11 +61,11 @@ enum CustomStatus {
 
 enum CustomOrderStatus {
   PENDING
-  CONFIRMED
-  IN_PRODUCTION
-  PACKED
-  SHIPPED
-  DELIVERED
+  IN_PROCESS
+  GHAT_RECEIVED
+  READY_FOR_DELIVERY
+  DISPATCHED
+  COMPLETED
   CANCELLED
 }
 
@@ -94,6 +95,12 @@ model Manufacturer {
   // Custom badge labels the manufacturer defines themselves (e.g. "Gold Customer",
   // "Premium") to tag their own retailers with — starts empty, manufacturer adds values.
   retailerBadgeLabels String[] @default([]) @map("retailer_badge_labels")
+  // Per-manufacturer running counters for JFA-/JFC- order numbers — shared
+  // across every retailer (and their Retailer Users) this manufacturer serves,
+  // so numbering is manufacturer-scoped, not per-retailer. Incremented via an
+  // atomic UPDATE ... RETURNING (lib/db/order-number.ts), never read-then-write.
+  nextCatalogOrderSeq Int @default(1) @map("next_catalog_order_seq")
+  nextCustomOrderSeq  Int @default(1) @map("next_custom_order_seq")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -476,6 +483,8 @@ model B2bOrderItem {
   productNameSnapshot   String?             @map("product_name_snapshot")
   productImageSnapshot  String?             @map("product_image_snapshot")
   productDesignSnapshot String?             @map("product_design_snapshot")
+  // Per-line status — see the matching note on KioskOrderItem.status.
+  status                OrderStatus         @default(PENDING)
   createdAt             DateTime            @default(now()) @map("created_at")
 
   @@index([orderId])
@@ -527,6 +536,11 @@ model KioskOrder {
   // can edit it; it IS forwarded to the manufacturer (no personal data).
   requirementNote String? @map("requirement_note")
 
+  // Captured from the Retailer User at "Add to Cart" — who sold this, so the
+  // Retailer Admin can see which staff member/counter placed the order.
+  salesCode       String? @map("sales_code")
+  salesPersonName String? @map("sales_person_name")
+
   orderNumber    String      @unique @map("order_number") // GK-YYYYMMDD-XXXX
   orderSource    String      @default("kiosk") @map("order_source")
   status         OrderStatus @default(PENDING)
@@ -565,6 +579,10 @@ model KioskOrderItem {
   productImageSnapshot  String?    @map("product_image_snapshot")
   categorySnapshot      String?    @map("category_snapshot")
   quantity              Int
+  // Per-line status — a single order can have products at different stages
+  // (e.g. one piece Ghat Received while another is Dispatched). Independent
+  // of the order-level `status`, which the manufacturer still advances too.
+  status                OrderStatus @default(PENDING)
   createdAt             DateTime   @default(now()) @map("created_at")
 
   @@index([orderId])
@@ -608,7 +626,7 @@ model CustomDesignRequest {
   // All optional — a request can still be just "this photo, roughly this weight".
   orderRef          String?   @map("order_ref") // the shop's own order number
   deliveryDate      DateTime? @map("delivery_date") @db.Date
-  quantity          Int? // pieces
+  quantity          String? // free text — pieces, e.g. "2 pcs" (not a strict count)
   meena             String? // colouring
   length            String?
   size              String?
@@ -661,7 +679,7 @@ model CustomDesignOrder {
   // distinct from `orderNumber` below, which this system generates.
   orderRef          String?   @map("order_ref")
   deliveryDate      DateTime? @map("delivery_date") @db.Date
-  quantity          Int?
+  quantity          String? // free text — pieces, e.g. "2 pcs" (not a strict count)
   meena             String?
   length            String?
   size              String?

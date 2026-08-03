@@ -1,6 +1,7 @@
 'use client';
 
 import { CheckCircle2, Loader2, PencilLine, Upload, X, ShieldCheck, Send, Sparkles } from 'lucide-react';
+import Link from 'next/link';
 import { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -9,8 +10,6 @@ import { apiPost } from '@/hooks/use-api';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 
 const PURITIES = ['24K', '22K', '18K', '14K', '916', '750', '585'];
-// Shop vocabulary, confirmed with the client — edit here to change the
-// options; nothing downstream validates against them (the columns are free text).
 const MEENA_OPTIONS = ['Yes', 'No'];
 const SCREW_OPTIONS = ['English', 'Pongli'];
 
@@ -28,10 +27,6 @@ const EMPTY_FORM = {
   notes: '', imageUrl: '',
 };
 
-/**
- * Only preview a pasted URL once it parses as an absolute http(s) URL — otherwise
- * every keystroke fires a request for a half-typed address and logs a 404.
- */
 function isPreviewableUrl(value: string): boolean {
   const trimmed = value.trim();
   if (!trimmed) return false;
@@ -43,7 +38,7 @@ function isPreviewableUrl(value: string): boolean {
   }
 }
 
-export default function StoreManagerCustomDesignPage() {
+export default function StoreCustomDesignNewPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [subCustom, setSubCustom] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -59,8 +54,8 @@ export default function StoreManagerCustomDesignPage() {
   async function handleUpload(file: File) {
     setError(null); setUploading(true);
     try {
-      const signRes = await fetch('/api/branch-manager/custom-designs/upload-sign', { method: 'POST', credentials: 'same-origin' });
-      if (signRes.status === 401) { window.location.assign('/store-manager/login'); return; }
+      const signRes = await fetch('/api/store/custom-designs/upload-sign', { method: 'POST', credentials: 'same-origin' });
+      if (signRes.status === 401) { window.location.assign('/store/login'); return; }
       const signJson = (await signRes.json()) as { data?: { uploadUrl: string; secureUrl: string; maxBytes: number }; error?: { message: string } };
       if (!signRes.ok || !signJson.data) { setError(signJson.error?.message ?? 'Upload unavailable.'); return; }
       const s = signJson.data;
@@ -85,8 +80,6 @@ export default function StoreManagerCustomDesignPage() {
 
     const from = form.weightFrom ? Number(form.weightFrom) : undefined;
     const to = form.weightTo ? Number(form.weightTo) : undefined;
-    // A single figure counts as an exact weight (min === max); if both are
-    // given but entered backwards, swap rather than reject.
     let weightGramsMin = from ?? to;
     let weightGramsMax = to ?? from;
     if (from !== undefined && to !== undefined && to < from) {
@@ -96,7 +89,7 @@ export default function StoreManagerCustomDesignPage() {
 
     setLoading(true);
     try {
-      await apiPost('/api/branch-manager/custom-designs', {
+      await apiPost('/api/store/custom-designs', {
         category: form.category,
         subCategory: form.subCategory.trim() || undefined,
         weightGramsMin,
@@ -122,9 +115,12 @@ export default function StoreManagerCustomDesignPage() {
     return (
       <div className="mx-auto flex max-w-md flex-col items-center px-4 py-24 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-700"><CheckCircle2 className="h-7 w-7" /></div>
-        <h1 className="mt-4 font-display text-2xl font-medium">Request sent</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Sent to Head Office for approval.</p>
-        <Button className="mt-6 metal-sheen text-[#17120b] font-semibold" onClick={() => { setDone(false); setForm(EMPTY_FORM); }}>New request</Button>
+        <h1 className="mt-4 font-display text-2xl font-medium">Order placed</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Forwarded to the manufacturer.</p>
+        <div className="mt-6 flex gap-3">
+          <Button variant="outline" onClick={() => { setDone(false); setForm(EMPTY_FORM); }}>New order</Button>
+          <Link href="/store/custom-designs"><Button className="metal-sheen text-[#17120b] font-semibold">Back to Customised Orders</Button></Link>
+        </div>
       </div>
     );
   }
@@ -133,19 +129,17 @@ export default function StoreManagerCustomDesignPage() {
     <div className="relative mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-56 bg-[radial-gradient(46rem_18rem_at_20%_-20%,rgba(201,168,76,0.14),transparent_65%)]" />
 
-      {/* Intro */}
       <div className="max-w-2xl">
         <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-[#a0824a]">
-          <PencilLine className="h-3.5 w-3.5" /> Custom design
+          <PencilLine className="h-3.5 w-3.5" /> Customised order
         </p>
-        <h1 className="mt-3 font-display text-3xl font-normal tracking-tight sm:text-4xl">Begin with an idea</h1>
+        <h1 className="mt-3 font-display text-3xl font-normal tracking-tight sm:text-4xl">Place a customised order</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Capture the design requirement and a reference image — the customer’s personal details stay outside the system.
+          Capture the design requirement and a reference image — this goes straight to the manufacturer.
         </p>
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_0.85fr] lg:gap-8">
-        {/* Form */}
         <form onSubmit={submit} className="space-y-5 rounded-2xl border border-black/10 bg-[#fffdf8] p-5 shadow-sm sm:p-7">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -243,8 +237,6 @@ export default function StoreManagerCustomDesignPage() {
             </div>
           </div>
 
-          {/* Piece spec. Free text so the shop can write its own units —
-              "18 inch", "2.5 mm", "size 14". */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="text-xs font-medium text-muted-foreground">Meena / colouring</label>
@@ -276,21 +268,14 @@ export default function StoreManagerCustomDesignPage() {
             </div>
           </div>
 
-          {/* Reference image — upload OR URL */}
           <div>
             <div className="mb-1.5 flex items-center justify-between">
               <label className="text-xs font-medium text-muted-foreground">Reference image</label>
               <div className="flex gap-1 text-xs">
-                {/* Switching mode clears the other mode's value so a stale uploaded
-                    URL can't be submitted as if it were typed (and vice-versa). */}
                 <button type="button" onClick={() => { setImageMode('upload'); set('imageUrl', ''); }} className={`rounded px-2 py-0.5 ${imageMode === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>Upload</button>
                 <button type="button" onClick={() => { setImageMode('url'); set('imageUrl', ''); }} className={`rounded px-2 py-0.5 ${imageMode === 'url' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>URL</button>
               </div>
             </div>
-            {/* Preview replaces the picker only for a COMPLETED upload. In URL mode the
-                input must stay mounted while typing — keying the preview off a
-                non-empty imageUrl swapped it out on the first character, so a URL
-                could never be finished. */}
             {form.imageUrl && imageMode === 'upload' ? (
               <div className="relative inline-block">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -335,24 +320,22 @@ export default function StoreManagerCustomDesignPage() {
 
           <div>
             <label className="text-xs font-medium text-muted-foreground">Remarks</label>
-            <textarea className="mt-1 min-h-[130px] w-full rounded-lg border border-black/15 bg-white/60 px-3 py-2 text-sm" placeholder="Describe the design the customer wants — style, size, engraving, timeline…" value={form.notes} onChange={(e) => set('notes', e.target.value)} />
+            <textarea className="mt-1 min-h-[130px] w-full rounded-lg border border-black/15 bg-white/60 px-3 py-2 text-sm" placeholder="Describe the design — style, size, engraving, timeline…" value={form.notes} onChange={(e) => set('notes', e.target.value)} />
           </div>
 
           {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
           <Button type="submit" disabled={loading} className="metal-sheen h-11 w-full rounded-full text-sm font-semibold text-[#17120b]">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="mr-1.5 h-4 w-4" /> Send to Head Office</>}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="mr-1.5 h-4 w-4" /> Place order</>}
           </Button>
         </form>
 
-        {/* Helper panel */}
         <aside className="space-y-4 lg:pt-1">
           <div className="rounded-2xl border border-black/10 bg-card p-5 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#a0824a]">What happens next</p>
             <ol className="mt-4 space-y-3">
               {[
-                'Your request goes to Head Office for approval.',
-                'Head Office forwards a sanitized order to the manufacturer.',
-                'Track status and message Head Office from My Orders.',
+                'Your order is forwarded straight to the manufacturer.',
+                'Track its status from Customised Orders.',
               ].map((step, i) => (
                 <li key={i} className="flex gap-3">
                   <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{i + 1}</span>

@@ -106,7 +106,7 @@ export async function getStoreManagerProductSales(
       FROM b2b_order_items boi
       JOIN b2b_orders bo ON boi.order_id = bo.id
       WHERE bo.branch_id = ${branchId}
-        AND bo.status = 'DELIVERED'
+        AND bo.status = 'COMPLETED'
         AND bo.created_at >= ${historyStart}::timestamp
         AND bo.created_at <= ${windowEnd}::timestamp
     )
@@ -159,7 +159,7 @@ export async function getRetailerProductSales(
       FROM b2b_order_items boi
       JOIN b2b_orders bo ON boi.order_id = bo.id
       WHERE bo.store_id = ${storeId}
-        AND bo.status = 'DELIVERED'
+        AND bo.status = 'COMPLETED'
         AND bo.created_at >= ${historyStart}::timestamp
         AND bo.created_at <= ${windowEnd}::timestamp
     )
@@ -222,7 +222,7 @@ export async function getRetailerBranchSales(
         FROM b2b_order_items boi
         JOIN b2b_orders bo ON boi.order_id = bo.id
         WHERE bo.branch_id = ${branch.id}
-          AND bo.status = 'DELIVERED'
+          AND bo.status = 'COMPLETED'
           AND bo.created_at >= ${windowStart}::timestamp
           AND bo.created_at <= ${windowEnd}::timestamp
       )
@@ -311,7 +311,7 @@ export async function getManufacturerRetailerSales(
       SELECT boi.manufacturer_product_id AS product_id, boi.quantity AS quantity, bo.store_id AS store_id
       FROM b2b_order_items boi
       JOIN b2b_orders bo ON boi.order_id = bo.id
-      WHERE bo.status = 'DELIVERED'
+      WHERE bo.status = 'COMPLETED'
         AND bo.created_at >= ${windowStart}::timestamp
         AND bo.created_at <= ${windowEnd}::timestamp
     )
@@ -359,7 +359,7 @@ export async function getManufacturerCategoryWeightBreakdown(
       SELECT boi.manufacturer_product_id AS product_id, boi.quantity AS quantity
       FROM b2b_order_items boi
       JOIN b2b_orders bo ON boi.order_id = bo.id
-      WHERE bo.status = 'DELIVERED'
+      WHERE bo.status = 'COMPLETED'
         AND bo.created_at >= ${windowStart}::timestamp
         AND bo.created_at <= ${windowEnd}::timestamp
     )
@@ -404,7 +404,7 @@ export async function getManufacturerTopProducts(
       SELECT boi.manufacturer_product_id AS product_id, boi.quantity AS quantity
       FROM b2b_order_items boi
       JOIN b2b_orders bo ON boi.order_id = bo.id
-      WHERE bo.status = 'DELIVERED'
+      WHERE bo.status = 'COMPLETED'
         AND bo.created_at >= ${windowStart}::timestamp
         AND bo.created_at <= ${windowEnd}::timestamp
     )

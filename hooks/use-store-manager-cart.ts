@@ -10,7 +10,7 @@ export type StoreManagerCartItem = {
   quantity: number;
 };
 
-type StoredCart = { items: StoreManagerCartItem[]; note: string };
+type StoredCart = { items: StoreManagerCartItem[]; note: string; salesCode: string; salesPersonName: string };
 
 const EVENT = 'jf_store_manager_cart_change';
 
@@ -19,15 +19,17 @@ function cartKey(kind: 'kiosk' | 'restock', branchId: string) {
 }
 
 function read(key: string): StoredCart {
-  if (typeof window === 'undefined') return { items: [], note: '' };
+  if (typeof window === 'undefined') return { items: [], note: '', salesCode: '', salesPersonName: '' };
   try {
     const stored = JSON.parse(localStorage.getItem(key) ?? 'null') as Partial<StoredCart> | null;
     return {
       items: Array.isArray(stored?.items) ? stored.items : [],
       note: typeof stored?.note === 'string' ? stored.note : '',
+      salesCode: typeof stored?.salesCode === 'string' ? stored.salesCode : '',
+      salesPersonName: typeof stored?.salesPersonName === 'string' ? stored.salesPersonName : '',
     };
   } catch {
-    return { items: [], note: '' };
+    return { items: [], note: '', salesCode: '', salesPersonName: '' };
   }
 }
 
@@ -43,7 +45,7 @@ function write(key: string, value: StoredCart) {
  */
 function useStoreManagerCart(kind: 'kiosk' | 'restock', branchId: string) {
   const key = useMemo(() => cartKey(kind, branchId), [branchId, kind]);
-  const [cart, setCart] = useState<StoredCart>({ items: [], note: '' });
+  const [cart, setCart] = useState<StoredCart>({ items: [], note: '', salesCode: '', salesPersonName: '' });
 
   useEffect(() => {
     const sync = () => setCart(read(key));
@@ -85,10 +87,21 @@ function useStoreManagerCart(kind: 'kiosk' | 'restock', branchId: string) {
     write(key, { ...read(key), note });
   }, [key]);
 
-  const clear = useCallback(() => write(key, { items: [], note: '' }), [key]);
+  const setSalesCode = useCallback((salesCode: string) => {
+    write(key, { ...read(key), salesCode });
+  }, [key]);
+
+  const setSalesPersonName = useCallback((salesPersonName: string) => {
+    write(key, { ...read(key), salesPersonName });
+  }, [key]);
+
+  const clear = useCallback(() => write(key, { items: [], note: '', salesCode: '', salesPersonName: '' }), [key]);
   const count = cart.items.reduce((total, line) => total + line.quantity, 0);
 
-  return { items: cart.items, note: cart.note, count, add, setQuantity, setNote, clear };
+  return {
+    items: cart.items, note: cart.note, salesCode: cart.salesCode, salesPersonName: cart.salesPersonName,
+    count, add, setQuantity, setNote, setSalesCode, setSalesPersonName, clear,
+  };
 }
 
 export function useStoreManagerKioskCart(branchId: string) {

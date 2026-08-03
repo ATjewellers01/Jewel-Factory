@@ -9,13 +9,14 @@ import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApi, apiSend } from '@/hooks/use-api';
+import { formatOrderStatus } from '@/lib/format';
 import { CUSTOM_ORDER_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
 type Order = {
   id: string; orderNumber: string; storeNameSnapshot: string; storeAddressSnapshot: string;
   category: string; weightGramsMin: string | null; weightGramsMax: string | null; purity: string | null;
   referenceImageUrl: string | null; designNotes: string | null;
-  orderRef: string | null; deliveryDate: string | null; quantity: number | null;
+  orderRef: string | null; deliveryDate: string | null; quantity: string | null;
   meena: string | null; length: string | null; size: string | null;
   broadness: string | null; screw: string | null; sampleWeightGrams: string | null;
   subCategory: string | null;
@@ -32,11 +33,14 @@ function formatWeightRange(min: string | null, max: string | null): string {
 }
 
 const STATUS: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800', CONFIRMED: 'bg-blue-100 text-blue-800',
-  IN_PRODUCTION: 'bg-purple-100 text-purple-800', PACKED: 'bg-indigo-100 text-indigo-800',
-  SHIPPED: 'bg-amber-100 text-amber-800', DELIVERED: 'bg-green-100 text-green-800', CANCELLED: 'bg-red-100 text-red-700',
+  PENDING: 'bg-yellow-100 text-yellow-800', IN_PROCESS: 'bg-blue-100 text-blue-800',
+  GHAT_RECEIVED: 'bg-purple-100 text-purple-800', READY_FOR_DELIVERY: 'bg-indigo-100 text-indigo-800',
+  DISPATCHED: 'bg-amber-100 text-amber-800', COMPLETED: 'bg-green-100 text-green-800', CANCELLED: 'bg-red-100 text-red-700',
 };
-const NEXT: Record<string, string> = { PENDING: 'CONFIRMED', CONFIRMED: 'IN_PRODUCTION', IN_PRODUCTION: 'PACKED', PACKED: 'SHIPPED', SHIPPED: 'DELIVERED' };
+const NEXT: Record<string, string> = {
+  PENDING: 'IN_PROCESS', IN_PROCESS: 'GHAT_RECEIVED', GHAT_RECEIVED: 'READY_FOR_DELIVERY',
+  READY_FOR_DELIVERY: 'DISPATCHED', DISPATCHED: 'COMPLETED',
+};
 
 export default function ManufacturerCustomDesignsPage() {
   const { data, error, loading, reload } = useApi<Order[]>('/api/manufacturer/custom-designs', '/manufacturer/login');
@@ -120,7 +124,7 @@ export default function ManufacturerCustomDesignsPage() {
                   <div><p className="text-xs text-muted-foreground">Store</p><p className="text-sm font-medium text-primary truncate">{o.storeNameSnapshot}</p></div>
                   <div><p className="text-xs text-muted-foreground">Category</p><p className="text-sm">{o.category}{o.subCategory ? ` › ${o.subCategory}` : ''}</p></div>
                   <div className="flex items-start gap-1.5">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{o.status.replace('_', ' ').toLowerCase()}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderStatus(o.status)}</span>
                     {o.karigarCode && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Karigar: {o.karigarCode}</span>}
                   </div>
                 </div>
@@ -162,7 +166,7 @@ export default function ManufacturerCustomDesignsPage() {
                   <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-xs text-blue-700">Customer details are not shared. Ship to the store address above.</div>
                   {NEXT[o.status] && (
                     <Button size="sm" disabled={busy === o.id} onClick={() => advance(o.id, NEXT[o.status])} className="metal-sheen text-[#17120b] font-semibold">
-                      {busy === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Mark as ${NEXT[o.status].replace('_', ' ').toLowerCase()}`}
+                      {busy === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Mark as ${formatOrderStatus(NEXT[o.status])}`}
                     </Button>
                   )}
                 </div>

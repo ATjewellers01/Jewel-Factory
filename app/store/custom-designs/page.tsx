@@ -1,6 +1,7 @@
 'use client';
 
-import { CheckCircle2, XCircle, Loader2, PencilLine, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, PencilLine, ChevronDown, ChevronUp, MessageSquare, Plus } from 'lucide-react';
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
@@ -9,13 +10,14 @@ import { OrderChat } from '@/components/orders/OrderChat';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { useApi, apiPost } from '@/hooks/use-api';
+import { formatOrderStatus } from '@/lib/format';
 import { CUSTOM_REQUEST_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
 type Order = { id: string; status: string; orderNumber: string; trackingNumber: string | null };
 type Request = {
   id: string; customerName: string; customerPhone: string; category: string;
   weightGramsMin: string | null; weightGramsMax: string | null; purity: string | null; designNotes: string | null;
-  orderRef: string | null; deliveryDate: string | null; quantity: number | null;
+  orderRef: string | null; deliveryDate: string | null; quantity: string | null;
   meena: string | null; length: string | null; size: string | null;
   broadness: string | null; screw: string | null; sampleWeightGrams: string | null;
   subCategory: string | null;
@@ -38,9 +40,9 @@ const REQ_STATUS: Record<string, string> = {
   APPROVED: 'bg-blue-50 text-blue-800 border-blue-200',
 };
 const MFR_STATUS: Record<string, string> = {
-  PENDING: 'bg-gray-100 text-gray-700', CONFIRMED: 'bg-blue-100 text-blue-700',
-  IN_PRODUCTION: 'bg-purple-100 text-purple-700', PACKED: 'bg-indigo-100 text-indigo-700',
-  SHIPPED: 'bg-amber-100 text-amber-700', DELIVERED: 'bg-green-100 text-green-700', CANCELLED: 'bg-red-100 text-red-700',
+  PENDING: 'bg-gray-100 text-gray-700', IN_PROCESS: 'bg-blue-100 text-blue-700',
+  GHAT_RECEIVED: 'bg-purple-100 text-purple-700', READY_FOR_DELIVERY: 'bg-indigo-100 text-indigo-700',
+  DISPATCHED: 'bg-amber-100 text-amber-700', COMPLETED: 'bg-green-100 text-green-700', CANCELLED: 'bg-red-100 text-red-700',
 };
 
 export default function StoreCustomDesignsPage() {
@@ -77,9 +79,16 @@ export default function StoreCustomDesignsPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4">
-      <div>
-        <h1 className="text-2xl font-medium tracking-tight">Customised Orders</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Approve to forward specs to the manufacturer (no customer data sent).</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-medium tracking-tight">Customised Orders</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">Approve to forward specs to the manufacturer (no customer data sent).</p>
+        </div>
+        <Link href="/store/custom-designs/new">
+          <Button size="sm" className="metal-sheen text-[#17120b] font-semibold">
+            <Plus className="mr-1 h-3.5 w-3.5" />Place Customised Order
+          </Button>
+        </Link>
       </div>
       {data && data.length > 0 && (
         <OrderFilters
@@ -132,7 +141,7 @@ export default function StoreCustomDesignsPage() {
                       <p className="text-xs text-muted-foreground uppercase tracking-wider">Manufacturer Status</p>
                       <div className="mt-1 flex flex-wrap items-center gap-2">
                         <span className="font-mono text-xs text-muted-foreground">{r.order.orderNumber}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${MFR_STATUS[r.order.status] ?? ''}`}>{r.order.status.replace('_', ' ').toLowerCase()}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${MFR_STATUS[r.order.status] ?? ''}`}>{formatOrderStatus(r.order.status)}</span>
                         {r.order.trackingNumber && <span className="text-xs text-muted-foreground">Tracking: {r.order.trackingNumber}</span>}
                       </div>
                     </div>

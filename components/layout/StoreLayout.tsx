@@ -9,7 +9,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 
-import { JewelleryStoreIcon } from '@/components/icons/JewelleryStoreIcon';
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
 import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
 
@@ -18,7 +17,6 @@ const FALLBACK_STORE_LOGO = '/storeRe-logo.avif';
 // Top navbar — the Retailer's day-to-day browsing/discovery actions, always visible.
 const TOP_NAV = [
   { label: 'Home', href: '/store/home', icon: Home },
-  { label: 'Product Catalogue', href: '/store/manufacturer-catalog', icon: JewelleryStoreIcon },
   { label: 'Similar Design Search', href: '/store/similar-search', icon: Search },
 ];
 
