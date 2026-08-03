@@ -64,7 +64,7 @@ export default function RetailerSimilarSearchPage() {
         </p>
         <h1 className="mt-3 font-display text-3xl font-normal tracking-tight sm:text-4xl">Find similar designs by photo</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Upload a reference photo and discover visually similar pieces from the manufacturer catalog.
+          Upload a reference photo and discover visually similar pieces from the product catalogue.
         </p>
       </div>
 

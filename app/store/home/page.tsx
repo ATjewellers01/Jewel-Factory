@@ -87,7 +87,7 @@ export default function StoreHomePage() {
         </p>
         <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.025em] sm:text-4xl">Browse by category</h1>
         <p className="mt-1.5 max-w-xl text-sm leading-6 text-muted-foreground">
-          Explore the full manufacturer catalogue, then build a restock order.
+          Explore the full product catalogue, then build a restock order.
         </p>
       </header>
 

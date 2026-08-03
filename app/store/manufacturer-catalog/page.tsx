@@ -92,7 +92,7 @@ function CatalogBrowse() {
     <div className="mx-auto w-full max-w-5xl space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-medium tracking-tight">Manufacturer Catalogue</h1>
+          <h1 className="text-2xl font-medium tracking-tight">Product Catalogue</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">Browse designs and place a restock order.</p>
         </div>
         <div className="flex items-center gap-2">

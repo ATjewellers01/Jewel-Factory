@@ -71,7 +71,7 @@ export default function StoreManagerRestockPage() {
   return (
     <CatalogOrderPanel
       title="Restock"
-      subtitle="Order stock for this store from the manufacturer catalog. Goes to Head Office for approval."
+      subtitle="Order stock for this store from the product catalogue. Goes to Head Office for approval."
       placeEndpoint="/api/branch-manager/restock-orders"
       notePlaceholder="Any note for Head Office (optional)…"
       onPlaced={(o) => setPlaced(o.orderNumber ?? 'placed')}

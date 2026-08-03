@@ -18,7 +18,7 @@ const FALLBACK_STORE_LOGO = '/storeRe-logo.avif';
 // Top navbar — the Retailer's day-to-day browsing/discovery actions, always visible.
 const TOP_NAV = [
   { label: 'Home', href: '/store/home', icon: Home },
-  { label: 'Manufacturer Catalogue', href: '/store/manufacturer-catalog', icon: JewelleryStoreIcon },
+  { label: 'Product Catalogue', href: '/store/manufacturer-catalog', icon: JewelleryStoreIcon },
   { label: 'Similar Design Search', href: '/store/similar-search', icon: Search },
 ];
 
@@ -76,7 +76,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
 
   const storeName = store.name || 'Your Store';
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
-  const pageLabel = ALL_NAV.find((item) => isActive(item.href))?.label ?? 'Manufacturer Catalogue';
+  const pageLabel = ALL_NAV.find((item) => isActive(item.href))?.label ?? 'Product Catalogue';
 
   useDocumentIdentity(pageLabel, { storeName, logoUrl: store.logoUrl });
 

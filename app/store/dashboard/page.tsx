@@ -47,7 +47,7 @@ export default function StoreDashboardPage() {
             <Card href="/store/custom-designs" icon={PencilLine} label="Customised Orders" total={data.totalCustom} pending={data.pendingCustom} />
           </div>
           <section className="grid gap-3 border-t border-[#e6e0d7] pt-6 sm:grid-cols-2">
-            <QuickLink href="/store/manufacturer-catalog" icon={Gem} title="Manufacturer catalog" description="Browse active designs and prepare a restock order." />
+            <QuickLink href="/store/manufacturer-catalog" icon={Gem} title="Product Catalogue" description="Browse active designs and prepare a restock order." />
             <QuickLink href="/store/branches" icon={Building2} title="Stores and Retailer Users" description="Manage branches, restock PINs, and store teams." />
           </section>
         </>
