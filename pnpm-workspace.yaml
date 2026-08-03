@@ -1,8 +1,12 @@
 packages: []
 
+overrides:
+  dompurify: "3.4.12"
+
 allowBuilds:
   "@prisma/client": true
   "@prisma/engines": true
+  core-js: false
   esbuild: true
   prisma: true
   sharp: true
