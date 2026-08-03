@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Loader2, Package, Sparkles, Check, CheckSquare, Square } from 'lucide-react';
+import { Plus, Loader2, Package, Sparkles, Check, CheckSquare, Square, FileDown } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { WeightRangeSlider } from '@/components/orders/WeightRangeSlider';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
+import { downloadCataloguePdf } from '@/lib/catalogue-pdf';
 import { SORT_OPTIONS, weightExtent, matchWeightRange, sortProducts, type SortOption } from '@/lib/weight-filter';
 import { formatWeight } from '@/lib/format';
 
@@ -52,6 +53,8 @@ export default function ManufacturerCatalogPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [activating, setActivating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState<{ done: number; total: number } | null>(null);
 
   async function load() {
     try {
@@ -123,6 +126,34 @@ export default function ManufacturerCatalogPage() {
     } finally { setActivating(false); }
   }
 
+  // Exports whatever is currently in `filtered` — the same set of cards the
+  // manufacturer is looking at, in the same order.
+  async function downloadPdf() {
+    if (filtered.length === 0 || generatingPdf) return;
+    setGeneratingPdf(true);
+    setPdfProgress({ done: 0, total: filtered.length });
+    try {
+      await downloadCataloguePdf(
+        filtered.map((p) => ({
+          designNumber: p.designNumber,
+          category: p.category,
+          subCategory: p.subCategory,
+          weightGrams: p.weightGrams,
+          size: p.size,
+          karigarCode: p.karigarCode,
+          statusLabel: STATUS_LABELS[p.status] ?? p.status.toLowerCase(),
+          imageUrl: (p.images.find((i) => i.isPrimary) ?? p.images[0])?.secureUrl ?? null,
+        })),
+        (done, total) => setPdfProgress({ done, total }),
+      );
+    } catch {
+      setError('Could not generate the PDF. Please try again.');
+    } finally {
+      setGeneratingPdf(false);
+      setPdfProgress(null);
+    }
+  }
+
   const karigarOptions = Array.from(
     new Set((products ?? []).map((p) => p.karigarCode).filter((k): k is string => !!k)),
   ).sort();
@@ -137,11 +168,25 @@ export default function ManufacturerCatalogPage() {
           <h1 className="text-2xl font-medium tracking-tight">Catalogue</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">Your global design catalog. No price shown — Gold only.</p>
         </div>
-        <Link href="/manufacturer/catalog/new">
-          <Button className="metal-sheen text-[#17120b] font-semibold">
-            <Plus className="mr-1.5 h-4 w-4" /> Add Design
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={downloadPdf}
+            disabled={generatingPdf || filtered.length === 0}
+            title="Download the currently filtered list as a PDF"
+          >
+            {generatingPdf ? (
+              <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />{pdfProgress ? `${pdfProgress.done}/${pdfProgress.total}` : 'Generating…'}</>
+            ) : (
+              <><FileDown className="mr-1.5 h-4 w-4" /> Download PDF</>
+            )}
           </Button>
-        </Link>
+          <Link href="/manufacturer/catalog/new">
+            <Button className="metal-sheen text-[#17120b] font-semibold">
+              <Plus className="mr-1.5 h-4 w-4" /> Add Design
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
