@@ -154,6 +154,7 @@ export default function StoreManagerSearchPage() {
                   name: product.designNumber,
                   designNumber: product.designNumber,
                   imageUrl: product.images.find((i) => i.isPrimary)?.secureUrl,
+                  purity: product.purity ?? undefined,
                 })}
                 onSetQuantity={(next) => kioskCart.setQuantity(product.id, next)}
               />

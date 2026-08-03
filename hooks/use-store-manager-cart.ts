@@ -8,6 +8,7 @@ export type StoreManagerCartItem = {
   designNumber?: string;
   imageUrl?: string;
   quantity: number;
+  purity?: string;
 };
 
 type StoredCart = { items: StoreManagerCartItem[]; note: string; salesCode: string; salesPersonName: string };
@@ -83,6 +84,11 @@ function useStoreManagerCart(kind: 'kiosk' | 'restock', branchId: string) {
     write(key, { ...current, items });
   }, [key]);
 
+  const setItemPurity = useCallback((productId: string, purity: string) => {
+    const current = read(key);
+    write(key, { ...current, items: current.items.map((line) => line.productId === productId ? { ...line, purity } : line) });
+  }, [key]);
+
   const setNote = useCallback((note: string) => {
     write(key, { ...read(key), note });
   }, [key]);
@@ -100,7 +106,7 @@ function useStoreManagerCart(kind: 'kiosk' | 'restock', branchId: string) {
 
   return {
     items: cart.items, note: cart.note, salesCode: cart.salesCode, salesPersonName: cart.salesPersonName,
-    count, add, setQuantity, setNote, setSalesCode, setSalesPersonName, clear,
+    count, add, setQuantity, setItemPurity, setNote, setSalesCode, setSalesPersonName, clear,
   };
 }
 

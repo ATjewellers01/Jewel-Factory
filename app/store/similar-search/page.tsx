@@ -152,6 +152,7 @@ export default function RetailerSimilarSearchPage() {
                   name: product.designNumber,
                   designNumber: product.designNumber,
                   imageUrl: product.images.find((i) => i.isPrimary)?.secureUrl,
+                  purity: product.purity ?? undefined,
                 })}
                 onSetQuantity={(next) => (next <= 0 ? cart.remove(product.id) : cart.setQty(product.id, next))}
               />

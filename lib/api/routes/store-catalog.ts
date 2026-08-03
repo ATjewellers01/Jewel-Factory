@@ -58,7 +58,7 @@ storeCatalogRoutes.delete('/favorites/:productId', storeGuard, async (c) => {
 const OrderBody = z.object({
   notes: z.string().optional(),
   items: z
-    .array(z.object({ manufacturerProductId: z.string().uuid(), quantity: z.number().int().positive() }))
+    .array(z.object({ manufacturerProductId: z.string().uuid(), quantity: z.number().int().positive(), purity: z.string().max(40).optional() }))
     .min(1),
 });
 
@@ -81,7 +81,7 @@ storeCatalogRoutes.post('/orders', storeGuard, zValidator('json', OrderBody), as
   const products = await prisma.manufacturerProduct.findMany({
     where: { id: { in: body.items.map((i) => i.manufacturerProductId) }, status: 'ACTIVE' },
     select: {
-      id: true, name: true, designNumber: true,
+      id: true, name: true, designNumber: true, purity: true,
       images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], take: 1, select: { secureUrl: true } },
     },
   });
@@ -106,6 +106,7 @@ storeCatalogRoutes.post('/orders', storeGuard, zValidator('json', OrderBody), as
         productNameSnapshot: p.name ?? p.designNumber,
         productDesignSnapshot: p.designNumber,
         productImageSnapshot: p.images[0]?.secureUrl,
+        purity: i.purity || p.purity,
       };
     }),
   });

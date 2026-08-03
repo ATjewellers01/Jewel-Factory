@@ -24,6 +24,7 @@ const MFR_STATUS: Record<string, string> = {
 type Item = {
   id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; quantity: number;
   status: string;
+  purity: string | null;
   product: OrderItemProductSafe | null;
 };
 type BaseOrder = {
@@ -153,6 +154,7 @@ export function BranchOrderList({ kind, endpoint }: { kind: BranchOrderKind; end
                             {it.product.category ?? '—'}
                             {it.product.subCategory ? ` › ${it.product.subCategory}` : ''}
                             {it.product.weightGrams != null ? ` · ${it.product.weightGrams}g` : ''}
+                            {it.purity ? ` · ${it.purity}` : ''}
                           </span>
                         )}
                       </span>

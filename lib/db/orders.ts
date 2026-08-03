@@ -13,6 +13,7 @@ export type KioskItemInput = {
   productImageSnapshot?: string;
   categorySnapshot?: string;
   quantity: number;
+  purity?: string | null;
 };
 
 export async function placeKioskOrder(input: {
@@ -65,6 +66,7 @@ export async function placeKioskOrder(input: {
           productImageSnapshot: i.productImageSnapshot ?? null,
           categorySnapshot: i.categorySnapshot ?? null,
           quantity: i.quantity,
+          purity: i.purity ?? null,
         })),
       },
       history: { create: { status: 'PENDING', note: 'Order placed at kiosk', changedBy: 'system' } },
@@ -286,7 +288,7 @@ export async function placeB2bOrder(input: {
   // it to approve, so its route passes false — pre-approved, goes straight to
   // the manufacturer queue.
   pendingManagerApproval?: boolean;
-  items: { manufacturerProductId: string; quantity: number; productNameSnapshot?: string; productImageSnapshot?: string; productDesignSnapshot?: string }[];
+  items: { manufacturerProductId: string; quantity: number; productNameSnapshot?: string; productImageSnapshot?: string; productDesignSnapshot?: string; purity?: string | null }[];
 }) {
   const totalItems = input.items.reduce((s, i) => s + i.quantity, 0);
   const preApproved = input.pendingManagerApproval === false;
@@ -310,6 +312,7 @@ export async function placeB2bOrder(input: {
           productNameSnapshot: i.productNameSnapshot ?? null,
           productImageSnapshot: i.productImageSnapshot ?? null,
           productDesignSnapshot: i.productDesignSnapshot ?? null,
+          purity: i.purity ?? null,
         })),
       },
       history: { create: { status: 'PENDING', note: preApproved ? 'Order placed (auto-approved — placed directly by Retailer)' : 'Order placed' } },

@@ -483,6 +483,10 @@ model B2bOrderItem {
   productNameSnapshot   String?             @map("product_name_snapshot")
   productImageSnapshot  String?             @map("product_image_snapshot")
   productDesignSnapshot String?             @map("product_design_snapshot")
+  // Melting/purity chosen for THIS line — defaults to the product's own purity
+  // in the UI, but overridable per order since the same design is sometimes
+  // wanted in a different melting. Null on older rows placed before this field.
+  purity                String?
   // Per-line status — see the matching note on KioskOrderItem.status.
   status                OrderStatus         @default(PENDING)
   createdAt             DateTime            @default(now()) @map("created_at")
@@ -579,6 +583,8 @@ model KioskOrderItem {
   productImageSnapshot  String?    @map("product_image_snapshot")
   categorySnapshot      String?    @map("category_snapshot")
   quantity              Int
+  // Melting/purity chosen for THIS line — see the matching note on B2bOrderItem.purity.
+  purity                String?
   // Per-line status — a single order can have products at different stages
   // (e.g. one piece Ghat Received while another is Dispatched). Independent
   // of the order-level `status`, which the manufacturer still advances too.

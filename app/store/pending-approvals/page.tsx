@@ -12,6 +12,7 @@ import { OrderChat } from '@/components/orders/OrderChat';
 
 type Item = {
   id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; quantity: number;
+  purity?: string | null;
   product: OrderItemProductSafe | null;
 };
 type KioskOrder = { id: string; orderNumber: string; customerName: string | null; branchNameSnapshot: string | null; requirementNote: string | null; totalItems: number; pickupStore: boolean; createdAt: string; items: Item[] };
@@ -198,6 +199,7 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
                     {it.product.category ?? '—'}
                     {it.product.subCategory ? ` › ${it.product.subCategory}` : ''}
                     {it.product.weightGrams != null ? ` · ${it.product.weightGrams}g` : ''}
+                    {it.purity ? ` · ${it.purity}` : ''}
                   </span>
                 )}
               </span>

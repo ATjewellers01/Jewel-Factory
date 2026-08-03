@@ -198,7 +198,7 @@ const KioskOrderBody = z.object({
   requirementNote: z.string().max(2000).optional(),
   salesCode: z.string().max(60).optional(),
   salesPersonName: z.string().max(120).optional(),
-  items: z.array(z.object({ manufacturerProductId: z.string().uuid(), quantity: z.number().int().positive() })).min(1),
+  items: z.array(z.object({ manufacturerProductId: z.string().uuid(), quantity: z.number().int().positive(), purity: z.string().max(40).optional() })).min(1),
 });
 
 branchManagerRoutes.post('/kiosk-orders', branchManagerGuard, zValidator('json', KioskOrderBody), async (c) => {
@@ -213,7 +213,7 @@ branchManagerRoutes.post('/kiosk-orders', branchManagerGuard, zValidator('json',
   const body = c.req.valid('json');
   const products = await prisma.manufacturerProduct.findMany({
     where: { id: { in: body.items.map((i) => i.manufacturerProductId) }, status: 'ACTIVE' },
-    select: { id: true, name: true, designNumber: true, category: true, images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], take: 1, select: { secureUrl: true } } },
+    select: { id: true, name: true, designNumber: true, category: true, purity: true, images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], take: 1, select: { secureUrl: true } } },
   });
   const byId = new Map(products.map((p) => [p.id, p]));
   for (const it of body.items) if (!byId.has(it.manufacturerProductId)) return sendError(c, 'not_found', 'One or more products are unavailable.', 404);
@@ -233,7 +233,11 @@ branchManagerRoutes.post('/kiosk-orders', branchManagerGuard, zValidator('json',
     salesPersonName: body.salesPersonName,
     items: body.items.map((i) => {
       const p = byId.get(i.manufacturerProductId)!;
-      return { manufacturerProductId: i.manufacturerProductId, productNameSnapshot: p.name ?? p.designNumber, productImageSnapshot: p.images[0]?.secureUrl, categorySnapshot: p.category ?? undefined, quantity: i.quantity };
+      return {
+        manufacturerProductId: i.manufacturerProductId, productNameSnapshot: p.name ?? p.designNumber,
+        productImageSnapshot: p.images[0]?.secureUrl, categorySnapshot: p.category ?? undefined, quantity: i.quantity,
+        purity: i.purity || p.purity,
+      };
     }),
   });
   return sendData(c, order, 201);
@@ -361,7 +365,7 @@ branchManagerRoutes.delete('/restock/pin', branchManagerGuard, async (c) => {
 const RestockBody = z.object({
   notes: z.string().optional(),
   requirementNote: z.string().max(2000).optional(),
-  items: z.array(z.object({ manufacturerProductId: z.string().uuid(), quantity: z.number().int().positive() })).min(1),
+  items: z.array(z.object({ manufacturerProductId: z.string().uuid(), quantity: z.number().int().positive(), purity: z.string().max(40).optional() })).min(1),
 });
 
 branchManagerRoutes.post('/restock-orders', branchManagerGuard, zValidator('json', RestockBody), async (c) => {
@@ -376,7 +380,7 @@ branchManagerRoutes.post('/restock-orders', branchManagerGuard, zValidator('json
   const body = c.req.valid('json');
   const products = await prisma.manufacturerProduct.findMany({
     where: { id: { in: body.items.map((i) => i.manufacturerProductId) }, status: 'ACTIVE' },
-    select: { id: true, name: true, designNumber: true, images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], take: 1, select: { secureUrl: true } } },
+    select: { id: true, name: true, designNumber: true, purity: true, images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], take: 1, select: { secureUrl: true } } },
   });
   const byId = new Map(products.map((p) => [p.id, p]));
   for (const it of body.items) if (!byId.has(it.manufacturerProductId)) return sendError(c, 'not_found', 'One or more products are unavailable.', 404);
@@ -391,7 +395,11 @@ branchManagerRoutes.post('/restock-orders', branchManagerGuard, zValidator('json
     requirementNote: body.requirementNote,
     items: body.items.map((i) => {
       const p = byId.get(i.manufacturerProductId)!;
-      return { manufacturerProductId: i.manufacturerProductId, quantity: i.quantity, productNameSnapshot: p.name ?? p.designNumber, productDesignSnapshot: p.designNumber, productImageSnapshot: p.images[0]?.secureUrl };
+      return {
+        manufacturerProductId: i.manufacturerProductId, quantity: i.quantity, productNameSnapshot: p.name ?? p.designNumber,
+        productDesignSnapshot: p.designNumber, productImageSnapshot: p.images[0]?.secureUrl,
+        purity: i.purity || p.purity,
+      };
     }),
   });
   return sendData(c, order, 201);

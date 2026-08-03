@@ -65,6 +65,9 @@ export function categorySlug(name: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
+/** Melting/purity options — shared by every form that captures a purity choice. */
+export const PURITIES = ['24K', '22K', '18K', '14K', '916', '750', '585'];
+
 /**
  * Legacy → new mapping for the one-off migration of pre-existing products that
  * used the old flat 10-category list. `null` = leave the product's value as-is.

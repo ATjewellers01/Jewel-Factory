@@ -13,7 +13,7 @@ import { StarRating } from '@/components/ui/StarRating';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useStoreManagerKioskCart, useStoreManagerRestockCart } from '@/hooks/use-store-manager-cart';
-import { subCategoriesFor } from '@/lib/categories';
+import { PURITIES, subCategoriesFor } from '@/lib/categories';
 import { formatWeight } from '@/lib/format';
 import { SORT_OPTIONS, weightExtent, matchWeightRange, sortByWeight, type SortOption } from '@/lib/weight-filter';
 import { useStoreManager } from './store-manager-context';
@@ -178,10 +178,14 @@ export function CatalogOrderPanel({
       name: p.designNumber,
       designNumber: p.designNumber,
       imageUrl: (p.images.find((i) => i.isPrimary) ?? p.images[0])?.secureUrl,
+      purity: p.purity ?? undefined,
     });
   }
   function setQty(id: string, qty: number) {
     orderCart.setQuantity(id, qty);
+  }
+  function setPurity(id: string, purity: string) {
+    orderCart.setItemPurity(id, purity);
   }
 
   async function place() {
@@ -198,7 +202,7 @@ export function CatalogOrderPanel({
           salesCode: orderCart.salesCode.trim() || undefined,
           salesPersonName: orderCart.salesPersonName.trim() || undefined,
         }),
-        items: cart.map((l) => ({ manufacturerProductId: l.productId, quantity: l.quantity })),
+        items: cart.map((l) => ({ manufacturerProductId: l.productId, quantity: l.quantity, purity: l.purity || undefined })),
       })) as { orderNumber?: string };
       orderCart.clear(); setShowCart(false);
       onPlaced(order);
@@ -294,41 +298,57 @@ export function CatalogOrderPanel({
                 {cart.map((l) => {
                   const fullProduct = (data ?? []).find((p) => p.id === l.productId);
                   return (
-                    <div key={l.productId} className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => fullProduct && setDetail(fullProduct)}
-                        disabled={!fullProduct}
-                        className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
-                      >
-                        {l.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={l.imageUrl} alt="" className="h-16 w-16 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
-                        ) : <div className="h-16 w-16 shrink-0 rounded-lg border bg-muted" />}
-                        <span className="min-w-0">
-                          <span className={`block truncate text-base font-medium ${fullProduct ? 'hover:text-[#b68a3e]' : ''}`}>{l.designNumber ?? l.name}</span>
-                          {/* Category truncates, weight/size gets its own line: on a
-                              phone the old single line clipped to "Bangles › Fancy H…"
-                              and dropped the weight — the part a jeweller needs. */}
-                          <span className="block truncate text-sm text-muted-foreground">
-                            {fullProduct?.category ?? '—'}
-                            {fullProduct?.subCategory ? ` › ${fullProduct.subCategory}` : ''}
-                          </span>
-                          {(formatWeight(fullProduct?.weightGrams) || fullProduct?.size) && (
-                            <span className="block text-sm font-medium text-muted-foreground">
-                              {formatWeight(fullProduct?.weightGrams)}
-                              {formatWeight(fullProduct?.weightGrams) && fullProduct?.size ? ' · ' : ''}
-                              {fullProduct?.size ? `Size ${fullProduct.size}` : ''}
+                    <div key={l.productId} className="space-y-1.5">
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => fullProduct && setDetail(fullProduct)}
+                          disabled={!fullProduct}
+                          className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
+                        >
+                          {l.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={l.imageUrl} alt="" className="h-16 w-16 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
+                          ) : <div className="h-16 w-16 shrink-0 rounded-lg border bg-muted" />}
+                          <span className="min-w-0">
+                            <span className={`block truncate text-base font-medium ${fullProduct ? 'hover:text-[#b68a3e]' : ''}`}>{l.designNumber ?? l.name}</span>
+                            {/* Category truncates, weight/size gets its own line: on a
+                                phone the old single line clipped to "Bangles › Fancy H…"
+                                and dropped the weight — the part a jeweller needs. */}
+                            <span className="block truncate text-sm text-muted-foreground">
+                              {fullProduct?.category ?? '—'}
+                              {fullProduct?.subCategory ? ` › ${fullProduct.subCategory}` : ''}
                             </span>
-                          )}
-                        </span>
-                      </button>
-                      <div className="flex w-[104px] shrink-0 items-center justify-center gap-1">
-                        <button onClick={() => setQty(l.productId, l.quantity - 1)} aria-label="One less" className="rounded border p-1"><Minus className="h-3 w-3" /></button>
-                        <span className="w-8 text-center text-sm tabular-nums">{l.quantity}</span>
-                        <button onClick={() => setQty(l.productId, l.quantity + 1)} aria-label="One more" className="rounded border p-1"><Plus className="h-3 w-3" /></button>
+                            {(formatWeight(fullProduct?.weightGrams) || fullProduct?.size) && (
+                              <span className="block text-sm font-medium text-muted-foreground">
+                                {formatWeight(fullProduct?.weightGrams)}
+                                {formatWeight(fullProduct?.weightGrams) && fullProduct?.size ? ' · ' : ''}
+                                {fullProduct?.size ? `Size ${fullProduct.size}` : ''}
+                              </span>
+                            )}
+                          </span>
+                        </button>
+                        <div className="flex w-[104px] shrink-0 items-center justify-center gap-1">
+                          <button onClick={() => setQty(l.productId, l.quantity - 1)} aria-label="One less" className="rounded border p-1"><Minus className="h-3 w-3" /></button>
+                          <span className="w-8 text-center text-sm tabular-nums">{l.quantity}</span>
+                          <button onClick={() => setQty(l.productId, l.quantity + 1)} aria-label="One more" className="rounded border p-1"><Plus className="h-3 w-3" /></button>
+                        </div>
+                        <button onClick={() => setQty(l.productId, 0)} className="text-muted-foreground hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
                       </div>
-                      <button onClick={() => setQty(l.productId, 0)} className="text-muted-foreground hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                      {/* Melting/purity defaults to the product's own purity but is
+                          overridable per line — the same design is sometimes wanted
+                          in a different melting. Travels with the order to the manufacturer. */}
+                      <div className="flex items-center gap-2 pl-[76px]">
+                        <span className="text-[11px] text-muted-foreground">Melting/Purity:</span>
+                        <select
+                          value={l.purity ?? ''}
+                          onChange={(e) => setPurity(l.productId, e.target.value)}
+                          className="h-7 rounded-md border border-input bg-transparent px-2 text-xs"
+                        >
+                          <option value="">—</option>
+                          {PURITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      </div>
                     </div>
                   );
                 })}

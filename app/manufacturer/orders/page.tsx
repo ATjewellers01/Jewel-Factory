@@ -34,6 +34,7 @@ type Row = {
 type Item = {
   id: string; productNameSnapshot: string; productImageSnapshot: string | null; categorySnapshot: string | null; quantity: number;
   status: string;
+  purity: string | null;
   product: OrderItemProduct | null;
 };
 type Detail = {
@@ -143,6 +144,7 @@ export default function ManufacturerOrdersPage() {
           categorySnapshot: null,
           quantity: i.quantity as number,
           status: (i.status as string) ?? 'PENDING',
+          purity: (i.purity as string | null) ?? null,
           product: (i.manufacturerProduct as OrderItemProduct | null) ?? null,
         })),
       });
@@ -270,6 +272,7 @@ export default function ManufacturerOrdersPage() {
                                   {it.product?.category ?? it.categorySnapshot ?? '—'}
                                   {it.product?.subCategory ? ` › ${it.product.subCategory}` : ''}
                                   {it.product?.weightGrams != null ? ` · ${it.product.weightGrams}g` : ''}
+                                  {it.purity ? ` · ${it.purity}` : ''}
                                 </span>
                                 {it.product?.karigarCode && (
                                   <span className="mt-0.5 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Karigar: {it.product.karigarCode}</span>

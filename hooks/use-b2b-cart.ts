@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 const KEY = 'jf_b2b_cart';
 
-export type B2bCartItem = { productId: string; name: string; designNumber: string; imageUrl?: string; quantity: number };
+export type B2bCartItem = { productId: string; name: string; designNumber: string; imageUrl?: string; quantity: number; purity?: string };
 
 function read(): B2bCartItem[] {
   if (typeof window === 'undefined') return [];
@@ -34,9 +34,12 @@ export function useB2bCart() {
     const cur = read().map((i) => (i.productId === productId ? { ...i, quantity: Math.max(1, qty) } : i));
     write(cur);
   }, []);
+  const setPurity = useCallback((productId: string, purity: string) => {
+    write(read().map((i) => (i.productId === productId ? { ...i, purity } : i)));
+  }, []);
   const remove = useCallback((productId: string) => write(read().filter((i) => i.productId !== productId)), []);
   const clear = useCallback(() => write([]), []);
 
   const count = items.reduce((s, i) => s + i.quantity, 0);
-  return { items, add, setQty, remove, clear, count };
+  return { items, add, setQty, setPurity, remove, clear, count };
 }

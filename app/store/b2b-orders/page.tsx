@@ -31,6 +31,7 @@ type Item = {
   id: string; productNameSnapshot: string | null; productImageSnapshot: string | null;
   productDesignSnapshot?: string | null; categorySnapshot?: string | null; quantity: number;
   status: string;
+  purity: string | null;
   product: OrderItemProductSafe | null;
 };
 
@@ -213,6 +214,7 @@ export default function StoreCatalogueOrdersPage() {
                             {it.product?.category ?? '—'}
                             {it.product?.subCategory ? ` › ${it.product.subCategory}` : ''}
                             {it.product?.weightGrams != null ? ` · ${it.product.weightGrams}g` : ''}
+                            {it.purity ? ` · ${it.purity}` : ''}
                           </p>
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-1">

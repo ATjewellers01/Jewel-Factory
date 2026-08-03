@@ -7,6 +7,7 @@ const KEY = 'jf_guest_cart';
 export type GuestCartItem = {
   productId: string; name: string; imageUrl?: string; quantity: number;
   category?: string | null; subCategory?: string | null; weightGrams?: string | number | null;
+  purity?: string;
 };
 
 function read(): GuestCartItem[] {
@@ -36,9 +37,12 @@ export function useGuestCart() {
   const setQty = useCallback((productId: string, qty: number) => {
     write(read().map((i) => (i.productId === productId ? { ...i, quantity: Math.max(1, qty) } : i)));
   }, []);
+  const setPurity = useCallback((productId: string, purity: string) => {
+    write(read().map((i) => (i.productId === productId ? { ...i, purity } : i)));
+  }, []);
   const remove = useCallback((productId: string) => write(read().filter((i) => i.productId !== productId)), []);
   const clear = useCallback(() => write([]), []);
 
   const count = items.reduce((s, i) => s + i.quantity, 0);
-  return { items, add, setQty, remove, clear, count };
+  return { items, add, setQty, setPurity, remove, clear, count };
 }
