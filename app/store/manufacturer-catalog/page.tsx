@@ -14,6 +14,7 @@ import { useB2bCart } from '@/hooks/use-b2b-cart';
 import { useFavorites } from '@/hooks/use-favorites';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 import { formatWeight } from '@/lib/format';
+import { WEIGHT_SORT_OPTIONS, deriveWeightBands, matchWeightBand, sortByWeight, type WeightSort } from '@/lib/weight-filter';
 
 type Img = { secureUrl: string; isPrimary: boolean };
 type Product = { id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; size?: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
@@ -41,6 +42,8 @@ function CatalogBrowse() {
   const [category, setCategory] = useState(params.get('category') ?? '');
   const [subCategory, setSubCategory] = useState(params.get('subCategory') ?? '');
   const [size, setSize] = useState('');
+  const [weightBand, setWeightBand] = useState('');
+  const [weightSort, setWeightSort] = useState<WeightSort>('');
   const [showCart, setShowCart] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [notes, setNotes] = useState('');
@@ -61,13 +64,23 @@ function CatalogBrowse() {
     })();
   }, []);
 
-  const filtered = (data ?? []).filter((p) => {
+  // Everything except the weight band, so the bands below describe the set the
+  // retailer is actually looking at (Bangles run 10-100 g, pendants 1-8 g — one
+  // fixed range would leave most options empty).
+  const preWeight = (data ?? []).filter((p) => {
     const matchSearch = !search || p.designNumber.toLowerCase().includes(search.toLowerCase());
     const matchCat = !category || p.category === category;
     const matchSub = !subCategory || p.subCategory === subCategory;
     const matchSize = !size || p.size === size;
     return matchSearch && matchCat && matchSub && matchSize;
   });
+
+  const weightBands = deriveWeightBands(preWeight.map((p) => p.weightGrams));
+  const filtered = sortByWeight(
+    preWeight.filter((p) => matchWeightBand(p.weightGrams, weightBand, weightBands)),
+    weightSort,
+    (p) => p.weightGrams,
+  );
 
   const sizeOptions = Array.from(
     new Set((data ?? []).map((p) => p.size).filter((s): s is string => !!s)),
@@ -123,8 +136,17 @@ function CatalogBrowse() {
             {sizeOptions.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         )}
-        {(category || subCategory || search || size) && (
-          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setSize(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+        {weightBands.length > 0 && (
+          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={weightBand} onChange={(e) => setWeightBand(e.target.value)} aria-label="Filter by weight">
+            <option value="">All weights</option>
+            {weightBands.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
+          </select>
+        )}
+        <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={weightSort} onChange={(e) => setWeightSort(e.target.value as WeightSort)} aria-label="Sort by weight">
+          {WEIGHT_SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        {(category || subCategory || search || size || weightBand || weightSort) && (
+          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setSize(''); setWeightBand(''); setWeightSort(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
         )}
       </div>
 
@@ -159,9 +181,14 @@ function CatalogBrowse() {
                         <span className="block truncate text-xs text-muted-foreground">
                           {f.manufacturerProduct.category ?? '—'}
                           {f.manufacturerProduct.subCategory ? ` › ${f.manufacturerProduct.subCategory}` : ''}
-                          {f.manufacturerProduct.weightGrams != null ? ` · ${f.manufacturerProduct.weightGrams}g` : ''}
-                          {f.manufacturerProduct.size ? ` · Size ${f.manufacturerProduct.size}` : ''}
                         </span>
+                        {(formatWeight(f.manufacturerProduct.weightGrams) || f.manufacturerProduct.size) && (
+                          <span className="block text-xs font-medium text-muted-foreground">
+                            {formatWeight(f.manufacturerProduct.weightGrams)}
+                            {formatWeight(f.manufacturerProduct.weightGrams) && f.manufacturerProduct.size ? ' · ' : ''}
+                            {f.manufacturerProduct.size ? `Size ${f.manufacturerProduct.size}` : ''}
+                          </span>
+                        )}
                       </span>
                     </button>
                     <div className="flex items-center gap-1">
@@ -227,9 +254,14 @@ function CatalogBrowse() {
                           <span className="block truncate text-xs text-muted-foreground">
                             {fullProduct?.category ?? '—'}
                             {fullProduct?.subCategory ? ` › ${fullProduct.subCategory}` : ''}
-                            {fullProduct?.weightGrams != null ? ` · ${fullProduct.weightGrams}g` : ''}
-                            {fullProduct?.size ? ` · Size ${fullProduct.size}` : ''}
                           </span>
+                          {(formatWeight(fullProduct?.weightGrams) || fullProduct?.size) && (
+                            <span className="block text-xs font-medium text-muted-foreground">
+                              {formatWeight(fullProduct?.weightGrams)}
+                              {formatWeight(fullProduct?.weightGrams) && fullProduct?.size ? ' · ' : ''}
+                              {fullProduct?.size ? `Size ${fullProduct.size}` : ''}
+                            </span>
+                          )}
                         </span>
                       </button>
                       <div className="flex w-[104px] shrink-0 items-center justify-center gap-1">

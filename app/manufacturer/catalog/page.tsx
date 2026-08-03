@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
+import { WEIGHT_SORT_OPTIONS, deriveWeightBands, matchWeightBand, sortByWeight, type WeightSort } from '@/lib/weight-filter';
 import { formatWeight } from '@/lib/format';
 
 type ProductImage = { id: string; secureUrl: string; isPrimary: boolean };
@@ -44,6 +45,8 @@ export default function ManufacturerCatalogPage() {
   const [subCategory, setSubCategory] = useState('');
   const [karigarCode, setKarigarCode] = useState('');
   const [size, setSize] = useState('');
+  const [weightBand, setWeightBand] = useState('');
+  const [weightSort, setWeightSort] = useState<WeightSort>('');
   const [status, setStatus] = useState<'' | 'ACTIVE' | 'DRAFT' | 'ARCHIVED'>('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [activating, setActivating] = useState(false);
@@ -63,7 +66,8 @@ export default function ManufacturerCatalogPage() {
 
   useEffect(() => { void load(); }, []);
 
-  const filtered = (products ?? []).filter((p) => {
+  // Everything except the weight band, so the bands describe the visible set.
+  const preWeight = (products ?? []).filter((p) => {
     const matchSearch =
       !search ||
       p.designNumber.toLowerCase().includes(search.toLowerCase()) ||
@@ -75,6 +79,13 @@ export default function ManufacturerCatalogPage() {
     const matchStatus = !status || p.status === status;
     return matchSearch && matchCat && matchSub && matchKarigar && matchSize && matchStatus;
   });
+
+  const weightBands = deriveWeightBands(preWeight.map((p) => p.weightGrams));
+  const filtered = sortByWeight(
+    preWeight.filter((p) => matchWeightBand(p.weightGrams, weightBand, weightBands)),
+    weightSort,
+    (p) => p.weightGrams,
+  );
 
   // Selecting designs only makes sense while a single status is in view — the
   // bulk action is "make these active", so it's offered on the Inactive filter.
@@ -172,6 +183,25 @@ export default function ManufacturerCatalogPage() {
             {sizeOptions.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         )}
+        {weightBands.length > 0 && (
+          <select
+            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+            value={weightBand}
+            onChange={(e) => setWeightBand(e.target.value)}
+            aria-label="Filter by weight"
+          >
+            <option value="">All weights</option>
+            {weightBands.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
+          </select>
+        )}
+        <select
+          className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+          value={weightSort}
+          onChange={(e) => setWeightSort(e.target.value as WeightSort)}
+          aria-label="Sort by weight"
+        >
+          {WEIGHT_SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
         <select
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
           value={status}
@@ -184,7 +214,7 @@ export default function ManufacturerCatalogPage() {
           <option value="ARCHIVED">Archived</option>
         </select>
         {(category || subCategory || search || karigarCode || size || status) && (
-          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setKarigarCode(''); setSize(''); setStatus(''); setSelected(new Set()); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setKarigarCode(''); setSize(''); setStatus(''); setWeightBand(''); setWeightSort(''); setSelected(new Set()); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
         )}
       </div>
 

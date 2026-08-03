@@ -47,6 +47,23 @@ export default function StoreHomePage() {
     return map;
   }, [products]);
 
+  // Live design counts per category and per "Category|Sub" pair, so the tiles and
+  // the sub-category panel can show how much stock actually sits behind each one
+  // instead of just how many sub-categories the taxonomy defines.
+  const counts = useMemo(() => {
+    const byCategory: Record<string, number> = {};
+    const bySub: Record<string, number> = {};
+    for (const p of products) {
+      if (!p.category) continue;
+      byCategory[p.category] = (byCategory[p.category] ?? 0) + 1;
+      if (p.subCategory) {
+        const key = `${p.category}|${p.subCategory}`;
+        bySub[key] = (bySub[key] ?? 0) + 1;
+      }
+    }
+    return { byCategory, bySub };
+  }, [products]);
+
   // Show categories that actually have stock first, but keep the rest visible
   // so the retailer can see the full range on offer.
   const orderedCategories = useMemo(() => {
@@ -104,6 +121,7 @@ export default function StoreHomePage() {
           <CategoryMosaic
             categories={orderedCategories}
             coverByCategory={coverByCategory}
+            countByCategory={counts.byCategory}
             onSelect={handleCategoryClick}
           />
         </>
@@ -113,6 +131,8 @@ export default function StoreHomePage() {
         <SubCategoryPanel
           category={openCategory}
           cover={coverByCategory[openCategory]}
+          total={counts.byCategory[openCategory] ?? 0}
+          countBySub={counts.bySub}
           onPick={(sub) => openCatalog(openCategory, sub)}
           onViewAll={() => openCatalog(openCategory)}
           onClose={() => setOpenCategory(null)}
@@ -144,7 +164,7 @@ function CatalogueStrip({ products }: { products: Product[] }) {
               // and off the accessibility tree so nothing is announced twice.
               aria-hidden={i >= products.length}
               tabIndex={i >= products.length ? -1 : undefined}
-              className="group/card relative block h-44 w-36 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-black/5 transition-shadow hover:shadow-[0_10px_30px_rgba(31,24,15,0.16)] sm:h-56 sm:w-48 lg:h-64 lg:w-56"
+              className="group/card relative block h-56 w-44 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-black/5 transition-shadow hover:shadow-[0_10px_30px_rgba(31,24,15,0.16)] sm:h-72 sm:w-60 lg:h-[22rem] lg:w-[18rem]"
               title={p.designNumber}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -154,7 +174,7 @@ function CatalogueStrip({ products }: { products: Product[] }) {
                 loading="lazy"
                 className="h-full w-full object-cover transition-transform duration-500 group-hover/card:scale-105"
               />
-              <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-2.5 pb-2 pt-6 text-[11px] font-semibold tabular-nums text-white sm:text-xs">
+              <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-3 pb-2.5 pt-7 text-xs font-semibold tabular-nums text-white sm:text-sm">
                 {p.designNumber}
               </span>
             </Link>
@@ -172,10 +192,11 @@ function CatalogueStrip({ products }: { products: Product[] }) {
  * pattern can't squeeze tiles into unreadable slivers.
  */
 function CategoryMosaic({
-  categories, coverByCategory, onSelect,
+  categories, coverByCategory, countByCategory, onSelect,
 }: {
   categories: string[];
   coverByCategory: Record<string, string>;
+  countByCategory: Record<string, number>;
   onSelect: (category: string) => void;
 }) {
   // A repeating 6-tile rhythm over a 6-column grid, in three tidy rows:
@@ -204,6 +225,12 @@ function CategoryMosaic({
           const { span, height } = RHYTHM[i % RHYTHM.length]!;
           const cover = coverByCategory[category];
           const subs = subCategoriesFor(category);
+          const total = countByCategory[category] ?? 0;
+          // Lead with the design count — that's the stock question — and keep the
+          // collections count as secondary context.
+          const meta = total > 0
+            ? `${total} ${total === 1 ? 'design' : 'designs'}${subs.length > 0 ? ` · ${subs.length} collections` : ''}`
+            : subs.length > 0 ? `${subs.length} collections` : 'View designs';
 
           return (
             <button
@@ -232,9 +259,7 @@ function CategoryMosaic({
                   <span className="block font-display text-lg font-semibold leading-tight text-white drop-shadow-sm sm:text-xl">
                     {category}
                   </span>
-                  <span className="mt-0.5 block text-[11px] text-white/70">
-                    {subs.length > 0 ? `${subs.length} collections` : 'View designs'}
-                  </span>
+                  <span className="mt-0.5 block text-[11px] text-white/70">{meta}</span>
                 </span>
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur-sm transition-colors group-hover:bg-[#c9a84c] group-hover:ring-[#c9a84c]">
                   <ArrowUpRight className="h-4 w-4" />
@@ -250,10 +275,12 @@ function CategoryMosaic({
 
 /** Slide-over listing a category's sub-categories. */
 function SubCategoryPanel({
-  category, cover, onPick, onViewAll, onClose,
+  category, cover, total, countBySub, onPick, onViewAll, onClose,
 }: {
   category: string;
   cover?: string;
+  total: number;
+  countBySub: Record<string, number>;
   onPick: (sub: string) => void;
   onViewAll: () => void;
   onClose: () => void;
@@ -285,22 +312,35 @@ function SubCategoryPanel({
           <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/70">Collection</p>
             <h2 className="font-display text-2xl font-semibold text-white">{category}</h2>
+            <p className="mt-0.5 text-xs text-white/75">
+              {total} {total === 1 ? 'design' : 'designs'} · {subs.length} collections
+            </p>
           </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
           <div className="grid grid-cols-2 gap-2.5">
-            {subs.map((sub) => (
-              <button
-                key={sub}
-                type="button"
-                onClick={() => onPick(sub)}
-                className="group flex min-h-[62px] items-center justify-between gap-2 rounded-xl border border-[#e8e0d2] bg-white px-3 py-2.5 text-left text-sm font-medium text-[#37302a] transition-all hover:-translate-y-0.5 hover:border-[#c9a84c] hover:shadow-[0_8px_20px_rgba(31,24,15,0.1)]"
-              >
-                <span className="min-w-0 leading-snug">{sub}</span>
-                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#b39244] opacity-0 transition-opacity group-hover:opacity-100" />
-              </button>
-            ))}
+            {subs.map((sub) => {
+              const n = countBySub[`${category}|${sub}`] ?? 0;
+              return (
+                <button
+                  key={sub}
+                  type="button"
+                  onClick={() => onPick(sub)}
+                  className="group flex min-h-[62px] items-center justify-between gap-2 rounded-xl border border-[#e8e0d2] bg-white px-3 py-2.5 text-left text-sm font-medium text-[#37302a] transition-all hover:-translate-y-0.5 hover:border-[#c9a84c] hover:shadow-[0_8px_20px_rgba(31,24,15,0.1)]"
+                >
+                  <span className="min-w-0">
+                    <span className="block leading-snug">{sub}</span>
+                    {/* A dimmed 0 is more useful than a hidden count — it says
+                        "nothing in stock" rather than leaving the retailer guessing. */}
+                    <span className={`mt-0.5 block text-[11px] font-normal tabular-nums ${n > 0 ? 'text-[#8a7f72]' : 'text-[#bdb3a6]'}`}>
+                      {n} {n === 1 ? 'design' : 'designs'}
+                    </span>
+                  </span>
+                  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#b39244] opacity-0 transition-opacity group-hover:opacity-100" />
+                </button>
+              );
+            })}
           </div>
         </div>
 

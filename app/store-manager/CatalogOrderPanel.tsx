@@ -14,6 +14,7 @@ import { useFavorites } from '@/hooks/use-favorites';
 import { useStoreManagerKioskCart, useStoreManagerRestockCart } from '@/hooks/use-store-manager-cart';
 import { subCategoriesFor } from '@/lib/categories';
 import { formatWeight } from '@/lib/format';
+import { deriveWeightBands, matchWeightBand, sortByWeight, type WeightBand } from '@/lib/weight-filter';
 import { useStoreManager } from './store-manager-context';
 
 type Img = { secureUrl: string; isPrimary: boolean };
@@ -68,7 +69,8 @@ export function CatalogOrderPanel({
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
   const [size, setSize] = useState('');
-  const [sort, setSort] = useState<'relevance' | 'newest' | 'name' | 'popularity'>(showPopularity ? 'popularity' : 'relevance');
+  const [sort, setSort] = useState<'relevance' | 'newest' | 'name' | 'popularity' | 'weight-asc' | 'weight-desc'>(showPopularity ? 'popularity' : 'relevance');
+  const [weightBand, setWeightBand] = useState('');
   const [mobileFilters, setMobileFilters] = useState(false);
   const [showCart, setShowCart] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
@@ -129,13 +131,26 @@ export function CatalogOrderPanel({
     [data],
   );
 
-  const filtered = useMemo(() => {
-    const items = (data ?? []).filter((p) =>
+  // Bands come from the set matching every OTHER filter, so the ranges on offer
+  // describe what's actually on screen (bangles 10-100 g vs pendants 1-8 g).
+  const preWeight = useMemo(
+    () => (data ?? []).filter((p) =>
       (!search || p.designNumber.toLowerCase().includes(search.toLowerCase())) &&
       (!category || p.category === category) &&
       (!subCategory || p.subCategory === subCategory) &&
       (!size || p.size === size),
-    );
+    ),
+    [category, data, search, size, subCategory],
+  );
+
+  const availableWeightBands = useMemo(
+    () => deriveWeightBands(preWeight.map((p) => p.weightGrams)),
+    [preWeight],
+  );
+
+  const filtered = useMemo(() => {
+    const items = preWeight.filter((p) => matchWeightBand(p.weightGrams, weightBand, availableWeightBands));
+    if (sort === 'weight-asc' || sort === 'weight-desc') return sortByWeight(items, sort, (p) => p.weightGrams);
     if (sort === 'newest') return [...items].sort((a, b) => b.designNumber.localeCompare(a.designNumber));
     if (sort === 'name') return [...items].sort((a, b) => a.designNumber.localeCompare(b.designNumber));
     if (sort === 'popularity') {
@@ -146,7 +161,7 @@ export function CatalogOrderPanel({
       });
     }
     return items;
-  }, [category, data, search, size, sort, subCategory, salesMap]);
+  }, [preWeight, availableWeightBands, weightBand, sort, salesMap]);
 
   const cart = orderCart.items;
   const count = orderCart.count;
@@ -235,11 +250,11 @@ export function CatalogOrderPanel({
                 ))}
               </span>
             </div>
-            <div className="relative"><SortAsc className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8174]" /><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="h-9 rounded-lg border border-black/15 bg-white/50 pl-9 pr-8 text-sm">{showPopularity && <option value="popularity">Best sellers</option>}<option value="relevance">Relevance</option><option value="newest">Newest first</option><option value="name">Name</option></select></div>
+            <div className="relative"><SortAsc className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8174]" /><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)} className="h-9 rounded-lg border border-black/15 bg-white/50 pl-9 pr-8 text-sm">{showPopularity && <option value="popularity">Best sellers</option>}<option value="relevance">Relevance</option><option value="newest">Newest first</option><option value="name">Name</option><option value="weight-asc">Weight: light to heavy</option><option value="weight-desc">Weight: heavy to light</option></select></div>
           </div>
         </div>
 
-        {mobileFilters ? <div className="mb-6 rounded-lg border border-black/10 bg-[#fffdf8] p-4 lg:hidden"><CatalogFilters categories={availableCategories} category={category} subCategory={subCategory} size={size} sizes={availableSizes} setCategory={setCategory} setSubCategory={setSubCategory} setSize={setSize} /></div> : null}
+        {mobileFilters ? <div className="mb-6 rounded-lg border border-black/10 bg-[#fffdf8] p-4 lg:hidden"><CatalogFilters categories={availableCategories} category={category} subCategory={subCategory} size={size} sizes={availableSizes} weightBand={weightBand} weightBands={availableWeightBands} setCategory={setCategory} setSubCategory={setSubCategory} setSize={setSize} setWeightBand={setWeightBand} /></div> : null}
         {error ? <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
 
       {showCart && (
@@ -277,12 +292,20 @@ export function CatalogOrderPanel({
                         ) : <div className="h-12 w-12 shrink-0 rounded-lg border bg-muted" />}
                         <span className="min-w-0">
                           <span className={`block truncate text-sm font-medium ${fullProduct ? 'hover:text-[#b68a3e]' : ''}`}>{l.designNumber ?? l.name}</span>
+                          {/* Category truncates, weight/size gets its own line: on a
+                              phone the old single line clipped to "Bangles › Fancy H…"
+                              and dropped the weight — the part a jeweller needs. */}
                           <span className="block truncate text-xs text-muted-foreground">
                             {fullProduct?.category ?? '—'}
                             {fullProduct?.subCategory ? ` › ${fullProduct.subCategory}` : ''}
-                            {fullProduct?.weightGrams != null ? ` · ${fullProduct.weightGrams}g` : ''}
-                            {fullProduct?.size ? ` · Size ${fullProduct.size}` : ''}
                           </span>
+                          {(formatWeight(fullProduct?.weightGrams) || fullProduct?.size) && (
+                            <span className="block text-xs font-medium text-muted-foreground">
+                              {formatWeight(fullProduct?.weightGrams)}
+                              {formatWeight(fullProduct?.weightGrams) && fullProduct?.size ? ' · ' : ''}
+                              {fullProduct?.size ? `Size ${fullProduct.size}` : ''}
+                            </span>
+                          )}
                         </span>
                       </button>
                       <div className="flex w-[104px] shrink-0 items-center justify-center gap-1">
@@ -343,9 +366,14 @@ export function CatalogOrderPanel({
                           <span className="block truncate text-xs text-muted-foreground">
                             {f.manufacturerProduct.category ?? '—'}
                             {f.manufacturerProduct.subCategory ? ` › ${f.manufacturerProduct.subCategory}` : ''}
-                            {f.manufacturerProduct.weightGrams != null ? ` · ${f.manufacturerProduct.weightGrams}g` : ''}
-                            {f.manufacturerProduct.size ? ` · Size ${f.manufacturerProduct.size}` : ''}
                           </span>
+                          {(formatWeight(f.manufacturerProduct.weightGrams) || f.manufacturerProduct.size) && (
+                            <span className="block text-xs font-medium text-muted-foreground">
+                              {formatWeight(f.manufacturerProduct.weightGrams)}
+                              {formatWeight(f.manufacturerProduct.weightGrams) && f.manufacturerProduct.size ? ' · ' : ''}
+                              {f.manufacturerProduct.size ? `Size ${f.manufacturerProduct.size}` : ''}
+                            </span>
+                          )}
                         </span>
                       </button>
                       <div className="flex items-center gap-1">
@@ -382,7 +410,7 @@ export function CatalogOrderPanel({
 
       <div className="flex items-start gap-8">
         <aside className="sticky top-28 hidden w-60 shrink-0 border-r border-black/10 pr-6 lg:block">
-          <CatalogFilters categories={availableCategories} category={category} subCategory={subCategory} size={size} sizes={availableSizes} setCategory={setCategory} setSubCategory={setSubCategory} setSize={setSize} />
+          <CatalogFilters categories={availableCategories} category={category} subCategory={subCategory} size={size} sizes={availableSizes} weightBand={weightBand} weightBands={availableWeightBands} setCategory={setCategory} setSubCategory={setSubCategory} setSize={setSize} setWeightBand={setWeightBand} />
         </aside>
         <div className="min-w-0 flex-1">
       {loading ? (
@@ -482,29 +510,36 @@ function CatalogFilters({
   subCategory,
   size,
   sizes,
+  weightBand,
+  weightBands,
   setCategory,
   setSubCategory,
   setSize,
+  setWeightBand,
 }: {
   categories: string[];
   category: string;
   subCategory: string;
   size: string;
   sizes: string[];
+  weightBand: string;
+  weightBands: WeightBand[];
   setCategory: (value: string) => void;
   setSubCategory: (value: string) => void;
   setSize: (value: string) => void;
+  setWeightBand: (value: string) => void;
 }) {
   const [categoriesOpen, setCategoriesOpen] = useState(true);
   const [subCategoriesOpen, setSubCategoriesOpen] = useState(true);
   const [sizesOpen, setSizesOpen] = useState(true);
+  const [weightsOpen, setWeightsOpen] = useState(true);
   const subCategories = subCategoriesFor(category);
 
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between border-b border-black/10 pb-3">
         <span className="text-sm font-semibold">Filters</span>
-        {(category || subCategory || size) ? <button onClick={() => { setCategory(''); setSubCategory(''); setSize(''); }} className="text-xs font-medium text-[#b68a3e] hover:underline">Clear all</button> : null}
+        {(category || subCategory || size || weightBand) ? <button onClick={() => { setCategory(''); setSubCategory(''); setSize(''); setWeightBand(''); }} className="text-xs font-medium text-[#b68a3e] hover:underline">Clear all</button> : null}
       </div>
       <button onClick={() => setCategoriesOpen((value) => !value)} className="flex w-full items-center justify-between py-3 text-sm font-semibold">Category <ChevronDown className={`h-4 w-4 text-[#8d8174] transition-transform ${categoriesOpen ? 'rotate-180' : ''}`} /></button>
       {categoriesOpen ? (
@@ -523,6 +558,12 @@ function CatalogFilters({
         <div className="border-t border-black/10">
           <button onClick={() => setSizesOpen((value) => !value)} className="flex w-full items-center justify-between py-3 text-sm font-semibold">Size <ChevronDown className={`h-4 w-4 text-[#8d8174] transition-transform ${sizesOpen ? 'rotate-180' : ''}`} /></button>
           {sizesOpen ? <div className="space-y-1 pb-4"><button onClick={() => setSize('')} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${!size ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>All sizes</button>{sizes.map((value) => <button key={value} onClick={() => setSize(value)} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${size === value ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>{value}</button>)}</div> : null}
+        </div>
+      ) : null}
+      {weightBands.length > 0 ? (
+        <div className="border-t border-black/10">
+          <button onClick={() => setWeightsOpen((value) => !value)} className="flex w-full items-center justify-between py-3 text-sm font-semibold">Weight <ChevronDown className={`h-4 w-4 text-[#8d8174] transition-transform ${weightsOpen ? 'rotate-180' : ''}`} /></button>
+          {weightsOpen ? <div className="space-y-1 pb-4"><button onClick={() => setWeightBand('')} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${!weightBand ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>All weights</button>{weightBands.map((band) => <button key={band.value} onClick={() => setWeightBand(band.value)} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${weightBand === band.value ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>{band.label}</button>)}</div> : null}
         </div>
       ) : null}
     </div>
