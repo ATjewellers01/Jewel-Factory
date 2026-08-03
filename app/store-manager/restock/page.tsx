@@ -1,8 +1,9 @@
 'use client';
 
-import { CheckCircle2, Loader2, Lock, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, ClipboardList, Loader2, Lock, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { BranchOrderList } from '@/components/orders/BranchOrderList';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { apiPost } from '@/hooks/use-api';
@@ -14,6 +15,9 @@ export default function StoreManagerRestockPage() {
   const [pinError, setPinError] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
   const [placed, setPlaced] = useState<string | null>(null);
+  // Restock's order history lives here (behind the PIN) instead of the open
+  // My Orders page, so everything restock-related sits behind one gate.
+  const [view, setView] = useState<'order' | 'history'>('order');
 
   async function check() {
     try {
@@ -68,6 +72,21 @@ export default function StoreManagerRestockPage() {
     );
   }
 
+  if (view === 'history') {
+    return (
+      <div className="mx-auto w-full max-w-4xl px-4 py-6">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="font-display text-2xl font-medium tracking-tight">Restock Orders</h1>
+            <p className="mt-0.5 text-sm text-muted-foreground">Restock orders you sent to Head Office — track status, message Head Office, and mark completed.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setView('order')}>Order Stock</Button>
+        </div>
+        <BranchOrderList kind="b2b" endpoint="/api/branch-manager/my-orders/b2b" />
+      </div>
+    );
+  }
+
   return (
     <CatalogOrderPanel
       title="Restock"
@@ -76,6 +95,11 @@ export default function StoreManagerRestockPage() {
       notePlaceholder="Any note for Head Office (optional)…"
       onPlaced={(o) => setPlaced(o.orderNumber ?? 'placed')}
       showPopularity
+      historyAction={
+        <button onClick={() => setView('history')} className="inline-flex items-center gap-2 rounded-full border border-white/25 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10">
+          <ClipboardList className="h-4 w-4" /> My Restock Orders
+        </button>
+      }
     />
   );
 }

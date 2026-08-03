@@ -2,7 +2,7 @@
 
 import { Award, Check, ChevronDown, Gem, Heart, LayoutGrid, Loader2, Minus, Plus, Search, ShoppingCart, SlidersHorizontal, SortAsc, Trash2, X } from 'lucide-react';
 import { motion } from 'motion/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { StoreManagerProductDetailModal, type StoreManagerProduct } from '@/components/kiosk/StoreManagerProductDetailModal';
 import { CartQtyControl } from '@/components/orders/CartQtyControl';
@@ -50,6 +50,7 @@ export function CatalogOrderPanel({
   notePlaceholder,
   showPopularity = false,
   openCartOnMount = false,
+  historyAction,
 }: {
   title: string;
   subtitle: string;
@@ -61,6 +62,8 @@ export function CatalogOrderPanel({
   showPopularity?: boolean;
   /** Opens the persisted customer cart when arriving from the global header. */
   openCartOnMount?: boolean;
+  /** Restock only: a button (e.g. "My Restock Orders") rendered next to the Order button. */
+  historyAction?: ReactNode;
 }) {
   const manager = useStoreManager();
   const kioskCart = useStoreManagerKioskCart(manager.branch.id);
@@ -214,6 +217,7 @@ export function CatalogOrderPanel({
             <p className="mt-4 max-w-xl text-sm leading-6 text-white/68">{subtitle}</p>
           </div>
           <div className="flex items-center gap-2">
+            {historyAction}
             <button onClick={() => setShowFavorites(true)} className="inline-flex items-center gap-2 rounded-full border border-white/25 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10">
               <Heart className="h-4 w-4" /> Favorites ({favorites.count})
             </button>
