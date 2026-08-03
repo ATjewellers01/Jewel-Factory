@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from 'react';
 
 import { StoreManagerProductDetailModal } from '@/components/kiosk/StoreManagerProductDetailModal';
 import { CartQtyControl } from '@/components/orders/CartQtyControl';
+import { WeightRangeSlider } from '@/components/orders/WeightRangeSlider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StarRating } from '@/components/ui/StarRating';
@@ -14,7 +15,7 @@ import { useB2bCart } from '@/hooks/use-b2b-cart';
 import { useFavorites } from '@/hooks/use-favorites';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 import { formatWeight } from '@/lib/format';
-import { WEIGHT_SORT_OPTIONS, deriveWeightBands, matchWeightBand, sortByWeight, type WeightSort } from '@/lib/weight-filter';
+import { SORT_OPTIONS, weightExtent, matchWeightRange, sortProducts, type SortOption } from '@/lib/weight-filter';
 
 type Img = { secureUrl: string; isPrimary: boolean };
 type Product = { id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; size?: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
@@ -42,8 +43,8 @@ function CatalogBrowse() {
   const [category, setCategory] = useState(params.get('category') ?? '');
   const [subCategory, setSubCategory] = useState(params.get('subCategory') ?? '');
   const [size, setSize] = useState('');
-  const [weightBand, setWeightBand] = useState('');
-  const [weightSort, setWeightSort] = useState<WeightSort>('');
+  const [weightRange, setWeightRange] = useState<[number, number] | null>(null);
+  const [sort, setSort] = useState<SortOption>('');
   const [showCart, setShowCart] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [notes, setNotes] = useState('');
@@ -75,10 +76,11 @@ function CatalogBrowse() {
     return matchSearch && matchCat && matchSub && matchSize;
   });
 
-  const weightBands = deriveWeightBands(preWeight.map((p) => p.weightGrams));
-  const filtered = sortByWeight(
-    preWeight.filter((p) => matchWeightBand(p.weightGrams, weightBand, weightBands)),
-    weightSort,
+  const weightBounds = weightExtent(preWeight.map((p) => p.weightGrams));
+  const filtered = sortProducts(
+    preWeight.filter((p) => matchWeightRange(p.weightGrams, weightRange)),
+    sort,
+    (p) => p.designNumber,
     (p) => p.weightGrams,
   );
 
@@ -136,19 +138,19 @@ function CatalogBrowse() {
             {sizeOptions.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         )}
-        {weightBands.length > 0 && (
-          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={weightBand} onChange={(e) => setWeightBand(e.target.value)} aria-label="Filter by weight">
-            <option value="">All weights</option>
-            {weightBands.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
-          </select>
-        )}
-        <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={weightSort} onChange={(e) => setWeightSort(e.target.value as WeightSort)} aria-label="Sort by weight">
-          {WEIGHT_SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={sort} onChange={(e) => setSort(e.target.value as SortOption)} aria-label="Sort by">
+          {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        {(category || subCategory || search || size || weightBand || weightSort) && (
-          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setSize(''); setWeightBand(''); setWeightSort(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+        {(category || subCategory || search || size || sort || weightRange) && (
+          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setSize(''); setWeightRange(null); setSort(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
         )}
       </div>
+
+      {weightBounds && (
+        <div className="max-w-xs rounded-lg border bg-card p-3">
+          <WeightRangeSlider extent={weightBounds} value={weightRange} onChange={setWeightRange} />
+        </div>
+      )}
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
@@ -247,16 +249,16 @@ function CatalogBrowse() {
                       >
                         {i.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={i.imageUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
-                        ) : <div className="h-12 w-12 shrink-0 rounded-lg border bg-muted" />}
+                          <img src={i.imageUrl} alt="" className="h-16 w-16 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
+                        ) : <div className="h-16 w-16 shrink-0 rounded-lg border bg-muted" />}
                         <span className="min-w-0">
-                          <span className={`block truncate text-sm ${fullProduct ? 'hover:text-primary' : ''}`}>{i.name}</span>
-                          <span className="block truncate text-xs text-muted-foreground">
+                          <span className={`block truncate text-base font-medium ${fullProduct ? 'hover:text-primary' : ''}`}>{i.name}</span>
+                          <span className="block truncate text-sm text-muted-foreground">
                             {fullProduct?.category ?? '—'}
                             {fullProduct?.subCategory ? ` › ${fullProduct.subCategory}` : ''}
                           </span>
                           {(formatWeight(fullProduct?.weightGrams) || fullProduct?.size) && (
-                            <span className="block text-xs font-medium text-muted-foreground">
+                            <span className="block text-sm font-medium text-muted-foreground">
                               {formatWeight(fullProduct?.weightGrams)}
                               {formatWeight(fullProduct?.weightGrams) && fullProduct?.size ? ' · ' : ''}
                               {fullProduct?.size ? `Size ${fullProduct.size}` : ''}

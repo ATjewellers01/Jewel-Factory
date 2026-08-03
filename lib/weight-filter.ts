@@ -116,3 +116,51 @@ export function sortByWeight<T>(
     return (wa - wb) * dir;
   });
 }
+
+/**
+ * Unified "Sort by" — one option list shared by every catalogue grid
+ * (Manufacturer, Retailer, Store Manager). "Latest" sorts by design number
+ * (JF-XXXX is issued sequentially, so it doubles as a creation-order proxy
+ * without needing createdAt on every product type).
+ */
+export type SortOption = '' | 'newest' | 'oldest' | 'weight-desc' | 'weight-asc';
+
+export const SORT_OPTIONS: Array<{ value: SortOption; label: string }> = [
+  { value: '', label: 'Sort: default' },
+  { value: 'newest', label: 'Latest ↓' },
+  { value: 'oldest', label: 'Latest ↑' },
+  { value: 'weight-desc', label: 'Gross Wt ↓' },
+  { value: 'weight-asc', label: 'Gross Wt ↑' },
+];
+
+export function sortProducts<T>(
+  items: T[],
+  sort: SortOption,
+  getDesignNumber: (item: T) => string,
+  getWeight: (item: T) => string | number | null | undefined,
+): T[] {
+  if (sort === 'weight-asc' || sort === 'weight-desc') return sortByWeight(items, sort, getWeight);
+  if (sort === 'newest') return [...items].sort((a, b) => getDesignNumber(b).localeCompare(getDesignNumber(a)));
+  if (sort === 'oldest') return [...items].sort((a, b) => getDesignNumber(a).localeCompare(getDesignNumber(b)));
+  return items;
+}
+
+/** Overall [min, max] across the weights actually on screen, for a range slider's bounds. */
+export function weightExtent(weights: Array<string | number | null | undefined>): [number, number] | null {
+  const values = weights.map(weightValue).filter((n): n is number => n !== null);
+  if (values.length === 0) return null;
+  const min = Math.floor(Math.min(...values) * 100) / 100;
+  const max = Math.ceil(Math.max(...values) * 100) / 100;
+  return min < max ? [min, max] : null;
+}
+
+/** True when the product's weight falls within [min, max] inclusive (or no range is set). */
+export function matchWeightRange(
+  weight: string | number | null | undefined,
+  range: [number, number] | null,
+): boolean {
+  if (!range) return true;
+  const n = weightValue(weight);
+  if (n === null) return false;
+  return n >= range[0] && n <= range[1];
+}
