@@ -10,7 +10,17 @@ import { OrderChat } from '@/components/orders/OrderChat';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { useApi, apiPost } from '@/hooks/use-api';
-import { SM_STATUS_OPTIONS, inDateRange, customBucketOf } from '@/lib/order-filters';
+import { formatOrderStatus } from '@/lib/format';
+import { SM_STATUS_OPTIONS, inDateRange, customBucketOf, uniqueBranchOptions } from '@/lib/order-filters';
+
+// Manufacturer's granular status on the forwarded order — same badge shown to
+// the Retailer Admin (app/store/custom-designs/page.tsx MFR_STATUS), so all
+// three roles (Retailer User, Retailer Admin, Manufacturer) see the same thing.
+const MFR_STATUS: Record<string, string> = {
+  PENDING: 'bg-gray-100 text-gray-700', IN_PROCESS: 'bg-blue-100 text-blue-700',
+  GHAT_RECEIVED: 'bg-purple-100 text-purple-700', READY_FOR_DELIVERY: 'bg-indigo-100 text-indigo-700',
+  DISPATCHED: 'bg-amber-100 text-amber-700', COMPLETED: 'bg-green-100 text-green-700', CANCELLED: 'bg-red-100 text-red-700',
+};
 
 type CustomOrder = {
   id: string; category: string; status: string; completedAt: string | null; createdAt: string;
@@ -19,7 +29,8 @@ type CustomOrder = {
   meena: string | null; length: string | null; size: string | null;
   broadness: string | null; screw: string | null; sampleWeightGrams: string | null;
   subCategory: string | null;
-  order: { orderNumber: string; status: string } | null;
+  salesCode: string | null; salesPersonName: string | null;
+  order: { orderNumber: string; status: string; trackingNumber: string | null } | null;
 };
 
 // Restock lives under its own PIN gate (/store-manager/restock) — its order
@@ -54,9 +65,12 @@ function CustomList() {
   const [busy, setBusy] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
+  const [salesPerson, setSalesPerson] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [zoomUrl, setZoomUrl] = useState<string | null>(null);
+
+  const salesPersonOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((r) => r.salesPersonName)), [data]);
 
   const filtered = useMemo(() => (data ?? []).filter((r) => {
     if (search.trim()) {
@@ -64,9 +78,10 @@ function CustomList() {
       if (!hay.includes(search.trim().toLowerCase())) return false;
     }
     if (status && customBucketOf(r) !== status) return false;
+    if (salesPerson && r.salesPersonName !== salesPerson) return false;
     if (!inDateRange(r.createdAt, from, to)) return false;
     return true;
-  }), [data, search, status, from, to]);
+  }), [data, search, status, salesPerson, from, to]);
 
   async function complete(id: string) {
     setBusy(id);
@@ -81,6 +96,12 @@ function CustomList() {
   return (
     <div className="space-y-3">
       <OrderFilters search={search} onSearch={setSearch} searchPlaceholder="Search by order ID / category…" status={status} onStatus={setStatus} statusOptions={SM_STATUS_OPTIONS} from={from} to={to} onFrom={setFrom} onTo={setTo} />
+      {salesPersonOptions.length > 0 && (
+        <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={salesPerson} onChange={(e) => setSalesPerson(e.target.value)}>
+          <option value="">All sales people</option>
+          {salesPersonOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      )}
       {filtered.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No requests match your filters.</p>}
       {filtered.map((r) => {
         // Store Manager does NOT see the manufacturer's granular status — that is HO-only.
@@ -108,6 +129,22 @@ function CustomList() {
               </div>
               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${st.cls}`}>{st.label}</span>
             </div>
+            {r.status === 'FORWARDED' && r.order && (
+              <div className="mt-3 rounded-lg border bg-muted/20 px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Manufacturer Status</p>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-xs text-muted-foreground">{r.order.orderNumber}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${MFR_STATUS[r.order.status] ?? ''}`}>{formatOrderStatus(r.order.status)}</span>
+                  {r.order.trackingNumber && <span className="text-xs text-muted-foreground">Tracking: {r.order.trackingNumber}</span>}
+                </div>
+              </div>
+            )}
+            {(r.salesCode || r.salesPersonName) && (
+              <div className="mt-3 flex flex-wrap gap-4 rounded-lg border bg-card px-3 py-2 text-xs">
+                {r.salesPersonName && <span><span className="text-muted-foreground">Sales person: </span><span className="font-medium">{r.salesPersonName}</span></span>}
+                {r.salesCode && <span><span className="text-muted-foreground">Sales code: </span><span className="font-medium">{r.salesCode}</span></span>}
+              </div>
+            )}
             <CustomSpecList spec={r} className="mt-3" />
             {r.designNotes && <p className="mt-2 text-sm text-muted-foreground">{r.designNotes}</p>}
             <div className="mt-3 flex flex-wrap gap-2">

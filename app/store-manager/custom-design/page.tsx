@@ -26,6 +26,7 @@ const EMPTY_FORM = {
   quantity: '', weightFrom: '', weightTo: '', purity: '',
   meena: '', length: '', size: '', broadness: '', screw: '', sampleWeight: '',
   notes: '', imageUrl: '',
+  salesCode: '', salesPersonName: '',
 };
 
 /**
@@ -82,6 +83,7 @@ export default function StoreManagerCustomDesignPage() {
     setError(null);
 
     if (!form.imageUrl.trim()) { setError('Please add a reference image.'); return; }
+    if (!form.salesCode.trim() || !form.salesPersonName.trim()) { setError('Please enter the sales code and sales person name.'); return; }
 
     const from = form.weightFrom ? Number(form.weightFrom) : undefined;
     const to = form.weightTo ? Number(form.weightTo) : undefined;
@@ -113,6 +115,8 @@ export default function StoreManagerCustomDesignPage() {
         broadness: form.broadness.trim() || undefined,
         screw: form.screw || undefined,
         sampleWeightGrams: form.sampleWeight ? Number(form.sampleWeight) : undefined,
+        salesCode: form.salesCode.trim() || undefined,
+        salesPersonName: form.salesPersonName.trim() || undefined,
       });
       setDone(true);
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not submit'); } finally { setLoading(false); }
@@ -155,6 +159,16 @@ export default function StoreManagerCustomDesignPage() {
             <div>
               <label className="text-xs font-medium text-muted-foreground">Delivery date</label>
               <Input required type="date" className="mt-1 h-10" value={form.deliveryDate} onChange={(e) => set('deliveryDate', e.target.value)} />
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Sales code</label>
+              <Input required className="mt-1 h-10" placeholder="e.g. SC-104" value={form.salesCode} onChange={(e) => set('salesCode', e.target.value)} autoComplete="off" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Sales person name</label>
+              <Input required className="mt-1 h-10" placeholder="Who's placing this order?" value={form.salesPersonName} onChange={(e) => set('salesPersonName', e.target.value)} autoComplete="off" />
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

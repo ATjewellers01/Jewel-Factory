@@ -23,6 +23,7 @@ type Request = {
   subCategory: string | null;
   referenceImageUrl: string | null; status: string; createdAt: string; order: Order | null;
   branch: { name: string } | null;
+  salesCode: string | null; salesPersonName: string | null;
 };
 
 function formatWeightRange(min: string | null, max: string | null): string {
@@ -53,17 +54,21 @@ export default function StoreCustomDesignsPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [branch, setBranch] = useState('');
+  const [salesPerson, setSalesPerson] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [zoomUrl, setZoomUrl] = useState<string | null>(null);
 
   const branchOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((r) => r.branch?.name)), [data]);
+  const salesPersonOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((r) => r.salesPersonName)), [data]);
   const filtered = useMemo(
-    () => (data ?? []).filter((r) => matchOrder(
-      { orderNumber: r.order?.orderNumber, status: r.status, createdAt: r.createdAt },
-      { search, status, searchLabel: `${r.customerName} ${r.customerPhone}`, branch, branchName: r.branch?.name, from, to },
-    )),
-    [data, search, status, branch, from, to],
+    () => (data ?? []).filter((r) =>
+      matchOrder(
+        { orderNumber: r.order?.orderNumber, status: r.status, createdAt: r.createdAt },
+        { search, status, searchLabel: `${r.customerName} ${r.customerPhone}`, branch, branchName: r.branch?.name, from, to },
+      ) && (!salesPerson || r.salesPersonName === salesPerson),
+    ),
+    [data, search, status, branch, salesPerson, from, to],
   );
 
   async function act(id: string, action: 'approve' | 'reject') {
@@ -91,12 +96,20 @@ export default function StoreCustomDesignsPage() {
         </Link>
       </div>
       {data && data.length > 0 && (
-        <OrderFilters
-          search={search} onSearch={setSearch} searchPlaceholder="Search by name / order ID…"
-          status={status} onStatus={setStatus} statusOptions={CUSTOM_REQUEST_STATUS_OPTIONS}
-          group={branch} onGroup={setBranch} groupOptions={branchOptions} groupAllLabel="All stores" groupLabel="Store"
-          from={from} to={to} onFrom={setFrom} onTo={setTo}
-        />
+        <div className="space-y-2">
+          <OrderFilters
+            search={search} onSearch={setSearch} searchPlaceholder="Search by name / order ID…"
+            status={status} onStatus={setStatus} statusOptions={CUSTOM_REQUEST_STATUS_OPTIONS}
+            group={branch} onGroup={setBranch} groupOptions={branchOptions} groupAllLabel="All stores" groupLabel="Store"
+            from={from} to={to} onFrom={setFrom} onTo={setTo}
+          />
+          {salesPersonOptions.length > 0 && (
+            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={salesPerson} onChange={(e) => setSalesPerson(e.target.value)}>
+              <option value="">All sales people</option>
+              {salesPersonOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          )}
+        </div>
       )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
@@ -125,6 +138,12 @@ export default function StoreCustomDesignsPage() {
               </button>
               {expanded === r.id && (
                 <div className="border-t px-4 pb-4 pt-3 space-y-3 bg-muted/10">
+                  {(r.salesCode || r.salesPersonName) && (
+                    <div className="flex flex-wrap gap-4 rounded-lg border bg-card px-3 py-2 text-xs">
+                      {r.salesPersonName && <span><span className="text-muted-foreground">Sales person: </span><span className="font-medium">{r.salesPersonName}</span></span>}
+                      {r.salesCode && <span><span className="text-muted-foreground">Sales code: </span><span className="font-medium">{r.salesCode}</span></span>}
+                    </div>
+                  )}
                   <CustomSpecList spec={r} />
                   {r.designNotes && <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Remarks</p><p className="text-sm">{r.designNotes}</p></div>}
                   {r.referenceImageUrl && (

@@ -262,6 +262,8 @@ const CustomBody = z.object({
   broadness: optionalText(60),
   screw: optionalText(60),
   sampleWeightGrams: z.coerce.number().positive().max(99999).optional(),
+  salesCode: optionalText(60),
+  salesPersonName: optionalText(120),
 });
 
 // Signed Cloudinary upload for the customer's reference photo (branch-scoped).
@@ -301,6 +303,8 @@ branchManagerRoutes.post('/custom-designs', branchManagerGuard, zValidator('json
     broadness: body.broadness as string | undefined,
     screw: body.screw as string | undefined,
     sampleWeightGrams: body.sampleWeightGrams,
+    salesCode: body.salesCode as string | undefined,
+    salesPersonName: body.salesPersonName as string | undefined,
   });
   return sendData(c, req, 201);
 });

@@ -67,6 +67,7 @@ export default function StoreCatalogueOrdersPage() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [branch, setBranch] = useState('');
+  const [salesPerson, setSalesPerson] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [zoomItem, setZoomItem] = useState<Item | null>(null);
@@ -119,9 +120,13 @@ export default function StoreCatalogueOrdersPage() {
   }, []);
 
   const branchOptions = useMemo(() => uniqueBranchOptions((rows ?? []).map((o) => o.branchNameSnapshot)), [rows]);
+  const salesPersonOptions = useMemo(() => uniqueBranchOptions((rows ?? []).map((o) => o.salesPersonName)), [rows]);
   const filtered = useMemo(
-    () => (rows ?? []).filter((o) => matchOrder(o, { search, status, branch, branchName: o.branchNameSnapshot, from, to })),
-    [rows, search, status, branch, from, to],
+    () => (rows ?? []).filter((o) =>
+      matchOrder(o, { search, status, branch, branchName: o.branchNameSnapshot, from, to }) &&
+      (!salesPerson || o.salesPersonName === salesPerson),
+    ),
+    [rows, search, status, branch, salesPerson, from, to],
   );
 
   return (
@@ -135,12 +140,20 @@ export default function StoreCatalogueOrdersPage() {
       </div>
 
       {rows && rows.length > 0 && (
-        <OrderFilters
-          search={search} onSearch={setSearch}
-          status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
-          group={branch} onGroup={setBranch} groupOptions={branchOptions} groupAllLabel="All stores" groupLabel="Store"
-          from={from} to={to} onFrom={setFrom} onTo={setTo}
-        />
+        <div className="space-y-2">
+          <OrderFilters
+            search={search} onSearch={setSearch}
+            status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
+            group={branch} onGroup={setBranch} groupOptions={branchOptions} groupAllLabel="All stores" groupLabel="Store"
+            from={from} to={to} onFrom={setFrom} onTo={setTo}
+          />
+          {salesPersonOptions.length > 0 && (
+            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={salesPerson} onChange={(e) => setSalesPerson(e.target.value)}>
+              <option value="">All sales people</option>
+              {salesPersonOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          )}
+        </div>
       )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}

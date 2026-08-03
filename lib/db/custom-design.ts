@@ -30,6 +30,8 @@ export async function placeCustomRequest(input: {
   broadness?: string;
   screw?: string;
   sampleWeightGrams?: number;
+  salesCode?: string | null;
+  salesPersonName?: string | null;
 }) {
   return prisma.customDesignRequest.create({
     data: {
@@ -55,6 +57,8 @@ export async function placeCustomRequest(input: {
       broadness: input.broadness ?? null,
       screw: input.screw ?? null,
       sampleWeightGrams: input.sampleWeightGrams ?? null,
+      salesCode: input.salesCode ?? null,
+      salesPersonName: input.salesPersonName ?? null,
     },
     select: { id: true },
   });
@@ -141,6 +145,8 @@ export async function forwardCustomRequest(storeId: string, requestId: string, r
         broadness: req.broadness,
         screw: req.screw,
         sampleWeightGrams: req.sampleWeightGrams,
+        salesCode: req.salesCode,
+        salesPersonName: req.salesPersonName,
         orderNumber: orderNum,
       },
     });

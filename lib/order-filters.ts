@@ -49,7 +49,13 @@ export const SM_STATUS_OPTIONS = [
 // finished AND the Store Manager marked delivered-to-customer reads "Completed",
 // while one the manufacturer finished but isn't yet marked complete reads
 // "Approved" (intended — `completedAt` is a separate flag, not derived from status).
+//
+// This is purely the Retailer Admin <-> Retailer User approval conversation —
+// independent of the manufacturer's own (separate) production status, which is
+// shown alongside it, not instead of it, on Kiosk/Restock (per-item) and
+// Customised (order-level "Manufacturer Status" block).
 type SmOrder = {
+  status?: string;
   completedAt?: string | null;
   pendingStoreApproval?: boolean;
   pendingManagerApproval?: boolean;
@@ -63,13 +69,15 @@ type SmCustom = {
 /** Label + badge colour for a kiosk/b2b order in the Store Manager's view. */
 export function statusOf(o: SmOrder): { label: string; cls: string } {
   if (o.completedAt) return { label: 'Completed', cls: 'bg-green-100 text-green-800' };
+  if (o.status === 'CANCELLED') return { label: 'Rejected', cls: 'bg-red-100 text-red-700' };
   if (o.pendingStoreApproval || o.pendingManagerApproval) return { label: 'Pending (Head Office)', cls: 'bg-yellow-100 text-yellow-800' };
   return { label: 'Approved', cls: 'bg-blue-100 text-blue-800' };
 }
 
 /** Derived filter bucket for kiosk/b2b orders (no raw enum shown to the SM). */
-export function bucketOf(o: SmOrder): 'COMPLETED' | 'PENDING' | 'APPROVED' {
+export function bucketOf(o: SmOrder): 'COMPLETED' | 'PENDING' | 'APPROVED' | 'REJECTED' {
   if (o.completedAt) return 'COMPLETED';
+  if (o.status === 'CANCELLED') return 'REJECTED';
   if (o.pendingStoreApproval || o.pendingManagerApproval) return 'PENDING';
   return 'APPROVED';
 }
