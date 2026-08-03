@@ -64,13 +64,13 @@ export default function StoreHomePage() {
     return { byCategory, bySub };
   }, [products]);
 
-  // Show categories that actually have stock first, but keep the rest visible
-  // so the retailer can see the full range on offer.
-  const orderedCategories = useMemo(() => {
-    const withStock = CATEGORIES.filter((c) => coverByCategory[c]);
-    const withoutStock = CATEGORIES.filter((c) => !coverByCategory[c]);
-    return [...withStock, ...withoutStock];
-  }, [coverByCategory]);
+  // Only categories with actual stock — the taxonomy has 14 entries and most
+  // retailers only carry a handful, so showing every category padded the grid
+  // with empty gold-gradient placeholders that had nothing behind them.
+  const stockedCategories = useMemo(
+    () => CATEGORIES.filter((c) => coverByCategory[c]).sort((a, b) => (counts.byCategory[b] ?? 0) - (counts.byCategory[a] ?? 0)),
+    [coverByCategory, counts.byCategory],
+  );
 
   function openCatalog(category: string, subCategory?: string) {
     const qs = new URLSearchParams({ category });
@@ -119,7 +119,7 @@ export default function StoreHomePage() {
         <>
           <CatalogueStrip products={products} />
           <CategoryMosaic
-            categories={orderedCategories}
+            categories={stockedCategories}
             coverByCategory={coverByCategory}
             countByCategory={counts.byCategory}
             onSelect={handleCategoryClick}
@@ -142,7 +142,11 @@ export default function StoreHomePage() {
   );
 }
 
-/** Edge-to-edge auto-scrolling strip of real catalogue photos; each is clickable. */
+/**
+ * Edge-to-edge auto-scrolling strip of real catalogue photos; each is
+ * clickable. Sized well above a typical thumbnail strip at every breakpoint —
+ * this is meant to be looked at, not skimmed as a row of icons.
+ */
 function CatalogueStrip({ products }: { products: Product[] }) {
   if (products.length === 0) return null;
   // Duplicated once so the -50% translate loops seamlessly (see globals.css).
@@ -152,10 +156,10 @@ function CatalogueStrip({ products }: { products: Product[] }) {
     <section aria-label="Catalogue highlights">
       <div className="group relative overflow-hidden rounded-2xl border border-[#e8e0d2] bg-[#faf7f1]">
         {/* Fade the edges so items enter and leave softly. */}
-        <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[#faf7f1] to-transparent sm:w-20" />
-        <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[#faf7f1] to-transparent sm:w-20" />
+        <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[#faf7f1] to-transparent sm:w-28" />
+        <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[#faf7f1] to-transparent sm:w-28" />
 
-        <div className="jf-marquee-track flex gap-3 p-3 sm:gap-4 sm:p-4">
+        <div className="jf-marquee-track flex gap-4 p-4 sm:gap-5 sm:p-5">
           {reel.map((p, i) => (
             <Link
               key={`${p.id}-${i}`}
@@ -164,7 +168,7 @@ function CatalogueStrip({ products }: { products: Product[] }) {
               // and off the accessibility tree so nothing is announced twice.
               aria-hidden={i >= products.length}
               tabIndex={i >= products.length ? -1 : undefined}
-              className="group/card relative block h-56 w-44 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-black/5 transition-shadow hover:shadow-[0_10px_30px_rgba(31,24,15,0.16)] sm:h-72 sm:w-60 lg:h-[22rem] lg:w-[18rem]"
+              className="group/card relative block h-64 w-52 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-black/5 transition-shadow hover:shadow-[0_10px_30px_rgba(31,24,15,0.16)] sm:h-96 sm:w-80 lg:h-[30rem] lg:w-[24rem]"
               title={p.designNumber}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -174,7 +178,7 @@ function CatalogueStrip({ products }: { products: Product[] }) {
                 loading="lazy"
                 className="h-full w-full object-cover transition-transform duration-500 group-hover/card:scale-105"
               />
-              <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-3 pb-2.5 pt-7 text-xs font-semibold tabular-nums text-white sm:text-sm">
+              <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-4 pb-3 pt-9 text-sm font-semibold tabular-nums text-white sm:px-5 sm:text-base">
                 {p.designNumber}
               </span>
             </Link>
@@ -186,10 +190,13 @@ function CatalogueStrip({ products }: { products: Product[] }) {
 }
 
 /**
- * Asymmetric mosaic. A repeating 6-column rhythm gives a deliberately uneven,
- * editorial layout instead of a uniform grid: a wide hero, two narrower tiles,
- * then a mirrored row. Below `sm` it collapses to a single column so the
- * pattern can't squeeze tiles into unreadable slivers.
+ * Category mosaic, sized to how many categories actually have stock (2-6 in
+ * practice, not the taxonomy's 14) — the old version used a repeating 6-tile
+ * rhythm meant for a long list, so with only 2-3 real categories it looked
+ * like a cut-off pattern rather than a deliberate layout. Each COUNT below is
+ * a hand-composed arrangement instead of a formula, so 2 categories reads as
+ * a balanced pair and 5 reads as a considered spread — not the same rhythm
+ * truncated at different points.
  */
 function CategoryMosaic({
   categories, coverByCategory, countByCategory, onSelect,
@@ -199,38 +206,55 @@ function CategoryMosaic({
   countByCategory: Record<string, number>;
   onSelect: (category: string) => void;
 }) {
-  // A repeating 6-tile rhythm over a 6-column grid, in three tidy rows:
-  //   row 1 — wide 4 + narrow 2
-  //   row 2 — narrow 2 + wide 4   (mirrored, so the layout never looks striped)
-  //   row 3 — even 3 + 3
-  //
-  // Height comes from fixed row heights, NOT per-tile aspect ratios: grid rows
-  // size to their tallest child, so mixing a 21/9 tile with a 3/4 tile in one
-  // row left a large hole under the short one. Fixed heights keep every row
-  // flush while the differing widths still give the asymmetric, editorial feel.
-  const RHYTHM = [
-    { span: 'sm:col-span-4', height: 'h-56 sm:h-64' },
-    { span: 'sm:col-span-2', height: 'h-56 sm:h-64' },
-    { span: 'sm:col-span-2', height: 'h-56 sm:h-72' },
-    { span: 'sm:col-span-4', height: 'h-56 sm:h-72' },
-    { span: 'sm:col-span-3', height: 'h-56 sm:h-60' },
-    { span: 'sm:col-span-3', height: 'h-56 sm:h-60' },
-  ];
+  if (categories.length === 0) return null;
+
+  // span: column span out of 12 (sm and up). height: fixed, since grid rows
+  // size to their tallest child — mixing aspect ratios in one row leaves a
+  // gap under the shorter tile, so every layout below fixes heights per row.
+  type Tile = { span: string; height: string };
+  const LAYOUTS: Record<number, Tile[]> = {
+    1: [{ span: 'sm:col-span-12', height: 'h-72 sm:h-96' }],
+    2: [
+      { span: 'sm:col-span-7', height: 'h-64 sm:h-[26rem]' },
+      { span: 'sm:col-span-5', height: 'h-64 sm:h-[26rem]' },
+    ],
+    3: [
+      { span: 'sm:col-span-7', height: 'h-64 sm:h-[22rem]' },
+      { span: 'sm:col-span-5', height: 'h-56 sm:h-[10.5rem]' },
+      { span: 'sm:col-span-5', height: 'h-56 sm:h-[10.5rem]' },
+    ],
+    4: [
+      { span: 'sm:col-span-6', height: 'h-60 sm:h-72' },
+      { span: 'sm:col-span-6', height: 'h-60 sm:h-72' },
+      { span: 'sm:col-span-4', height: 'h-52 sm:h-60' },
+      { span: 'sm:col-span-8', height: 'h-52 sm:h-60' },
+    ],
+    5: [
+      { span: 'sm:col-span-7', height: 'h-64 sm:h-80' },
+      { span: 'sm:col-span-5', height: 'h-64 sm:h-80' },
+      { span: 'sm:col-span-4', height: 'h-52 sm:h-56' },
+      { span: 'sm:col-span-4', height: 'h-52 sm:h-56' },
+      { span: 'sm:col-span-4', height: 'h-52 sm:h-56' },
+    ],
+  };
+  // 6+: two even hero rows of 3, repeating — still deliberate (a clean grid),
+  // not a truncated rhythm, because every tile in it is the same shape.
+  const layoutFor = (count: number): Tile[] => {
+    if (LAYOUTS[count]) return LAYOUTS[count];
+    return Array.from({ length: count }, () => ({ span: 'sm:col-span-4', height: 'h-56 sm:h-64' }));
+  };
+  const layout = layoutFor(categories.length);
 
   return (
     <section aria-label="Categories" className="space-y-4">
       <h2 className="font-display text-xl font-semibold tracking-tight">Categories</h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-6 sm:gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-12 sm:gap-4">
         {categories.map((category, i) => {
-          const { span, height } = RHYTHM[i % RHYTHM.length]!;
+          const { span, height } = layout[i]!;
           const cover = coverByCategory[category];
           const subs = subCategoriesFor(category);
           const total = countByCategory[category] ?? 0;
-          // Lead with the design count — that's the stock question — and keep the
-          // collections count as secondary context.
-          const meta = total > 0
-            ? `${total} ${total === 1 ? 'design' : 'designs'}${subs.length > 0 ? ` · ${subs.length} collections` : ''}`
-            : subs.length > 0 ? `${subs.length} collections` : 'View designs';
+          const meta = `${total} ${total === 1 ? 'design' : 'designs'}${subs.length > 0 ? ` · ${subs.length} collections` : ''}`;
 
           return (
             <button
@@ -239,17 +263,13 @@ function CategoryMosaic({
               onClick={() => onSelect(category)}
               className={`group relative ${span} ${height} overflow-hidden rounded-2xl bg-[#efe7da] text-left ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_44px_rgba(31,24,15,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a84c]`}
             >
-              {cover ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={cover}
-                  alt=""
-                  loading="lazy"
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
-                />
-              ) : (
-                <span aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(201,168,76,0.28),transparent_60%)]" />
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={cover}
+                alt=""
+                loading="lazy"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
+              />
 
               {/* Scrim keeps the label readable over any photo. */}
               <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/25 to-transparent" />
