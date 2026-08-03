@@ -113,15 +113,15 @@ export default function BranchesPage() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className={labelClass}>User Mobile Number *
-            <Input type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number" value={form.phone} onChange={set('phone')} required />
+            <Input type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number" value={form.phone} onChange={set('phone')} required autoComplete="off" />
           </label>
           <label className={labelClass}>Retail User Email
-            <Input type="email" inputMode="email" placeholder="e.g. name@example.com" value={form.email} onChange={set('email')} />
+            <Input type="email" inputMode="email" placeholder="e.g. name@example.com" value={form.email} onChange={set('email')} autoComplete="off" />
           </label>
         </div>
 
         <label className={labelClass}>Restock Pin
-          <Input type="password" inputMode="numeric" maxLength={12} placeholder="4–12 digits (optional)" value={form.pin} onChange={set('pin')} className="sm:max-w-[220px]" />
+          <Input type="password" inputMode="numeric" maxLength={12} placeholder="4–12 digits (optional)" value={form.pin} onChange={set('pin')} className="sm:max-w-[220px]" autoComplete="new-password" />
         </label>
 
         {/* No password field: the mobile number is both the Retailer User's login
@@ -243,8 +243,8 @@ function BranchRetailerUsers({ branch, onChange }: { branch: Branch; onChange: (
       )}
 
       <form onSubmit={add} className="grid gap-2 rounded-lg border bg-card p-3 sm:grid-cols-2">
-        <Input type="tel" inputMode="numeric" maxLength={10} placeholder="User Mobile Number *" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} required />
-        <Input type="email" placeholder="Retail User Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+        <Input type="tel" inputMode="numeric" maxLength={10} placeholder="User Mobile Number *" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} required autoComplete="off" />
+        <Input type="email" placeholder="Retail User Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} autoComplete="off" />
         {err && <p className="text-sm text-red-600 sm:col-span-2">{err}</p>}
         <div className="sm:col-span-2">
           <Button type="submit" size="sm" disabled={adding} className="metal-sheen text-[#17120b] font-semibold">{adding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Plus className="mr-1 h-3.5 w-3.5" />Add Retailer User</>}</Button>
