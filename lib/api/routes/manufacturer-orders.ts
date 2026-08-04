@@ -36,8 +36,11 @@ manufacturerOrderRoutes.patch('/orders/:id', zValidator('json', StatusBody), asy
   return sendData(c, { ok: true });
 });
 
+// Full status set, incl. PENDING/CANCELLED — the manufacturer can pick any
+// value directly (a free dropdown, not a forced forward-only progression),
+// so an item can be sent straight to Cancelled if it was rejected/never made.
 const ItemStatusBody = z.object({
-  status: z.enum(['IN_PROCESS', 'GHAT_RECEIVED', 'READY_FOR_DELIVERY', 'DISPATCHED', 'COMPLETED', 'CANCELLED']),
+  status: z.enum(['PENDING', 'IN_PROCESS', 'GHAT_RECEIVED', 'READY_FOR_DELIVERY', 'DISPATCHED', 'COMPLETED', 'CANCELLED']),
 });
 
 manufacturerOrderRoutes.patch('/orders/:id/items/:itemId', zValidator('json', ItemStatusBody), async (c) => {

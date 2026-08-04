@@ -46,10 +46,10 @@ const STATUS: Record<string, string> = {
   GHAT_RECEIVED: 'bg-purple-100 text-purple-800', READY_FOR_DELIVERY: 'bg-indigo-100 text-indigo-800',
   DISPATCHED: 'bg-amber-100 text-amber-800', COMPLETED: 'bg-green-100 text-green-800', CANCELLED: 'bg-red-100 text-red-700',
 };
-const NEXT: Record<string, string> = {
-  PENDING: 'IN_PROCESS', IN_PROCESS: 'GHAT_RECEIVED', GHAT_RECEIVED: 'READY_FOR_DELIVERY',
-  READY_FOR_DELIVERY: 'DISPATCHED', DISPATCHED: 'COMPLETED',
-};
+// Free-form — the manufacturer can set an item to any status directly
+// (including Cancelled, for a rejected/never-made item), not just the next
+// one in sequence.
+const ALL_ITEM_STATUSES = ['PENDING', 'IN_PROCESS', 'GHAT_RECEIVED', 'READY_FOR_DELIVERY', 'DISPATCHED', 'COMPLETED', 'CANCELLED'];
 
 function endpointFor(source: Source, id?: string) {
   return source === 'kiosk'
@@ -151,9 +151,10 @@ export default function ManufacturerOrdersPage() {
     }
   }
 
-  async function advance(row: Row) {
-    const next = NEXT[row.status];
-    if (!next) return;
+  // Order-level status is manual, not derived from items — two explicit
+  // actions: Approve (Pending -> In Process) and Complete (-> Completed),
+  // independent of whatever stage the individual items are at.
+  async function advance(row: Row, next: string) {
     setBusy(row.id);
     try {
       await apiSend('PATCH', endpointFor(row.source, row.id), { status: next });
@@ -165,9 +166,8 @@ export default function ManufacturerOrdersPage() {
     }
   }
 
-  async function advanceItem(row: Row, item: Item) {
-    const next = NEXT[item.status];
-    if (!next) return;
+  async function setItemStatus(row: Row, item: Item, next: string) {
+    if (next === item.status) return;
     setItemBusy(item.id);
     try {
       await apiSend('PATCH', `${endpointFor(row.source, row.id)}/items/${item.id}`, { status: next });
@@ -282,27 +282,33 @@ export default function ManufacturerOrdersPage() {
                             </button>
                             <div className="flex shrink-0 flex-col items-end gap-1">
                               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[it.status] ?? ''}`}>{formatOrderStatus(it.status)}</span>
-                              {NEXT[it.status] && (
-                                <button
-                                  type="button"
-                                  disabled={itemBusy === it.id}
-                                  onClick={() => advanceItem(o, it)}
-                                  className="text-[11px] font-medium text-primary hover:underline disabled:opacity-50"
-                                >
-                                  {itemBusy === it.id ? <Loader2 className="h-3 w-3 animate-spin" /> : `Mark as ${formatOrderStatus(NEXT[it.status])}`}
-                                </button>
-                              )}
+                              <select
+                                value={it.status}
+                                disabled={itemBusy === it.id}
+                                onChange={(e) => { e.stopPropagation(); void setItemStatus(o, it, e.target.value); }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-6 rounded border border-input bg-transparent px-1 text-[10px] disabled:opacity-50"
+                              >
+                                {ALL_ITEM_STATUSES.map((s) => <option key={s} value={s}>{formatOrderStatus(s)}</option>)}
+                              </select>
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-                  {NEXT[o.status] && (
-                    <Button size="sm" disabled={busy === o.id} onClick={() => advance(o)} className="metal-sheen text-[#17120b] font-semibold">
-                      {busy === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Mark as ${formatOrderStatus(NEXT[o.status])}`}
-                    </Button>
-                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {o.status === 'PENDING' && (
+                      <Button size="sm" disabled={busy === o.id} onClick={() => advance(o, 'IN_PROCESS')} className="metal-sheen text-[#17120b] font-semibold">
+                        {busy === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Mark as Approved'}
+                      </Button>
+                    )}
+                    {o.status !== 'COMPLETED' && o.status !== 'CANCELLED' && (
+                      <Button size="sm" variant="outline" disabled={busy === o.id} onClick={() => advance(o, 'COMPLETED')}>
+                        {busy === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Mark as Complete'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

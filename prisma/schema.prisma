@@ -487,7 +487,9 @@ model B2bOrderItem {
   // in the UI, but overridable per order since the same design is sometimes
   // wanted in a different melting. Null on older rows placed before this field.
   purity                String?
-  // Per-line status — see the matching note on KioskOrderItem.status.
+  // Per-line status — see the matching note on KioskOrderItem.status. Includes
+  // CANCELLED, directly selectable by the manufacturer (not just a byproduct
+  // of some other flow) for an item that was rejected/never made.
   status                OrderStatus         @default(PENDING)
   createdAt             DateTime            @default(now()) @map("created_at")
 
@@ -586,8 +588,10 @@ model KioskOrderItem {
   // Melting/purity chosen for THIS line — see the matching note on B2bOrderItem.purity.
   purity                String?
   // Per-line status — a single order can have products at different stages
-  // (e.g. one piece Ghat Received while another is Dispatched). Independent
-  // of the order-level `status`, which the manufacturer still advances too.
+  // (e.g. one piece Ghat Received while another is Dispatched), independent
+  // of the order-level status (which the manufacturer advances manually via
+  // Mark as Approved / Mark as Complete). Includes CANCELLED, directly
+  // selectable for an item that was rejected/never made.
   status                OrderStatus @default(PENDING)
   createdAt             DateTime   @default(now()) @map("created_at")
 
