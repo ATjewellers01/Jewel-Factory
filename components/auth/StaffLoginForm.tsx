@@ -6,7 +6,9 @@ import { useState } from 'react';
 
 import { Wordmark } from '@/components/landing/Wordmark';
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { toFieldErrors } from '@/lib/field-error';
 
 type FooterLink = { label: string; prompt?: string; href: string };
 
@@ -49,10 +51,12 @@ export function StaffLoginForm({
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
     setLoading(true);
     try {
       const res = await fetch(loginPath, {
@@ -62,7 +66,7 @@ export function StaffLoginForm({
         body: JSON.stringify({ email, password }),
       });
       const json = (await res.json().catch(() => null)) as
-        | { error?: { message?: string } }
+        | { error?: { message?: string; fields?: Record<string, string> } }
         | { data?: unknown }
         | null;
       if (!res.ok || (json && 'error' in json && json.error)) {
@@ -71,6 +75,7 @@ export function StaffLoginForm({
             ? json.error.message
             : 'Invalid email or password',
         );
+        setFieldErrors(json && 'error' in json && json.error?.fields ? json.error.fields : {});
         setLoading(false); // reset so the user can correct credentials and retry
         return;
       }
@@ -109,6 +114,7 @@ export function StaffLoginForm({
               className={showLabels ? 'h-12 rounded-xl border-[#dcd3c6] bg-white px-4 shadow-sm transition-shadow focus-visible:ring-[#b98b31]/35' : undefined}
             />
             {identifierHint && showLabels && <span className="block text-[11px] leading-4 text-[#8a8178]">{identifierHint}</span>}
+            <FieldError errors={toFieldErrors(fieldErrors.email)} />
           </label>
           <label className="block space-y-2">
             {showLabels && <span className="text-xs font-semibold text-[#4f473f]">Password</span>}
@@ -132,6 +138,7 @@ export function StaffLoginForm({
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </span>
+            <FieldError errors={toFieldErrors(fieldErrors.password)} />
           </label>
         </div>
 

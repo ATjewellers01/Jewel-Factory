@@ -1,4 +1,4 @@
-import { zValidator } from '@hono/zod-validator';
+import { jsonValidator } from '../validation';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -33,7 +33,7 @@ const BrandingBody = z.object({
   websiteUrl: z.preprocess(emptyToUndef, z.string().url().nullish()),
 });
 
-storePortalRoutes.patch('/branding', storeGuard, zValidator('json', BrandingBody), async (c) => {
+storePortalRoutes.patch('/branding', storeGuard, jsonValidator(BrandingBody), async (c) => {
   const b = c.req.valid('json');
   const result = await updateStoreBranding(c.get('storeId'), {
     logoUrl: (b.logoUrl ?? null) as string | null,
@@ -54,7 +54,7 @@ storePortalRoutes.post('/branding/logo/sign', storeGuard, async (c) => {
 });
 
 // ── Visual search (image → similar manufacturer products) ─────────────────────
-storePortalRoutes.post('/search/image', storeGuard, zValidator('json', z.object({ image: z.string().min(1) })), async (c) => {
+storePortalRoutes.post('/search/image', storeGuard, jsonValidator(z.object({ image: z.string().min(1) })), async (c) => {
   let ids: string[];
   try {
     const vector = await embedImageBase64(c.req.valid('json').image);
@@ -94,7 +94,7 @@ const ProfileBody = z.object({
   ownerPhone: z.string().optional(),
 });
 
-storePortalRoutes.patch('/profile', storeGuard, zValidator('json', ProfileBody), async (c) => {
+storePortalRoutes.patch('/profile', storeGuard, jsonValidator(ProfileBody), async (c) => {
   const result = await updateStoreProfile(c.get('storeId'), c.req.valid('json') as Record<string, string>);
   if ('error' in result) return sendError(c, 'conflict', 'That email is already registered.', 409);
   return sendData(c, result);
@@ -121,7 +121,7 @@ storePortalRoutes.get('/branches', storeGuard, async (c) => {
   return sendData(c, await listBranches(c.get('storeId')));
 });
 
-storePortalRoutes.post('/branches', storeGuard, zValidator('json', BranchBody), async (c) => {
+storePortalRoutes.post('/branches', storeGuard, jsonValidator(BranchBody), async (c) => {
   const b = c.req.valid('json');
   const result = await createBranch(c.get('storeId'), b as Parameters<typeof createBranch>[1]);
   if ('error' in result) {
@@ -130,7 +130,7 @@ storePortalRoutes.post('/branches', storeGuard, zValidator('json', BranchBody), 
   return sendData(c, result.branch, 201);
 });
 
-storePortalRoutes.patch('/branches/:id', storeGuard, zValidator('json', BranchBody.partial()), async (c) => {
+storePortalRoutes.patch('/branches/:id', storeGuard, jsonValidator(BranchBody.partial()), async (c) => {
   const b = await updateBranch(c.get('storeId'), c.req.param('id'), c.req.valid('json') as Parameters<typeof updateBranch>[2]);
   if (!b) return sendError(c, 'not_found', 'Branch not found', 404);
   return sendData(c, b);
@@ -144,7 +144,7 @@ storePortalRoutes.delete('/branches/:id', storeGuard, async (c) => {
 
 // Branch restock PIN (owner can set/clear; store manager can too via branch-manager)
 const BranchPinBody = z.object({ pin: z.string().min(4).max(12) });
-storePortalRoutes.put('/branches/:id/restock-pin', storeGuard, zValidator('json', BranchPinBody), async (c) => {
+storePortalRoutes.put('/branches/:id/restock-pin', storeGuard, jsonValidator(BranchPinBody), async (c) => {
   const ok = await setBranchRestockPin(c.get('storeId'), c.req.param('id'), c.req.valid('json').pin);
   if (!ok) return sendError(c, 'not_found', 'Branch not found', 404);
   return sendData(c, { ok: true });
@@ -172,7 +172,7 @@ const BMCreateBody = z.object({
   email: z.preprocess(emptyToUndef, z.string().email().optional()),
 });
 
-storePortalRoutes.post('/branches/:id/managers', storeGuard, zValidator('json', BMCreateBody), async (c) => {
+storePortalRoutes.post('/branches/:id/managers', storeGuard, jsonValidator(BMCreateBody), async (c) => {
   const b = c.req.valid('json');
   const res = await createBranchManager(c.get('storeId'), c.req.param('id'), { phone: b.phone, email: b.email ?? null });
   if (res === null) return sendError(c, 'not_found', 'Branch not found', 404);
@@ -189,13 +189,13 @@ const BMUpdateBody = z.object({
   isActive: z.boolean().optional(),
 });
 
-storePortalRoutes.patch('/branches/:id/managers/:mid', storeGuard, zValidator('json', BMUpdateBody), async (c) => {
+storePortalRoutes.patch('/branches/:id/managers/:mid', storeGuard, jsonValidator(BMUpdateBody), async (c) => {
   const res = await updateBranchManager(c.get('storeId'), c.req.param('id'), c.req.param('mid'), c.req.valid('json') as Record<string, unknown>);
   if (!res) return sendError(c, 'not_found', 'Store manager not found', 404);
   return sendData(c, res);
 });
 
-storePortalRoutes.put('/branches/:id/managers/:mid/password', storeGuard, zValidator('json', z.object({ password: z.string().min(6) })), async (c) => {
+storePortalRoutes.put('/branches/:id/managers/:mid/password', storeGuard, jsonValidator(z.object({ password: z.string().min(6) })), async (c) => {
   const ok = await resetBranchManagerPassword(c.get('storeId'), c.req.param('id'), c.req.param('mid'), c.req.valid('json').password);
   if (!ok) return sendError(c, 'not_found', 'Store manager not found', 404);
   return sendData(c, { ok: true });

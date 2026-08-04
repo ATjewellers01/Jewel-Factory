@@ -1,4 +1,4 @@
-import { zValidator } from '@hono/zod-validator';
+import { jsonValidator } from '../validation';
 import { Hono } from 'hono';
 import { deleteCookie, setCookie } from 'hono/cookie';
 import crypto from 'node:crypto';
@@ -45,7 +45,7 @@ const LoginBody = z.object({
 });
 
 // POST /api/store/login
-storeAuthRoutes.post('/login', zValidator('json', LoginBody), async (c) => {
+storeAuthRoutes.post('/login', jsonValidator(LoginBody), async (c) => {
   const env = getServerEnv();
   const { email, password } = c.req.valid('json');
   const username = email.toLowerCase().trim();
@@ -135,7 +135,7 @@ const RegisterBody = z.object({
 });
 
 // POST /api/store/register
-storeAuthRoutes.post('/register', zValidator('json', RegisterBody), async (c) => {
+storeAuthRoutes.post('/register', jsonValidator(RegisterBody), async (c) => {
   const body = c.req.valid('json');
   const email = typeof body.email === 'string' ? body.email.toLowerCase().trim() : null;
 
@@ -198,7 +198,7 @@ storeAuthRoutes.post('/register', zValidator('json', RegisterBody), async (c) =>
 const ForgotBody = z.object({ email: z.string().email() });
 
 // POST /api/store/forgot-password — always 200 (anti-enumeration)
-storeAuthRoutes.post('/forgot-password', zValidator('json', ForgotBody), async (c) => {
+storeAuthRoutes.post('/forgot-password', jsonValidator(ForgotBody), async (c) => {
   const env = getServerEnv();
   const email = c.req.valid('json').email.toLowerCase().trim();
   const store = await prisma.store.findUnique({
@@ -244,7 +244,7 @@ const LookupBody = z.object({
 });
 
 // POST /api/store/lookup-email
-storeAuthRoutes.post('/lookup-email', zValidator('json', LookupBody), async (c) => {
+storeAuthRoutes.post('/lookup-email', jsonValidator(LookupBody), async (c) => {
   const { mobileNumber } = c.req.valid('json');
   const store = await prisma.store.findFirst({
     where: { ownerPhone: mobileNumber },
@@ -268,7 +268,7 @@ const ResetBody = z.object({
 });
 
 // POST /api/store/reset-password
-storeAuthRoutes.post('/reset-password', zValidator('json', ResetBody), async (c) => {
+storeAuthRoutes.post('/reset-password', jsonValidator(ResetBody), async (c) => {
   const { token, password } = c.req.valid('json');
   const row = await verifyResetToken(token, 'STORE_OWNER');
   if (!row || !row.storeId) {

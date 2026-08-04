@@ -5,14 +5,17 @@ import { useEffect, useState } from 'react';
 
 import { BranchOrderList } from '@/components/orders/BranchOrderList';
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { apiPost } from '@/hooks/use-api';
+import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { CatalogOrderPanel } from '../CatalogOrderPanel';
 
 export default function StoreManagerRestockPage() {
   const [gate, setGate] = useState<'checking' | 'locked' | 'open'>('checking');
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState<string | null>(null);
+  const [submitErr, setSubmitErr] = useState<unknown>(null);
   const [unlocking, setUnlocking] = useState(false);
   const [placed, setPlaced] = useState<string | null>(null);
   // Restock's order history lives here (behind the PIN) instead of the open
@@ -33,11 +36,12 @@ export default function StoreManagerRestockPage() {
   async function unlock(e: React.FormEvent) {
     e.preventDefault();
     setPinError(null);
+    setSubmitErr(null);
     setUnlocking(true);
     try {
       await apiPost('/api/branch-manager/restock/unlock', { pin });
       setGate('open');
-    } catch { setPinError('Incorrect PIN.'); } finally { setUnlocking(false); }
+    } catch (err) { setPinError('Incorrect PIN.'); setSubmitErr(err); } finally { setUnlocking(false); }
   }
 
   if (gate === 'checking') return <div className="flex items-center gap-2 py-16 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>;
@@ -51,7 +55,10 @@ export default function StoreManagerRestockPage() {
             <h1 className="font-display text-xl font-medium">Restock is protected</h1>
             <p className="mt-1 text-sm text-muted-foreground">Enter the restock PIN. This keeps customers out of restock.</p>
           </div>
-          <Input type="password" inputMode="numeric" autoFocus placeholder="Restock PIN" value={pin} onChange={(e) => setPin(e.target.value)} className="text-center tracking-widest" />
+          <div>
+            <Input type="password" inputMode="numeric" autoFocus placeholder="Restock PIN" value={pin} onChange={(e) => setPin(e.target.value)} className="text-center tracking-widest" />
+            <FieldError errors={toFieldErrors(fieldError(submitErr, 'pin'))} />
+          </div>
           {pinError && <p className="text-sm text-red-600">{pinError}</p>}
           <Button type="submit" disabled={unlocking} className="metal-sheen w-full text-[#17120b] font-semibold">
             {unlocking ? <Loader2 className="h-4 w-4 animate-spin" /> : <><ShieldCheck className="mr-1.5 h-4 w-4" />Unlock</>}

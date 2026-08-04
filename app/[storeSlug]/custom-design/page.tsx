@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { useKioskStore } from '@/components/kiosk/StoreContext';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
+import { toFieldErrors } from '@/lib/field-error';
 
 const PURITIES = ['24K', '22K', '18K', '14K', '916', '750', '585'];
 
@@ -18,6 +20,7 @@ export default function CustomDesignPage() {
   const [subCustom, setSubCustom] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState(false);
   const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload');
   const [uploading, setUploading] = useState(false);
@@ -65,6 +68,7 @@ export default function CustomDesignPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
     if (!form.name.trim() || form.phone.trim().length < 7) return setError('Please enter your name and a valid phone.');
     setLoading(true);
     try {
@@ -82,8 +86,8 @@ export default function CustomDesignPage() {
           referenceImageUrl: form.imageUrl.trim() || undefined,
         }),
       });
-      const json = (await res.json()) as { data?: unknown; error?: { message: string } };
-      if (!res.ok || json.error) { setError(json.error?.message ?? 'Could not submit.'); return; }
+      const json = (await res.json()) as { data?: unknown; error?: { message: string; fields?: Record<string, string> } };
+      if (!res.ok || json.error) { setError(json.error?.message ?? 'Could not submit.'); setFieldErrors(json.error?.fields ?? {}); return; }
       setDone(true);
     } catch (err) { setError(err instanceof Error ? err.message : 'Network error'); } finally { setLoading(false); }
   }
@@ -107,8 +111,8 @@ export default function CustomDesignPage() {
 
       <form onSubmit={submit} className="mt-6 space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div><label className="text-xs font-medium text-muted-foreground">Your Name *</label><Input className="mt-1" value={form.name} onChange={(e) => set('name', e.target.value)} required /></div>
-          <div><label className="text-xs font-medium text-muted-foreground">Phone *</label><Input className="mt-1" type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} required /></div>
+          <div><label className="text-xs font-medium text-muted-foreground">Your Name *</label><Input className="mt-1" value={form.name} onChange={(e) => set('name', e.target.value)} required /><FieldError errors={toFieldErrors(fieldErrors.customerName)} /></div>
+          <div><label className="text-xs font-medium text-muted-foreground">Phone *</label><Input className="mt-1" type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} required /><FieldError errors={toFieldErrors(fieldErrors.customerPhone)} /></div>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
@@ -116,6 +120,7 @@ export default function CustomDesignPage() {
             <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.category} onChange={(e) => onCategoryChange(e.target.value)}>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
+            <FieldError errors={toFieldErrors(fieldErrors.category)} />
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">Sub-category <span className="font-normal">(optional)</span></label>
@@ -136,13 +141,14 @@ export default function CustomDesignPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div><label className="text-xs font-medium text-muted-foreground">Weight (g)</label><Input className="mt-1" type="number" step="0.1" value={form.weight} onChange={(e) => set('weight', e.target.value)} /></div>
+          <div><label className="text-xs font-medium text-muted-foreground">Weight (g)</label><Input className="mt-1" type="number" step="0.1" value={form.weight} onChange={(e) => set('weight', e.target.value)} /><FieldError errors={toFieldErrors(fieldErrors.weightGrams)} /></div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">Purity</label>
             <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.purity} onChange={(e) => set('purity', e.target.value)}>
               <option value="">—</option>
               {PURITIES.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
+            <FieldError errors={toFieldErrors(fieldErrors.purity)} />
           </div>
         </div>
         {/* Reference image — upload OR URL */}
@@ -175,8 +181,9 @@ export default function CustomDesignPage() {
           ) : (
             <Input placeholder="https://…" value={form.imageUrl} onChange={(e) => set('imageUrl', e.target.value)} />
           )}
+          <FieldError errors={toFieldErrors(fieldErrors.referenceImageUrl)} />
         </div>
-        <div><label className="text-xs font-medium text-muted-foreground">Notes / description</label><textarea className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[100px]" placeholder="Describe your ideal design…" value={form.notes} onChange={(e) => set('notes', e.target.value)} /></div>
+        <div><label className="text-xs font-medium text-muted-foreground">Notes / description</label><textarea className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[100px]" placeholder="Describe your ideal design…" value={form.notes} onChange={(e) => set('notes', e.target.value)} /><FieldError errors={toFieldErrors(fieldErrors.notes)} /></div>
 
         {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
         <Button type="submit" disabled={loading} className="metal-sheen h-11 w-full text-sm font-semibold text-[#17120b]">

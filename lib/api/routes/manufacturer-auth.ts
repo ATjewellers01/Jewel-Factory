@@ -1,4 +1,4 @@
-import { zValidator } from '@hono/zod-validator';
+import { jsonValidator } from '../validation';
 import { Hono } from 'hono';
 import { deleteCookie, setCookie } from 'hono/cookie';
 import { z } from 'zod';
@@ -22,7 +22,7 @@ const LoginBody = z.object({
 });
 
 // POST /api/manufacturer/login
-manufacturerAuthRoutes.post('/login', zValidator('json', LoginBody), async (c) => {
+manufacturerAuthRoutes.post('/login', jsonValidator(LoginBody), async (c) => {
   const env = getServerEnv();
   const { email, password } = c.req.valid('json');
 

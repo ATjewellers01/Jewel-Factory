@@ -1,4 +1,4 @@
-import { zValidator } from '@hono/zod-validator';
+import { jsonValidator } from '../validation';
 import { Hono, type Context } from 'hono';
 import { getCookie, deleteCookie, setCookie } from 'hono/cookie';
 import { z } from 'zod';
@@ -46,7 +46,7 @@ function bmSecret(env: { BRANCH_MANAGER_SECRET?: string; MANAGER_SECRET: string 
 const LoginBody = z.object({ email: z.string().min(1), password: z.string().min(1) });
 
 // POST /api/branch-manager/login
-branchManagerRoutes.post('/login', zValidator('json', LoginBody), async (c) => {
+branchManagerRoutes.post('/login', jsonValidator(LoginBody), async (c) => {
   const env = getServerEnv();
   const { email, password } = c.req.valid('json');
   const username = email.toLowerCase().trim();
@@ -173,7 +173,7 @@ branchManagerRoutes.get('/tryon-products', branchManagerGuard, async (c) => {
 });
 
 // ── Visual search (image → similar manufacturer products) ─────────────────────
-branchManagerRoutes.post('/search/image', branchManagerGuard, zValidator('json', z.object({ image: z.string().min(1) })), async (c) => {
+branchManagerRoutes.post('/search/image', branchManagerGuard, jsonValidator(z.object({ image: z.string().min(1) })), async (c) => {
   let ids: string[];
   try {
     const vector = await embedImageBase64(c.req.valid('json').image);
@@ -201,7 +201,7 @@ const KioskOrderBody = z.object({
   items: z.array(z.object({ manufacturerProductId: z.string().uuid(), quantity: z.number().int().positive(), purity: z.string().max(40).optional() })).min(1),
 });
 
-branchManagerRoutes.post('/kiosk-orders', branchManagerGuard, zValidator('json', KioskOrderBody), async (c) => {
+branchManagerRoutes.post('/kiosk-orders', branchManagerGuard, jsonValidator(KioskOrderBody), async (c) => {
   const retailerId = c.get('storeId');
   const branchId = c.get('branchId');
   const [retailer, branch] = await Promise.all([
@@ -280,7 +280,7 @@ branchManagerRoutes.post('/custom-designs/upload-sign', branchManagerGuard, asyn
   }
 });
 
-branchManagerRoutes.post('/custom-designs', branchManagerGuard, zValidator('json', CustomBody), async (c) => {
+branchManagerRoutes.post('/custom-designs', branchManagerGuard, jsonValidator(CustomBody), async (c) => {
   const retailerId = c.get('storeId');
   const branchId = c.get('branchId');
   const body = c.req.valid('json');
@@ -331,7 +331,7 @@ branchManagerRoutes.get('/restock/lock-status', branchManagerGuard, async (c) =>
 
 // POST /api/branch-manager/restock/unlock — verify branch PIN → set unlock cookie
 const RestockUnlock = z.object({ pin: z.string().min(1) });
-branchManagerRoutes.post('/restock/unlock', branchManagerGuard, zValidator('json', RestockUnlock), async (c) => {
+branchManagerRoutes.post('/restock/unlock', branchManagerGuard, jsonValidator(RestockUnlock), async (c) => {
   const env = getServerEnv();
   const branch = await prisma.branch.findUnique({ where: { id: c.get('branchId') }, select: { id: true, restockPinHash: true } });
   if (!branch) return sendError(c, 'not_found', 'Branch not found', 404);
@@ -348,7 +348,7 @@ branchManagerRoutes.post('/restock/unlock', branchManagerGuard, zValidator('json
 // ── Set/clear the branch restock PIN (store manager can manage it too) ────────
 
 const SetPin = z.object({ pin: z.string().min(4).max(12) });
-branchManagerRoutes.put('/restock/pin', branchManagerGuard, zValidator('json', SetPin), async (c) => {
+branchManagerRoutes.put('/restock/pin', branchManagerGuard, jsonValidator(SetPin), async (c) => {
   const { hashPassword } = await import('@/lib/password');
   const hash = await hashPassword(c.req.valid('json').pin);
   await prisma.branch.update({ where: { id: c.get('branchId') }, data: { restockPinHash: hash } });
@@ -368,7 +368,7 @@ const RestockBody = z.object({
   items: z.array(z.object({ manufacturerProductId: z.string().uuid(), quantity: z.number().int().positive(), purity: z.string().max(40).optional() })).min(1),
 });
 
-branchManagerRoutes.post('/restock-orders', branchManagerGuard, zValidator('json', RestockBody), async (c) => {
+branchManagerRoutes.post('/restock-orders', branchManagerGuard, jsonValidator(RestockBody), async (c) => {
   const retailerId = c.get('storeId');
   const branchId = c.get('branchId');
   const [retailer, branch] = await Promise.all([
@@ -441,7 +441,7 @@ branchManagerRoutes.get('/messages/:kind/:id', branchManagerGuard, async (c) => 
   return sendData(c, await listOrderMessages(c.get('storeId'), kind, c.req.param('id')));
 });
 
-branchManagerRoutes.post('/messages/:kind/:id', branchManagerGuard, zValidator('json', z.object({ body: z.string().min(1).max(2000) })), async (c) => {
+branchManagerRoutes.post('/messages/:kind/:id', branchManagerGuard, jsonValidator(z.object({ body: z.string().min(1).max(2000) })), async (c) => {
   const kind = KIND_MAP[c.req.param('kind')];
   if (!kind) return sendError(c, 'bad_request', 'Invalid order kind', 400);
   const bm = await prisma.branchManager.findUnique({ where: { id: c.get('branchManagerId') }, select: { name: true } });

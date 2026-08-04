@@ -15,7 +15,9 @@ import { useEffect, useRef, useState } from 'react';
 import { PortalLoginScreen } from '@/components/auth/PortalLoginScreen';
 import { Wordmark } from '@/components/landing/Wordmark';
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { toFieldErrors } from '@/lib/field-error';
 
 interface FormState {
   name: string;
@@ -48,6 +50,7 @@ export default function StoreRegisterPage() {
   const [form, setForm] = useState<FormState>(INITIAL);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [logoMode, setLogoMode] = useState<'upload' | 'url'>('upload');
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoError, setLogoError] = useState<string | null>(null);
@@ -152,6 +155,7 @@ export default function StoreRegisterPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
     const message = validate();
     if (message) return setError(message);
 
@@ -163,11 +167,13 @@ export default function StoreRegisterPage() {
         body: JSON.stringify(form),
       });
       if (res.status === 409) {
-        const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+        const json = (await res.json().catch(() => null)) as { error?: { message?: string; fields?: Record<string, string> } } | null;
+        setFieldErrors(json?.error?.fields ?? {});
         return setError(json?.error?.message ?? 'Already registered.');
       }
       if (!res.ok) {
-        const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+        const json = (await res.json().catch(() => null)) as { error?: { message?: string; fields?: Record<string, string> } } | null;
+        setFieldErrors(json?.error?.fields ?? {});
         return setError(json?.error?.message ?? 'Registration failed. Please try again.');
       }
       setSuccess(true);
@@ -216,13 +222,21 @@ export default function StoreRegisterPage() {
                 <fieldset className="space-y-5">
                   <legend className="font-display text-[1.35rem] tracking-tight">Tell us about your business</legend>
                   <label className={labelClass}>Business name <Input autoFocus autoComplete="organization" placeholder="e.g. Mehta Jewellers" value={form.name} onChange={set('name')} className={fieldClass} /></label>
+                  <FieldError errors={toFieldErrors(fieldErrors.name)} />
                   <div className="grid gap-5 lg:grid-cols-2">
-                    <label className={labelClass}>Person name <Input autoComplete="name" placeholder="Full name" value={form.personName} onChange={set('personName')} className={fieldClass} /></label>
-                    <label className={labelClass}>Mobile number <Input type="tel" autoComplete="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number" value={form.mobileNumber} onChange={set('mobileNumber')} className={fieldClass} /></label>
+                    <div>
+                      <label className={labelClass}>Person name <Input autoComplete="name" placeholder="Full name" value={form.personName} onChange={set('personName')} className={fieldClass} /></label>
+                      <FieldError errors={toFieldErrors(fieldErrors.personName)} />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Mobile number <Input type="tel" autoComplete="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number" value={form.mobileNumber} onChange={set('mobileNumber')} className={fieldClass} /></label>
+                      <FieldError errors={toFieldErrors(fieldErrors.mobileNumber)} />
+                    </div>
                   </div>
                   <label className={labelClass}>Business email
                     <Input type="email" autoComplete="email" inputMode="email" placeholder="Used to sign in" value={form.email} onChange={set('email')} className={fieldClass} />
                   </label>
+                  <FieldError errors={toFieldErrors(fieldErrors.email)} />
                   {/* With an email the username is the email; without one the mobile
                       number is both username and password, so the note has to say so. */}
                   <p className="flex items-start gap-2 rounded-xl bg-[#f4f0e8] px-4 py-3 text-xs leading-5 text-[#746b62]">
@@ -273,6 +287,7 @@ export default function StoreRegisterPage() {
                     )}
 
                     {logoError ? <span className="font-normal normal-case tracking-normal text-[11px] text-red-600">{logoError}</span> : null}
+                    <FieldError errors={toFieldErrors(fieldErrors.logoUrl)} />
                   </div>
                 </fieldset>
 
@@ -287,9 +302,16 @@ export default function StoreRegisterPage() {
                     </span>
                     <Input autoComplete="postal-code" inputMode="numeric" maxLength={6} placeholder="6-digit PIN code" value={form.addressPincode} onChange={set('addressPincode')} className={fieldClass} />
                   </label>
+                  <FieldError errors={toFieldErrors(fieldErrors.addressPincode)} />
                   <div className="grid gap-5 lg:grid-cols-2">
-                    <label className={labelClass}>City <Input autoComplete="address-level2" placeholder="City" value={form.addressCity} onChange={set('addressCity')} className={fieldClass} /></label>
-                    <label className={labelClass}>State <Input autoComplete="address-level1" placeholder="State" value={form.addressState} onChange={set('addressState')} className={fieldClass} /></label>
+                    <div>
+                      <label className={labelClass}>City <Input autoComplete="address-level2" placeholder="City" value={form.addressCity} onChange={set('addressCity')} className={fieldClass} /></label>
+                      <FieldError errors={toFieldErrors(fieldErrors.addressCity)} />
+                    </div>
+                    <div>
+                      <label className={labelClass}>State <Input autoComplete="address-level1" placeholder="State" value={form.addressState} onChange={set('addressState')} className={fieldClass} /></label>
+                      <FieldError errors={toFieldErrors(fieldErrors.addressState)} />
+                    </div>
                   </div>
                   {/* Street + landmark are optional here — both can be added or
                       edited later from the purchase manager's profile page. */}
@@ -299,12 +321,14 @@ export default function StoreRegisterPage() {
                     </span>
                     <Input autoComplete="street-address" placeholder="Building, street and area" value={form.addressStreet} onChange={set('addressStreet')} className={fieldClass} />
                   </label>
+                  <FieldError errors={toFieldErrors(fieldErrors.addressStreet)} />
                   <label className={labelClass}>
                     <span className="flex flex-wrap items-center gap-x-2">
                       Landmark <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
                     </span>
                     <Input placeholder="Nearby landmark" value={form.addressLandmark} onChange={set('addressLandmark')} className={fieldClass} />
                   </label>
+                  <FieldError errors={toFieldErrors(fieldErrors.addressLandmark)} />
                   <p className="text-xs leading-5 text-[#8a8178]">You can add or change the street address and landmark later from your portal profile.</p>
                 </fieldset>
             </section>

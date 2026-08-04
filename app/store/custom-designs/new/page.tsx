@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { apiPost } from '@/hooks/use-api';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
+import { fieldError, toFieldErrors } from '@/lib/field-error';
 
 const PURITIES = ['24K', '22K', '18K', '14K', '916', '750', '585'];
 const MEENA_OPTIONS = ['Yes', 'No'];
@@ -43,6 +45,7 @@ export default function StoreCustomDesignNewPage() {
   const [subCustom, setSubCustom] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submitErr, setSubmitErr] = useState<unknown>(null);
   const [done, setDone] = useState(false);
   const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload');
   const [uploading, setUploading] = useState(false);
@@ -75,6 +78,7 @@ export default function StoreCustomDesignNewPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setSubmitErr(null);
 
     if (!form.imageUrl.trim()) { setError('Please add a reference image.'); return; }
 
@@ -108,7 +112,10 @@ export default function StoreCustomDesignNewPage() {
         sampleWeightGrams: form.sampleWeight ? Number(form.sampleWeight) : undefined,
       });
       setDone(true);
-    } catch (err) { setError(err instanceof Error ? err.message : 'Could not submit'); } finally { setLoading(false); }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not submit');
+      setSubmitErr(err);
+    } finally { setLoading(false); }
   }
 
   if (done) {
@@ -145,10 +152,12 @@ export default function StoreCustomDesignNewPage() {
             <div>
               <label className="text-xs font-medium text-muted-foreground">Order number</label>
               <Input required className="mt-1 h-10" placeholder="Your shop's order no." value={form.orderRef} onChange={(e) => set('orderRef', e.target.value)} />
+              <FieldError errors={toFieldErrors(fieldError(submitErr, 'orderRef'))} />
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Delivery date</label>
               <Input required type="date" className="mt-1 h-10" value={form.deliveryDate} onChange={(e) => set('deliveryDate', e.target.value)} />
+              <FieldError errors={toFieldErrors(fieldError(submitErr, 'deliveryDate'))} />
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -157,6 +166,7 @@ export default function StoreCustomDesignNewPage() {
               <select className="mt-1 h-10 w-full rounded-lg border border-black/15 bg-white/60 px-3 text-sm" value={form.category} onChange={(e) => { set('category', e.target.value); set('subCategory', ''); setSubCustom(false); }}>
                 {CATEGORIES.map((cc) => <option key={cc} value={cc}>{cc}</option>)}
               </select>
+              <FieldError errors={toFieldErrors(fieldError(submitErr, 'category'))} />
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Sub-category</label>
@@ -172,6 +182,7 @@ export default function StoreCustomDesignNewPage() {
                   {subOptions.length > 0 && <button type="button" onClick={() => { setSubCustom(false); set('subCategory', ''); }} className="shrink-0 text-xs text-muted-foreground hover:text-foreground">List</button>}
                 </div>
               )}
+              <FieldError errors={toFieldErrors(fieldError(submitErr, 'subCategory'))} />
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -180,6 +191,7 @@ export default function StoreCustomDesignNewPage() {
               <div className="mt-1 flex items-center gap-2">
                 <Input required placeholder="e.g. 2 pcs" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} className="h-10" />
               </div>
+              <FieldError errors={toFieldErrors(fieldError(submitErr, 'quantity'))} />
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Sample weight (g)</label>
@@ -195,6 +207,7 @@ export default function StoreCustomDesignNewPage() {
                 onBlur={(e) => set('sampleWeight', formatWeight3(e.target.value))}
                 className="mt-1 h-10"
               />
+              <FieldError errors={toFieldErrors(fieldError(submitErr, 'sampleWeightGrams'))} />
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -227,6 +240,7 @@ export default function StoreCustomDesignNewPage() {
                 />
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground">Leave &ldquo;To&rdquo; blank for an exact weight.</p>
+              <FieldError errors={toFieldErrors(fieldError(submitErr, 'weightGramsMin') ?? fieldError(submitErr, 'weightGramsMax'))} />
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Melting / purity</label>
@@ -234,6 +248,7 @@ export default function StoreCustomDesignNewPage() {
                 <option value="">—</option>
                 {PURITIES.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
+              <FieldError errors={toFieldErrors(fieldError(submitErr, 'purity'))} />
             </div>
           </div>
 
@@ -244,6 +259,7 @@ export default function StoreCustomDesignNewPage() {
                 <option value="">—</option>
                 {MEENA_OPTIONS.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
+              <FieldError errors={toFieldErrors(fieldError(submitErr, 'meena'))} />
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Screw</label>
@@ -251,20 +267,24 @@ export default function StoreCustomDesignNewPage() {
                 <option value="">—</option>
                 {SCREW_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
               </select>
+              <FieldError errors={toFieldErrors(fieldError(submitErr, 'screw'))} />
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <label className="text-xs font-medium text-muted-foreground">Length</label>
               <Input required className="mt-1 h-10" placeholder="e.g. 18 inch" value={form.length} onChange={(e) => set('length', e.target.value)} />
+              <FieldError errors={toFieldErrors(fieldError(submitErr, 'length'))} />
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Size</label>
               <Input required className="mt-1 h-10" placeholder="e.g. 2.6 or 2.6.5" value={form.size} onChange={(e) => set('size', e.target.value)} />
+              <FieldError errors={toFieldErrors(fieldError(submitErr, 'size'))} />
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Broadness</label>
               <Input required className="mt-1 h-10" placeholder="e.g. 8 mm" value={form.broadness} onChange={(e) => set('broadness', e.target.value)} />
+              <FieldError errors={toFieldErrors(fieldError(submitErr, 'broadness'))} />
             </div>
           </div>
 
@@ -316,11 +336,13 @@ export default function StoreCustomDesignNewPage() {
                 ) : null}
               </div>
             )}
+            <FieldError errors={toFieldErrors(fieldError(submitErr, 'referenceImageUrl'))} />
           </div>
 
           <div>
             <label className="text-xs font-medium text-muted-foreground">Remarks</label>
             <textarea className="mt-1 min-h-[130px] w-full rounded-lg border border-black/15 bg-white/60 px-3 py-2 text-sm" placeholder="Describe the design — style, size, engraving, timeline…" value={form.notes} onChange={(e) => set('notes', e.target.value)} />
+            <FieldError errors={toFieldErrors(fieldError(submitErr, 'designNotes'))} />
           </div>
 
           {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}

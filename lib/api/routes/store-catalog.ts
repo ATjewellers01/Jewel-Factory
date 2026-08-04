@@ -1,4 +1,4 @@
-import { zValidator } from '@hono/zod-validator';
+import { jsonValidator } from '../validation';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -62,7 +62,7 @@ const OrderBody = z.object({
     .min(1),
 });
 
-storeCatalogRoutes.post('/orders', storeGuard, zValidator('json', OrderBody), async (c) => {
+storeCatalogRoutes.post('/orders', storeGuard, jsonValidator(OrderBody), async (c) => {
   const storeId = c.get('storeId');
   const store = await prisma.store.findUnique({
     where: { id: storeId },

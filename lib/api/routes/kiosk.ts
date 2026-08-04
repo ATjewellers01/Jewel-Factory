@@ -1,4 +1,4 @@
-import { zValidator } from '@hono/zod-validator';
+import { jsonValidator } from '../validation';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -67,7 +67,7 @@ kioskRoutes.get('/lock-status/:slug', async (c) => {
 // ── Kiosk unlock: verify the store PIN, set the device cookie (8h) ─────────────
 const UnlockBody = z.object({ slug: z.string().min(1), pin: z.string().min(1) });
 
-kioskRoutes.post('/unlock', zValidator('json', UnlockBody), async (c) => {
+kioskRoutes.post('/unlock', jsonValidator(UnlockBody), async (c) => {
   const env = getServerEnv();
   const { slug, pin } = c.req.valid('json');
   const store = await prisma.store.findFirst({
@@ -140,7 +140,7 @@ const OrderBody = z.object({
   items: z.array(z.object({ productId: z.string().uuid(), quantity: z.number().int().positive() })).min(1),
 });
 
-kioskRoutes.post('/orders', zValidator('json', OrderBody), async (c) => {
+kioskRoutes.post('/orders', jsonValidator(OrderBody), async (c) => {
   const body = c.req.valid('json');
   const store = await resolveStore(body.storeSlug);
   if (!store) return sendError(c, 'not_found', 'Store not found or not active.', 404);
@@ -194,7 +194,7 @@ kioskRoutes.post('/orders', zValidator('json', OrderBody), async (c) => {
 // ── Similar image search (manufacturer catalog) ───────────────────────────────
 const SearchBody = z.object({ image: z.string().min(10) }); // base64
 
-kioskRoutes.post('/search/image', zValidator('json', SearchBody), async (c) => {
+kioskRoutes.post('/search/image', jsonValidator(SearchBody), async (c) => {
   let ids: string[];
   try {
     const vector = await embedImageBase64(c.req.valid('json').image);
@@ -226,7 +226,7 @@ kioskRoutes.get('/orders/:id', async (c) => {
 // ── Custom design reference image upload (public, per-store folder) ────────────
 // Signed Cloudinary upload for the customer's reference photo. Scoped to the
 // store's custom folder; only signs folder+timestamp so it can't be abused.
-kioskRoutes.post('/custom-design/upload-sign', zValidator('json', z.object({ storeSlug: z.string().min(1) })), async (c) => {
+kioskRoutes.post('/custom-design/upload-sign', jsonValidator(z.object({ storeSlug: z.string().min(1) })), async (c) => {
   const store = await resolveStore(c.req.valid('json').storeSlug);
   if (!store) return sendError(c, 'not_found', 'Store not found or not active.', 404);
   try {
@@ -249,7 +249,7 @@ const CustomBody = z.object({
   referenceImageUrl: z.string().url().optional().or(z.literal('')),
 });
 
-kioskRoutes.post('/custom-design', zValidator('json', CustomBody), async (c) => {
+kioskRoutes.post('/custom-design', jsonValidator(CustomBody), async (c) => {
   const body = c.req.valid('json');
   const store = await resolveStore(body.storeSlug);
   if (!store) return sendError(c, 'not_found', 'Store not found or not active.', 404);

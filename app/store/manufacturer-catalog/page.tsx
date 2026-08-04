@@ -8,12 +8,14 @@ import { StoreManagerProductDetailModal } from '@/components/kiosk/StoreManagerP
 import { CartQtyControl } from '@/components/orders/CartQtyControl';
 import { WeightRangeSlider } from '@/components/orders/WeightRangeSlider';
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { StarRating } from '@/components/ui/StarRating';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { useB2bCart } from '@/hooks/use-b2b-cart';
 import { useFavorites } from '@/hooks/use-favorites';
 import { CATEGORIES, PURITIES, subCategoriesFor } from '@/lib/categories';
+import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { formatWeight } from '@/lib/format';
 import { SORT_OPTIONS, weightExtent, matchWeightRange, sortProducts, type SortOption } from '@/lib/weight-filter';
 
@@ -49,6 +51,7 @@ function CatalogBrowse() {
   const [showFavorites, setShowFavorites] = useState(false);
   const [notes, setNotes] = useState('');
   const [placing, setPlacing] = useState(false);
+  const [submitErr, setSubmitErr] = useState<unknown>(null);
   const [salesMap, setSalesMap] = useState<Record<string, SalesInfo>>({});
   const [detail, setDetail] = useState<Product | null>(null);
 
@@ -90,6 +93,7 @@ function CatalogBrowse() {
 
   async function placeOrder() {
     setPlacing(true);
+    setSubmitErr(null);
     try {
       const order = (await apiPost('/api/store/orders', {
         notes: notes || undefined,
@@ -100,6 +104,7 @@ function CatalogBrowse() {
       void order;
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Could not place order');
+      setSubmitErr(e);
     } finally { setPlacing(false); }
   }
 
@@ -292,6 +297,7 @@ function CatalogBrowse() {
                 })}
               </div>
               <textarea placeholder="Notes for manufacturer (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[60px]" />
+              <FieldError errors={toFieldErrors(fieldError(submitErr, 'notes'))} />
               <p className="text-xs text-muted-foreground">Ships to your fixed store address.</p>
               <Button onClick={placeOrder} disabled={placing} className="metal-sheen text-[#17120b] font-semibold w-full">
                 {placing ? <Loader2 className="h-4 w-4 animate-spin" /> : `Place order (${cart.count} item(s))`}

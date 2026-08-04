@@ -8,12 +8,14 @@ import { StoreManagerProductDetailModal, type StoreManagerProduct } from '@/comp
 import { CartQtyControl } from '@/components/orders/CartQtyControl';
 import { WeightRangeSlider } from '@/components/orders/WeightRangeSlider';
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { StarRating } from '@/components/ui/StarRating';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useStoreManagerKioskCart, useStoreManagerRestockCart } from '@/hooks/use-store-manager-cart';
 import { PURITIES, subCategoriesFor } from '@/lib/categories';
+import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { formatWeight } from '@/lib/format';
 import { SORT_OPTIONS, weightExtent, matchWeightRange, sortByWeight, type SortOption } from '@/lib/weight-filter';
 import { useStoreManager } from './store-manager-context';
@@ -83,6 +85,7 @@ export function CatalogOrderPanel({
   const [placing, setPlacing] = useState(false);
   const [detail, setDetail] = useState<Product | null>(null);
   const [placeError, setPlaceError] = useState<string | null>(null);
+  const [submitErr, setSubmitErr] = useState<unknown>(null);
   const [salesMap, setSalesMap] = useState<Record<string, SalesInfo>>({});
   const [mobileCols, setMobileCols] = useState<MobileCols>(2);
   const [wideCols, setWideCols] = useState<WideCols>(4);
@@ -190,6 +193,7 @@ export function CatalogOrderPanel({
 
   async function place() {
     setPlaceError(null);
+    setSubmitErr(null);
     if (!showPopularity && (!orderCart.salesCode.trim() || !orderCart.salesPersonName.trim())) {
       setPlaceError('Please enter the sales code and sales person name.');
       return;
@@ -208,6 +212,7 @@ export function CatalogOrderPanel({
       onPlaced(order);
     } catch (e) {
       setPlaceError(e instanceof Error ? e.message : 'Could not place order');
+      setSubmitErr(e);
     } finally { setPlacing(false); }
   }
 
@@ -358,16 +363,19 @@ export function CatalogOrderPanel({
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">Sales code</label>
                     <Input value={orderCart.salesCode} onChange={(e) => orderCart.setSalesCode(e.target.value)} placeholder="e.g. SC-104" className="mt-1 h-10" />
+                    <FieldError errors={toFieldErrors(fieldError(submitErr, 'salesCode'))} />
                   </div>
                   <div>
                     <label className="text-xs font-medium text-muted-foreground">Sales person name</label>
                     <Input value={orderCart.salesPersonName} onChange={(e) => orderCart.setSalesPersonName(e.target.value)} placeholder="Who's placing this order?" className="mt-1 h-10" />
+                    <FieldError errors={toFieldErrors(fieldError(submitErr, 'salesPersonName'))} />
                   </div>
                 </div>
               )}
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Remark (goes to Head Office)</label>
                 <textarea value={orderCart.note} onChange={(e) => orderCart.setNote(e.target.value)} placeholder={notePlaceholder} className="mt-1 min-h-[90px] w-full rounded-lg border border-black/15 bg-white/60 px-3 py-2 text-sm" />
+                <FieldError errors={toFieldErrors(fieldError(submitErr, 'requirementNote'))} />
               </div>
               {placeError && <p className="text-sm text-red-600">{placeError}</p>}
               <Button onClick={place} disabled={placing} className="metal-sheen h-11 w-full rounded-full font-semibold text-[#17120b]">

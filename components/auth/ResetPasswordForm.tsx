@@ -7,7 +7,9 @@ import { useState } from 'react';
 
 import { Wordmark } from '@/components/landing/Wordmark';
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { toFieldErrors } from '@/lib/field-error';
 
 export function ResetPasswordForm({
   title,
@@ -25,11 +27,13 @@ export function ResetPasswordForm({
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [done, setDone] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
     if (!token) return setError('Missing or invalid reset link.');
     if (password.length < 6) return setError('Password must be at least 6 characters.');
     if (password !== confirm) return setError('Passwords do not match.');
@@ -42,7 +46,8 @@ export function ResetPasswordForm({
         body: JSON.stringify({ token, password }),
       });
       if (!res.ok) {
-        const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+        const json = (await res.json().catch(() => null)) as { error?: { message?: string; fields?: Record<string, string> } } | null;
+        setFieldErrors(json?.error?.fields ?? {});
         return setError(json?.error?.message ?? 'Could not reset password. The link may have expired.');
       }
       setDone(true);
@@ -104,6 +109,7 @@ export function ResetPasswordForm({
                   {show ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+              <FieldError errors={toFieldErrors(fieldErrors.password)} />
               <Input
                 type={show ? 'text' : 'password'}
                 placeholder="Confirm password"
@@ -111,6 +117,7 @@ export function ResetPasswordForm({
                 onChange={(e) => setConfirm(e.target.value)}
                 required
               />
+              <FieldError errors={toFieldErrors(fieldErrors.token)} />
               {error && <p className="text-center text-sm text-red-600">{error}</p>}
               <Button type="submit" className="h-11 w-full metal-sheen text-[#17120b] font-semibold" disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Set new password'}

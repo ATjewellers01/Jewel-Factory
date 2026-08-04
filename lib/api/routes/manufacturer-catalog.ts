@@ -19,6 +19,7 @@ import { getManufacturerDashboard } from '@/lib/db/manufacturer-dashboard';
 import { indexManufacturerProduct } from '@/lib/db/indexing';
 import { sendData, sendError } from '../envelope';
 import { manufacturerGuard, type AppEnv } from '../guards';
+import { jsonValidator } from '../validation';
 import type { ProductStatus } from '@prisma/client';
 
 // All routes here are manufacturer-gated.
@@ -104,12 +105,12 @@ const ProductBody = z.object({
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional(),
 });
 
-manufacturerCatalogRoutes.post('/products', zValidator('json', ProductBody), async (c) => {
+manufacturerCatalogRoutes.post('/products', jsonValidator(ProductBody), async (c) => {
   const product = await createManufacturerProduct(c.get('manufacturerId'), c.req.valid('json'));
   return sendData(c, product, 201);
 });
 
-manufacturerCatalogRoutes.patch('/products/:id', zValidator('json', ProductBody.partial()), async (c) => {
+manufacturerCatalogRoutes.patch('/products/:id', jsonValidator(ProductBody.partial()), async (c) => {
   const updated = await updateManufacturerProduct(
     c.get('manufacturerId'),
     c.req.param('id'),
@@ -126,7 +127,7 @@ const BulkStatusBody = z.object({
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']),
 });
 
-manufacturerCatalogRoutes.post('/products/bulk-status', zValidator('json', BulkStatusBody), async (c) => {
+manufacturerCatalogRoutes.post('/products/bulk-status', jsonValidator(BulkStatusBody), async (c) => {
   const { ids, status } = c.req.valid('json');
   const result = await setManufacturerProductsStatus(c.get('manufacturerId'), ids, status);
   return sendData(c, { updated: result.count });
@@ -160,7 +161,7 @@ const SaveImageBody = z.object({
 });
 
 // POST /products/:id/images — save uploaded image
-manufacturerCatalogRoutes.post('/products/:id/images', zValidator('json', SaveImageBody), async (c) => {
+manufacturerCatalogRoutes.post('/products/:id/images', jsonValidator(SaveImageBody), async (c) => {
   const productId = c.req.param('id');
   const img = await addProductImage(c.get('manufacturerId'), productId, c.req.valid('json'));
   if (!img) return sendError(c, 'not_found', 'Product not found', 404);
@@ -203,7 +204,7 @@ const TryonBody = z.object({
 });
 
 // POST /products/:id/tryon — set/replace try-on asset
-manufacturerCatalogRoutes.post('/products/:id/tryon', zValidator('json', TryonBody), async (c) => {
+manufacturerCatalogRoutes.post('/products/:id/tryon', jsonValidator(TryonBody), async (c) => {
   const asset = await setProductTryon(c.get('manufacturerId'), c.req.param('id'), c.req.valid('json'));
   if (!asset) return sendError(c, 'not_found', 'Product not found', 404);
   return sendData(c, asset, 201);

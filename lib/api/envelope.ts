@@ -19,6 +19,6 @@ export function sendData<T>(c: Context, data: T, status = 200) {
   return c.json({ data }, status as never);
 }
 
-export function sendError(c: Context, code: ErrorCode, message: string, status = 400) {
-  return c.json({ error: { code, message } }, status as never);
+export function sendError(c: Context, code: ErrorCode, message: string, status = 400, fields?: Record<string, string>) {
+  return c.json({ error: { code, message, ...(fields ? { fields } : {}) } }, status as never);
 }

@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { uploadToObjectStorage } from '@/lib/upload-client';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
+import { toFieldErrors } from '@/lib/field-error';
 
 const PURITIES = ['24K', '22K', '18K', '14K', '916', '750', '585'];
 const JEWELLERY_TYPES = ['necklace', 'earring_left', 'earring_right', 'ring_index', 'ring_middle', 'bangle'] as const;
@@ -68,6 +70,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingTryon, setUploadingTryon] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [zoom, setZoom] = useState<{ src: string; checker?: boolean } | null>(null); // click-to-enlarge preview
 
   // ── AI generate (raw image -> name/description + catalog + transparent) ──────
@@ -334,8 +337,12 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildPayload()),
       });
-      const json = (await res.json()) as { data?: { id: string; designNumber: string }; error?: { message: string } };
-      if (!res.ok || !json.data) { setError(json.error?.message ?? 'Could not create product'); return null; }
+      const json = (await res.json()) as { data?: { id: string; designNumber: string }; error?: { message: string; fields?: Record<string, string> } };
+      if (!res.ok || !json.data) {
+        setError(json.error?.message ?? 'Could not create product');
+        setFieldErrors(json.error?.fields ?? {});
+        return null;
+      }
       createIdRef.current = json.data.id;
       setForm((p) => ({ ...p, id: json.data!.id, designNumber: json.data!.designNumber }));
       return json.data.id;
@@ -436,25 +443,24 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
   async function save() {
     setError(null);
+    setFieldErrors({});
     setBusy(true);
     try {
       const id = await ensureProductId();
       if (!id) return;
-      // If it already existed, patch the fields.
-      if (isEdit || initial?.id) {
-        await fetch(`/api/manufacturer/products/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(buildPayload()),
-        });
-      } else {
-        // Newly created via ensureProductId with current payload — but if the user
-        // edited fields after uploading an image (which created it), patch too.
-        await fetch(`/api/manufacturer/products/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(buildPayload()),
-        });
+      // Same PATCH either way — if it already existed, patch its fields; if it
+      // was just created via ensureProductId, patch too in case the user
+      // edited fields after uploading an image (which created it).
+      const res = await fetch(`/api/manufacturer/products/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(buildPayload()),
+      });
+      const json = (await res.json().catch(() => null)) as { error?: { message: string; fields?: Record<string, string> } } | null;
+      if (!res.ok || json?.error) {
+        setError(json?.error?.message ?? 'Could not save');
+        setFieldErrors(json?.error?.fields ?? {});
+        return;
       }
       router.push('/manufacturer/catalog');
     } catch (e) {
@@ -480,6 +486,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
               <option value="">Select category</option>
               {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
+            <FieldError errors={toFieldErrors(fieldErrors.category)} />
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">Sub-category <span className="font-normal">(optional)</span></label>
@@ -509,12 +516,14 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
                 )}
               </div>
             )}
+            <FieldError errors={toFieldErrors(fieldErrors.subCategory)} />
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
             <label className="text-xs font-medium text-muted-foreground">Weight (g)</label>
             <Input className="mt-1" type="number" step="0.001" placeholder="12.5" value={form.weightGrams} onChange={set('weightGrams')} />
+            <FieldError errors={toFieldErrors(fieldErrors.weightGrams)} />
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">Purity</label>
@@ -522,10 +531,12 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
               <option value="">—</option>
               {PURITIES.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
+            <FieldError errors={toFieldErrors(fieldErrors.purity)} />
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">Pieces</label>
             <Input className="mt-1" type="number" min="1" step="1" placeholder="1" value={form.pieces} onChange={set('pieces')} title="How many physical pieces make up the weight above (e.g. a bangle pair = 2)" />
+            <FieldError errors={toFieldErrors(fieldErrors.pieces)} />
           </div>
         </div>
         {/* Sits directly under Weight — it's a dimension of the piece, and only
@@ -535,6 +546,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
             <div>
               <label className="text-xs font-medium text-muted-foreground">Size <span className="font-normal">(optional)</span></label>
               <Input className="mt-1" placeholder="e.g. 2.4" value={form.size} onChange={set('size')} title="Bangle size — free text, e.g. 2.4 or 2.6" />
+              <FieldError errors={toFieldErrors(fieldErrors.size)} />
             </div>
           </div>
         )}
@@ -546,6 +558,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
           <div>
             <label className="text-xs font-medium text-muted-foreground">Min Order Qty</label>
             <Input className="mt-1" type="number" min="1" value={form.minOrderQty} onChange={set('minOrderQty')} />
+            <FieldError errors={toFieldErrors(fieldErrors.minOrderQty)} />
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">Status</label>
@@ -553,11 +566,13 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
               <option value="ACTIVE">Active (visible)</option>
               <option value="DRAFT">Inactive (hidden from stores)</option>
             </select>
+            <FieldError errors={toFieldErrors(fieldErrors.status)} />
           </div>
         </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground">Karigar Code <span className="text-[10px] normal-case text-muted-foreground/70">(internal only — never shown to purchase managers)</span></label>
           <Input className="mt-1" placeholder="e.g. K-104" value={form.karigarCode} onChange={set('karigarCode')} />
+          <FieldError errors={toFieldErrors(fieldErrors.karigarCode)} />
         </div>
       </section>
 

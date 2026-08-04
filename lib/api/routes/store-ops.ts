@@ -1,4 +1,4 @@
-import { zValidator } from '@hono/zod-validator';
+import { jsonValidator } from '../validation';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -44,7 +44,7 @@ storeOpsRoutes.get('/kiosk-pin', async (c) => {
 });
 
 const KioskPinBody = z.object({ pin: z.string().min(4).max(20) });
-storeOpsRoutes.put('/kiosk-pin', zValidator('json', KioskPinBody), async (c) => {
+storeOpsRoutes.put('/kiosk-pin', jsonValidator(KioskPinBody), async (c) => {
   const hash = await hashPassword(c.req.valid('json').pin);
   await prisma.store.update({ where: { id: c.get('storeId') }, data: { kioskPinHash: hash } });
   return sendData(c, { ok: true, isSet: true });
@@ -78,7 +78,7 @@ storeOpsRoutes.post('/kiosk-orders/:id/reject', async (c) => {
   return sendData(c, { ok: true });
 });
 const NoteBody = z.object({ requirementNote: z.string().max(2000).nullish() });
-storeOpsRoutes.patch('/kiosk-orders/:id/note', zValidator('json', NoteBody), async (c) => {
+storeOpsRoutes.patch('/kiosk-orders/:id/note', jsonValidator(NoteBody), async (c) => {
   const ok = await updateKioskRequirementNote(c.get('storeId'), c.req.param('id'), c.req.valid('json').requirementNote ?? null);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, { ok: true });
@@ -106,7 +106,7 @@ storeOpsRoutes.post('/b2b-orders/:id/reject', async (c) => {
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, { ok: true });
 });
-storeOpsRoutes.patch('/b2b-orders/:id/note', zValidator('json', NoteBody), async (c) => {
+storeOpsRoutes.patch('/b2b-orders/:id/note', jsonValidator(NoteBody), async (c) => {
   const ok = await updateB2bRequirementNote(c.get('storeId'), c.req.param('id'), c.req.valid('json').requirementNote ?? null);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, { ok: true });
@@ -149,7 +149,7 @@ storeOpsRoutes.post('/custom-designs/upload-sign', async (c) => {
   }
 });
 
-storeOpsRoutes.post('/custom-designs', zValidator('json', StoreCustomBody), async (c) => {
+storeOpsRoutes.post('/custom-designs', jsonValidator(StoreCustomBody), async (c) => {
   const storeId = c.get('storeId');
   const body = c.req.valid('json');
   const req = await placeCustomRequest({
@@ -217,7 +217,7 @@ storeOpsRoutes.get('/messages/:kind/:id', async (c) => {
   return sendData(c, await listOrderMessages(c.get('storeId'), kind, c.req.param('id')));
 });
 
-storeOpsRoutes.post('/messages/:kind/:id', zValidator('json', z.object({ body: z.string().min(1).max(2000) })), async (c) => {
+storeOpsRoutes.post('/messages/:kind/:id', jsonValidator(z.object({ body: z.string().min(1).max(2000) })), async (c) => {
   const kind = OPS_KIND[c.req.param('kind')];
   if (!kind) return sendError(c, 'bad_request', 'Invalid order kind', 400);
   // Sender name: owner = "Head Office", manager = their name.

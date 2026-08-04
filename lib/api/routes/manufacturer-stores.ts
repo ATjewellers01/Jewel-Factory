@@ -1,4 +1,4 @@
-import { zValidator } from '@hono/zod-validator';
+import { jsonValidator } from '../validation';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -77,7 +77,7 @@ const EditBody = z.object({
   badgeLabel: z.string().nullable().optional(),
 });
 
-manufacturerStoreRoutes.patch('/stores/:id', zValidator('json', EditBody), async (c) => {
+manufacturerStoreRoutes.patch('/stores/:id', jsonValidator(EditBody), async (c) => {
   const updated = await updateStoreByManufacturer(c.get('manufacturerId'), c.req.param('id'), c.req.valid('json'));
   if (!updated) return sendError(c, 'not_found', 'Store not found', 404);
   return sendData(c, updated);
@@ -85,7 +85,7 @@ manufacturerStoreRoutes.patch('/stores/:id', zValidator('json', EditBody), async
 
 const PasswordBody = z.object({ password: z.string().min(6) });
 
-manufacturerStoreRoutes.put('/stores/:id/password', zValidator('json', PasswordBody), async (c) => {
+manufacturerStoreRoutes.put('/stores/:id/password', jsonValidator(PasswordBody), async (c) => {
   const ok = await resetStorePassword(c.get('manufacturerId'), c.req.param('id'), c.req.valid('json').password);
   if (!ok) return sendError(c, 'not_found', 'Store not found', 404);
   return sendData(c, { ok: true });
@@ -93,7 +93,7 @@ manufacturerStoreRoutes.put('/stores/:id/password', zValidator('json', PasswordB
 
 const ActiveBody = z.object({ isActive: z.boolean() });
 
-manufacturerStoreRoutes.patch('/stores/:id/active', zValidator('json', ActiveBody), async (c) => {
+manufacturerStoreRoutes.patch('/stores/:id/active', jsonValidator(ActiveBody), async (c) => {
   const result = await setStoreActive(c.get('manufacturerId'), c.req.param('id'), c.req.valid('json').isActive);
   if (!result) return sendError(c, 'not_found', 'Store not found', 404);
   return sendData(c, result);
@@ -113,7 +113,7 @@ manufacturerStoreRoutes.get('/retailer-badge-labels', async (c) => {
 
 const BadgeLabelBody = z.object({ label: z.string().trim().min(1).max(40) });
 
-manufacturerStoreRoutes.post('/retailer-badge-labels', zValidator('json', BadgeLabelBody), async (c) => {
+manufacturerStoreRoutes.post('/retailer-badge-labels', jsonValidator(BadgeLabelBody), async (c) => {
   return sendData(c, await addRetailerBadgeLabel(c.get('manufacturerId'), c.req.valid('json').label), 201);
 });
 

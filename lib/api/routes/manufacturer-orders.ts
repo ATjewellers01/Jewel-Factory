@@ -1,4 +1,4 @@
-import { zValidator } from '@hono/zod-validator';
+import { jsonValidator } from '../validation';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -29,7 +29,7 @@ manufacturerOrderRoutes.get('/orders/:id', async (c) => {
   if (!o) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, o);
 });
-manufacturerOrderRoutes.patch('/orders/:id', zValidator('json', StatusBody), async (c) => {
+manufacturerOrderRoutes.patch('/orders/:id', jsonValidator(StatusBody), async (c) => {
   const { status, trackingNumber } = c.req.valid('json');
   const ok = await advanceB2bOrderStatus(c.get('manufacturerId'), c.req.param('id'), status as OrderStatus, trackingNumber);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
@@ -43,7 +43,7 @@ const ItemStatusBody = z.object({
   status: z.enum(['PENDING', 'IN_PROCESS', 'GHAT_RECEIVED', 'READY_FOR_DELIVERY', 'DISPATCHED', 'COMPLETED', 'CANCELLED']),
 });
 
-manufacturerOrderRoutes.patch('/orders/:id/items/:itemId', zValidator('json', ItemStatusBody), async (c) => {
+manufacturerOrderRoutes.patch('/orders/:id/items/:itemId', jsonValidator(ItemStatusBody), async (c) => {
   const { status } = c.req.valid('json');
   const ok = await advanceB2bOrderItemStatus(c.get('manufacturerId'), c.req.param('id'), c.req.param('itemId'), status as OrderStatus);
   if (!ok) return sendError(c, 'not_found', 'Order item not found', 404);
@@ -89,14 +89,14 @@ manufacturerOrderRoutes.get('/kiosk-orders/:id', async (c) => {
   if (!o) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, await sanitizeKiosk(o as unknown as Record<string, unknown>, new Map()));
 });
-manufacturerOrderRoutes.patch('/kiosk-orders/:id', zValidator('json', StatusBody), async (c) => {
+manufacturerOrderRoutes.patch('/kiosk-orders/:id', jsonValidator(StatusBody), async (c) => {
   const { status, trackingNumber } = c.req.valid('json');
   const ok = await advanceKioskOrderStatus(c.get('manufacturerId'), c.req.param('id'), status as OrderStatus, trackingNumber);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, { ok: true });
 });
 
-manufacturerOrderRoutes.patch('/kiosk-orders/:id/items/:itemId', zValidator('json', ItemStatusBody), async (c) => {
+manufacturerOrderRoutes.patch('/kiosk-orders/:id/items/:itemId', jsonValidator(ItemStatusBody), async (c) => {
   const { status } = c.req.valid('json');
   const ok = await advanceKioskOrderItemStatus(c.get('manufacturerId'), c.req.param('id'), c.req.param('itemId'), status as OrderStatus);
   if (!ok) return sendError(c, 'not_found', 'Order item not found', 404);
@@ -112,7 +112,7 @@ const CustomStatusBody = z.object({
 manufacturerOrderRoutes.get('/custom-designs', async (c) => {
   return sendData(c, await listCustomOrdersByManufacturer(c.get('manufacturerId')));
 });
-manufacturerOrderRoutes.patch('/custom-designs/:id', zValidator('json', CustomStatusBody), async (c) => {
+manufacturerOrderRoutes.patch('/custom-designs/:id', jsonValidator(CustomStatusBody), async (c) => {
   const { status, trackingNumber } = c.req.valid('json');
   const ok = await advanceCustomOrderStatus(c.get('manufacturerId'), c.req.param('id'), status as CustomOrderStatus, trackingNumber);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
@@ -121,7 +121,7 @@ manufacturerOrderRoutes.patch('/custom-designs/:id', zValidator('json', CustomSt
 
 const KarigarCodeBody = z.object({ karigarCode: z.string().trim().max(60).nullable() });
 
-manufacturerOrderRoutes.patch('/custom-designs/:id/karigar-code', zValidator('json', KarigarCodeBody), async (c) => {
+manufacturerOrderRoutes.patch('/custom-designs/:id/karigar-code', jsonValidator(KarigarCodeBody), async (c) => {
   const { karigarCode } = c.req.valid('json');
   const ok = await setCustomOrderKarigarCode(c.get('manufacturerId'), c.req.param('id'), karigarCode || null);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);

@@ -2,6 +2,21 @@
 
 import { useEffect, useState, useCallback } from 'react';
 
+/**
+ * Thrown by apiPost/apiSend on a failed request. `fields` (path -> message)
+ * is present when the server rejected specific form fields (see
+ * lib/api/validation.ts's jsonValidator) — forms use it to show the error
+ * under the exact input that failed instead of one generic banner.
+ */
+export class ApiError extends Error {
+  fields?: Record<string, string>;
+  constructor(message: string, fields?: Record<string, string>) {
+    super(message);
+    this.name = 'ApiError';
+    this.fields = fields;
+  }
+}
+
 /** Fetch a GET endpoint returning the { data } envelope. Redirects to loginPath on 401. */
 export function useApi<T>(path: string, loginPath?: string) {
   const [data, setData] = useState<T | null>(null);
@@ -35,6 +50,14 @@ export function useApi<T>(path: string, loginPath?: string) {
   return { data, error, loading, reload: load };
 }
 
+type ApiEnvelope = { data?: unknown; error?: { message: string; fields?: Record<string, string> } };
+
+function throwIfError(json: ApiEnvelope | null): asserts json is { data?: unknown } {
+  if (json && 'error' in json && json.error) {
+    throw new ApiError(json.error.message, json.error.fields);
+  }
+}
+
 export async function apiPost(path: string, body?: unknown) {
   const res = await fetch(path, {
     method: 'POST',
@@ -42,10 +65,9 @@ export async function apiPost(path: string, body?: unknown) {
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
-  const json = (await res.json().catch(() => null)) as { data?: unknown; error?: { message: string } } | null;
-  if (!res.ok || (json && 'error' in json && json.error)) {
-    throw new Error(json && 'error' in json && json.error ? json.error.message : 'Request failed');
-  }
+  const json = (await res.json().catch(() => null)) as ApiEnvelope | null;
+  if (!res.ok && !(json && 'error' in json && json.error)) throw new ApiError('Request failed');
+  throwIfError(json);
   return json?.data;
 }
 
@@ -56,9 +78,8 @@ export async function apiSend(method: 'PATCH' | 'PUT' | 'DELETE', path: string, 
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
-  const json = (await res.json().catch(() => null)) as { data?: unknown; error?: { message: string } } | null;
-  if (!res.ok || (json && 'error' in json && json.error)) {
-    throw new Error(json && 'error' in json && json.error ? json.error.message : 'Request failed');
-  }
+  const json = (await res.json().catch(() => null)) as ApiEnvelope | null;
+  if (!res.ok && !(json && 'error' in json && json.error)) throw new ApiError('Request failed');
+  throwIfError(json);
   return json?.data;
 }

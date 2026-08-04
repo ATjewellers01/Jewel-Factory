@@ -4,14 +4,17 @@ import { Loader2, Lock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { apiSend } from '@/hooks/use-api';
+import { fieldError, toFieldErrors } from '@/lib/field-error';
 
 export default function KioskPinPage() {
   const [isSet, setIsSet] = useState<boolean | null>(null);
   const [pin, setPin] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [submitErr, setSubmitErr] = useState<unknown>(null);
 
   useEffect(() => {
     (async () => {
@@ -24,11 +27,11 @@ export default function KioskPinPage() {
 
   async function savePin() {
     if (pin.length < 4) { setMsg('PIN must be at least 4 characters.'); return; }
-    setBusy(true); setMsg(null);
+    setBusy(true); setMsg(null); setSubmitErr(null);
     try {
       await apiSend('PUT', '/api/store/kiosk-pin', { pin });
       setIsSet(true); setPin(''); setMsg('Kiosk PIN saved. In-store devices will need it to unlock the kiosk.');
-    } catch { setMsg('Could not save PIN.'); } finally { setBusy(false); }
+    } catch (err) { setMsg('Could not save PIN.'); setSubmitErr(err); } finally { setBusy(false); }
   }
 
   async function removePin() {
@@ -70,6 +73,7 @@ export default function KioskPinPage() {
               <div>
                 <label className="text-xs font-medium text-muted-foreground">{isSet ? 'New PIN' : 'Set PIN'} (min 4)</label>
                 <Input className="mt-1 max-w-[180px]" type="password" inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="••••" />
+                <FieldError errors={toFieldErrors(fieldError(submitErr, 'pin'))} />
               </div>
               <Button onClick={savePin} disabled={busy} className="metal-sheen text-[#17120b] font-semibold">
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (isSet ? 'Update PIN' : 'Set PIN')}

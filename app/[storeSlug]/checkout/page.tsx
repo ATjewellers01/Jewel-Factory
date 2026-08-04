@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { useKioskStore } from '@/components/kiosk/StoreContext';
 import { useGuestCart } from '@/hooks/use-guest-cart';
+import { toFieldErrors } from '@/lib/field-error';
 
 export default function KioskCheckoutPage() {
   const store = useKioskStore();
@@ -21,6 +23,7 @@ export default function KioskCheckoutPage() {
   const [form, setForm] = useState({ name: '', phone: '', email: '', address: '', notes: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   useEffect(() => setMounted(true), []);
 
@@ -29,6 +32,7 @@ export default function KioskCheckoutPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
     if (!form.name.trim()) return setError('Please enter your name.');
     if (form.phone.trim().length < 7) return setError('Please enter a valid phone number.');
     if (mode === 'delivery' && !form.address.trim()) return setError('Please enter a delivery address.');
@@ -49,8 +53,8 @@ export default function KioskCheckoutPage() {
           items: cart.items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
         }),
       });
-      const json = (await res.json()) as { data?: { id: string; orderNumber: string }; error?: { message: string } };
-      if (!res.ok || !json.data) { setError(json.error?.message ?? 'Could not place order.'); return; }
+      const json = (await res.json()) as { data?: { id: string; orderNumber: string }; error?: { message: string; fields?: Record<string, string> } };
+      if (!res.ok || !json.data) { setError(json.error?.message ?? 'Could not place order.'); setFieldErrors(json.error?.fields ?? {}); return; }
       cart.clear();
       router.push(`${base}/checkout/success?order=${json.data.orderNumber}`);
     } catch (err) {
@@ -116,9 +120,9 @@ export default function KioskCheckoutPage() {
 
         {/* Details */}
         <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div><label className="text-xs font-medium text-muted-foreground">Name *</label><Input className="mt-1" value={form.name} onChange={(e) => set('name', e.target.value)} required /></div>
-          <div><label className="text-xs font-medium text-muted-foreground">Phone *</label><Input className="mt-1" type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} required /></div>
-          <div className="sm:col-span-2"><label className="text-xs font-medium text-muted-foreground">Email (optional)</label><Input className="mt-1" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} /></div>
+          <div><label className="text-xs font-medium text-muted-foreground">Name *</label><Input className="mt-1" value={form.name} onChange={(e) => set('name', e.target.value)} required /><FieldError errors={toFieldErrors(fieldErrors.customerName)} /></div>
+          <div><label className="text-xs font-medium text-muted-foreground">Phone *</label><Input className="mt-1" type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} required /><FieldError errors={toFieldErrors(fieldErrors.customerPhone)} /></div>
+          <div className="sm:col-span-2"><label className="text-xs font-medium text-muted-foreground">Email (optional)</label><Input className="mt-1" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} /><FieldError errors={toFieldErrors(fieldErrors.customerEmail)} /></div>
         </section>
 
         {/* Delivery mode */}
@@ -128,12 +132,18 @@ export default function KioskCheckoutPage() {
             <button type="button" onClick={() => setMode('delivery')} className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium ${mode === 'delivery' ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground'}`}><MapPin className="h-4 w-4" />Home Delivery</button>
           </div>
           {mode === 'delivery' && (
-            <textarea className="w-full rounded-xl border bg-background px-3 py-2 text-sm min-h-[80px]" placeholder="House / flat, street, city, PIN code" value={form.address} onChange={(e) => set('address', e.target.value)} required />
+            <>
+              <textarea className="w-full rounded-xl border bg-background px-3 py-2 text-sm min-h-[80px]" placeholder="House / flat, street, city, PIN code" value={form.address} onChange={(e) => set('address', e.target.value)} required />
+              <FieldError errors={toFieldErrors(fieldErrors.deliveryAddress)} />
+            </>
           )}
           {mode === 'pickup' && <p className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">Store staff will contact you when your order is ready for pickup.</p>}
         </section>
 
-        <textarea className="w-full rounded-xl border bg-background px-3 py-2 text-sm min-h-[60px]" placeholder="Notes (optional)" value={form.notes} onChange={(e) => set('notes', e.target.value)} />
+        <div>
+          <textarea className="w-full rounded-xl border bg-background px-3 py-2 text-sm min-h-[60px]" placeholder="Notes (optional)" value={form.notes} onChange={(e) => set('notes', e.target.value)} />
+          <FieldError errors={toFieldErrors(fieldErrors.notes)} />
+        </div>
 
         {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 

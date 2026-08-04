@@ -4,8 +4,10 @@ import { Loader2, Store as StoreIcon, Pencil, Key, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { useApi, apiPost, apiSend } from '@/hooks/use-api';
+import { fieldError, toFieldErrors } from '@/lib/field-error';
 
 type Store = {
   id: string; name: string; slug: string; email: string | null;
@@ -239,17 +241,21 @@ function EditModal({
   const [newLabel, setNewLabel] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [submitErr, setSubmitErr] = useState<unknown>(null);
+  const [labelErr, setLabelErr] = useState<unknown>(null);
 
   async function addLabel() {
     const label = newLabel.trim();
     if (!label) return;
     setErr(null);
+    setLabelErr(null);
     try {
       await apiPost('/api/manufacturer/retailer-badge-labels', { label });
       setNewLabel('');
       onBadgeLabelsChanged();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not add tag');
+      setLabelErr(e);
     }
   }
   async function removeLabel(label: string) {
@@ -265,13 +271,13 @@ function EditModal({
   }
 
   async function save() {
-    setBusy(true); setErr(null);
+    setBusy(true); setErr(null); setSubmitErr(null);
     const extra = parseInt(form.extraBranchAllowance, 10);
     if (Number.isNaN(extra) || extra < 0) { setErr('Extra stores must be 0 or more.'); setBusy(false); return; }
     try {
       await apiSend('PATCH', `/api/manufacturer/stores/${store.id}`, { ...form, extraBranchAllowance: extra, badgeLabel: badgeLabel || null });
       onSaved();
-    } catch (e) { setErr(e instanceof Error ? e.message : 'Failed'); } finally { setBusy(false); }
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Failed'); setSubmitErr(e); } finally { setBusy(false); }
   }
   const createdDate = new Date(store.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
   return (
@@ -281,9 +287,13 @@ function EditModal({
         <div className="space-y-2 border-b pb-3">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact Info (Editable)</h3>
           <Input placeholder="Business Name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          <FieldError errors={toFieldErrors(fieldError(submitErr, 'name'))} />
           <Input placeholder="Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+          <FieldError errors={toFieldErrors(fieldError(submitErr, 'email'))} />
           <Input placeholder="Mobile Number" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+          <FieldError errors={toFieldErrors(fieldError(submitErr, 'phone'))} />
           <Input placeholder="City" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
+          <FieldError errors={toFieldErrors(fieldError(submitErr, 'city'))} />
         </div>
 
         {/* Read-only owner info */}
@@ -366,6 +376,7 @@ function EditModal({
             value={form.extraBranchAllowance}
             onChange={(e) => setForm((f) => ({ ...f, extraBranchAllowance: e.target.value }))}
           />
+          <FieldError errors={toFieldErrors(fieldError(submitErr, 'extraBranchAllowance'))} />
           <p className="text-[11px] text-muted-foreground">
             Effective limit: {FREE_BRANCH_LIMIT} + {parseInt(form.extraBranchAllowance, 10) || 0} = {FREE_BRANCH_LIMIT + (parseInt(form.extraBranchAllowance, 10) || 0)} stores
           </p>
@@ -382,6 +393,7 @@ function EditModal({
             <option value="">No tag</option>
             {badgeLabels.map((label) => <option key={label} value={label}>{label}</option>)}
           </select>
+          <FieldError errors={toFieldErrors(fieldError(submitErr, 'badgeLabel'))} />
           <div className="flex flex-wrap gap-1.5">
             {badgeLabels.map((label) => (
               <span key={label} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
@@ -394,6 +406,7 @@ function EditModal({
             <Input placeholder="New tag, e.g. Gold Customer" value={newLabel} onChange={(e) => setNewLabel(e.target.value)} />
             <Button type="button" variant="outline" onClick={addLabel} disabled={!newLabel.trim()}>Add</Button>
           </div>
+          <FieldError errors={toFieldErrors(fieldError(labelErr, 'label'))} />
         </div>
 
         {err && <p className="text-sm text-red-600">{err}</p>}
@@ -408,17 +421,19 @@ function PasswordModal({ store, onClose }: { store: Store; onClose: () => void }
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [submitErr, setSubmitErr] = useState<unknown>(null);
   async function save() {
     if (pw.length < 6) { setErr('Min 6 characters.'); return; }
-    setBusy(true); setErr(null);
+    setBusy(true); setErr(null); setSubmitErr(null);
     try { await apiSend('PUT', `/api/manufacturer/stores/${store.id}/password`, { password: pw }); setDone(true); }
-    catch (e) { setErr(e instanceof Error ? e.message : 'Failed'); } finally { setBusy(false); }
+    catch (e) { setErr(e instanceof Error ? e.message : 'Failed'); setSubmitErr(e); } finally { setBusy(false); }
   }
   return (
     <Modal onClose={onClose} title={`Reset password — ${store.name}`}>
       {done ? <p className="text-sm text-green-700">Password reset.</p> : (
         <>
           <Input type="password" placeholder="New password (min 6)" value={pw} onChange={(e) => setPw(e.target.value)} />
+          <FieldError errors={toFieldErrors(fieldError(submitErr, 'password'))} />
           {err && <p className="text-sm text-red-600">{err}</p>}
           <div className="flex gap-2"><Button onClick={save} disabled={busy} className="metal-sheen text-[#17120b] font-semibold flex-1">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reset'}</Button><Button variant="outline" onClick={onClose}>Cancel</Button></div>
         </>

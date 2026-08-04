@@ -7,7 +7,9 @@ import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/orders/OrderItemDetailModal';
 import { CustomSpecList } from '@/components/orders/CustomSpecList';
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import { useApi, apiPost, apiSend } from '@/hooks/use-api';
+import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { OrderChat } from '@/components/orders/OrderChat';
 
 type Item = {
@@ -115,17 +117,19 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note ?? '');
   const [saving, setSaving] = useState(false);
+  const [submitErr, setSubmitErr] = useState<unknown>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [zoomItem, setZoomItem] = useState<Item | null>(null);
   const [productModal, setProductModal] = useState<OrderItemProductSafe | null>(null);
 
   async function saveNote() {
     setSaving(true);
+    setSubmitErr(null);
     try {
       await apiSend('PATCH', `/api/store/${kind === 'kiosk' ? 'kiosk-orders' : 'b2b-orders'}/${id}/note`, { requirementNote: draft.trim() || null });
       setEditing(false);
       onNoteSaved();
-    } catch { /* ignore */ } finally { setSaving(false); }
+    } catch (err) { setSubmitErr(err); } finally { setSaving(false); }
   }
 
   return (
@@ -163,6 +167,7 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
         {editing ? (
           <div className="mt-1.5 space-y-2">
             <textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-sm min-h-[60px]" placeholder="Customer requirement / specs…" />
+            <FieldError errors={toFieldErrors(fieldError(submitErr, 'requirementNote'))} />
             <div className="flex gap-2">
               <Button size="sm" onClick={saveNote} disabled={saving} className="metal-sheen text-[#17120b] font-semibold">{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Save className="mr-1 h-3.5 w-3.5" />Save</>}</Button>
               <Button size="sm" variant="outline" onClick={() => setEditing(false)}>Cancel</Button>

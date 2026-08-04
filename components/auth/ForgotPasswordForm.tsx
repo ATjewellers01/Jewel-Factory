@@ -6,7 +6,9 @@ import { useState } from 'react';
 
 import { Wordmark } from '@/components/landing/Wordmark';
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { toFieldErrors } from '@/lib/field-error';
 import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
 
 export function ForgotPasswordForm({
@@ -25,12 +27,14 @@ export function ForgotPasswordForm({
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [blocked, setBlocked] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // "Forgot your email?" — recover the sign-in address from a mobile number.
   const [showLookup, setShowLookup] = useState(false);
   const [mobile, setMobile] = useState('');
   const [lookupBusy, setLookupBusy] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [lookupFieldErrors, setLookupFieldErrors] = useState<Record<string, string>>({});
   const [foundEmail, setFoundEmail] = useState<string | null>(null);
   const [mobileOnly, setMobileOnly] = useState(false);
 
@@ -38,6 +42,7 @@ export function ForgotPasswordForm({
     e.preventDefault();
     setLoading(true);
     setBlocked(null);
+    setFieldErrors({});
     try {
       const res = await fetch(apiPath, {
         method: 'POST',
@@ -48,6 +53,11 @@ export function ForgotPasswordForm({
       if (res.status === 403) {
         const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
         setBlocked(json?.error?.message ?? 'This account is deactivated.');
+        return;
+      }
+      if (!res.ok) {
+        const json = (await res.json().catch(() => null)) as { error?: { message?: string; fields?: Record<string, string> } } | null;
+        setFieldErrors(json?.error?.fields ?? {});
         return;
       }
       setSent(true); // otherwise always show success (anti-enumeration)
@@ -62,6 +72,7 @@ export function ForgotPasswordForm({
     e.preventDefault();
     setLookupBusy(true);
     setLookupError(null);
+    setLookupFieldErrors({});
     setFoundEmail(null);
     setMobileOnly(false);
     try {
@@ -71,9 +82,10 @@ export function ForgotPasswordForm({
         body: JSON.stringify({ mobileNumber: mobile.trim() }),
       });
       const json = (await res.json().catch(() => null)) as
-        | { data?: { email: string | null; usesMobileLogin: boolean }; error?: { message?: string } }
+        | { data?: { email: string | null; usesMobileLogin: boolean }; error?: { message?: string; fields?: Record<string, string> } }
         | null;
       if (!res.ok || !json?.data) {
+        setLookupFieldErrors(json?.error?.fields ?? {});
         setLookupError(json?.error?.message ?? 'Could not look up that mobile number.');
         return;
       }
@@ -161,6 +173,7 @@ export function ForgotPasswordForm({
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
+              <FieldError errors={toFieldErrors(fieldErrors.email)} />
               <Button type="submit" className="h-11 w-full metal-sheen text-[#17120b] font-semibold" disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send reset link'}
               </Button>
@@ -197,6 +210,7 @@ export function ForgotPasswordForm({
                       {lookupBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Find'}
                     </Button>
                   </form>
+                  <FieldError errors={toFieldErrors(lookupFieldErrors.mobileNumber)} />
 
                   {lookupError && <p className="text-sm text-red-600">{lookupError}</p>}
 
