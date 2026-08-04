@@ -29,6 +29,20 @@ export function formatOrderStatus(status: string): string {
 }
 
 /**
+ * Order-LEVEL label for Kiosk/Catalog(B2B) orders only — the manufacturer's
+ * "Mark as Approved" button sets the order's status to IN_PROCESS (same enum
+ * value items use), but the order-level badge should read "approved", not
+ * "in process". Per-item badges keep the plain formatOrderStatus() label —
+ * don't use this for items, and don't use it for Customised orders (their
+ * order-level status still walks the full granular chain, not just
+ * Pending/Approved/Completed).
+ */
+export function formatOrderLevelStatus(status: string): string {
+  if (status === 'IN_PROCESS') return 'approved';
+  return formatOrderStatus(status);
+}
+
+/**
  * Format a weight (Prisma Decimal arrives as a string like "12.500") to a clean
  * "12.5 g". Returns null when there's no usable weight.
  */

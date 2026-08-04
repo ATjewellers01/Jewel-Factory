@@ -5,9 +5,13 @@
  */
 
 // Status buckets for kiosk guest orders + B2B orders (OrderStatus enum).
+// Order-level filter for Kiosk/Catalog(B2B) orders — order-level status is now
+// manual (Pending -> Approved -> Completed, see app/manufacturer/orders/page.tsx),
+// so IN_PROCESS reads "Approved" here, not "In Process" (that label is still
+// used for per-item statuses elsewhere).
 export const KIOSK_B2B_STATUS_OPTIONS = [
   { value: 'PENDING', label: 'Pending' },
-  { value: 'IN_PROCESS', label: 'In Process' },
+  { value: 'IN_PROCESS', label: 'Approved' },
   { value: 'GHAT_RECEIVED', label: 'Ghat Received' },
   { value: 'READY_FOR_DELIVERY', label: 'Ready For Delivery' },
   { value: 'DISPATCHED', label: 'Dispatched' },

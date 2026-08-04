@@ -9,7 +9,7 @@ import { OrderFilters } from '@/components/orders/OrderFilters';
 import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/orders/OrderItemDetailModal';
 import { Button } from '@/components/ui/button';
 import { useApi, apiPost } from '@/hooks/use-api';
-import { formatOrderStatus, titleCaseName } from '@/lib/format';
+import { formatOrderStatus, formatOrderLevelStatus, titleCaseName } from '@/lib/format';
 import { SM_STATUS_OPTIONS, inDateRange, statusOf, bucketOf, uniqueBranchOptions } from '@/lib/order-filters';
 
 // Manufacturer's status colors — used both order-level (Manufacturer Status
@@ -124,7 +124,7 @@ export function BranchOrderList({ kind, endpoint }: { kind: BranchOrderKind; end
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Manufacturer Status</p>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
                       <span className="font-mono text-xs text-muted-foreground">{o.orderNumber}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${MFR_STATUS[o.status] ?? ''}`}>{formatOrderStatus(o.status)}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${MFR_STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span>
                       {o.trackingNumber && <span className="text-xs text-muted-foreground">Tracking: {o.trackingNumber}</span>}
                     </div>
                   </div>

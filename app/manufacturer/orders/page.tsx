@@ -8,7 +8,7 @@ import { ManufacturerOrderItemModal, type OrderItemProduct } from '@/components/
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { apiSend } from '@/hooks/use-api';
-import { formatOrderStatus } from '@/lib/format';
+import { formatOrderStatus, formatOrderLevelStatus } from '@/lib/format';
 import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
 // Catalogue Orders merges the manufacturer's two order sources — B2B/restock
@@ -220,7 +220,7 @@ export default function ManufacturerOrdersPage() {
                   <div><p className="text-xs text-muted-foreground">Order</p><p className="text-sm font-medium">{o.orderNumber}</p></div>
                   <div><p className="text-xs text-muted-foreground">Customer</p><p className="text-sm font-medium text-primary truncate">{o.storeName ?? '—'}</p><p className="text-xs text-muted-foreground truncate">{o.branchName ?? o.storeCity ?? ''}</p></div>
                   <div><p className="text-xs text-muted-foreground">Items</p><p className="text-sm tabular-nums">{o.totalItems}</p></div>
-                  <div className="flex items-start"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderStatus(o.status)}</span></div>
+                  <div className="flex items-start"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span></div>
                 </div>
                 {expanded === o.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
               </button>

@@ -4,7 +4,7 @@ import { ArrowRight, Package, ShoppingBag, ClipboardCheck, Store as StoreIcon, L
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
-import { formatOrderStatus } from '@/lib/format';
+import { formatOrderLevelStatus } from '@/lib/format';
 
 type Dashboard = {
   totalDesigns: number;
@@ -117,7 +117,7 @@ export default function ManufacturerDashboardPage() {
                         </p>
                       </div>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_COLORS[o.status] ?? ''}`}>
-                        {formatOrderStatus(o.status)}
+                        {formatOrderLevelStatus(o.status)}
                       </span>
                     </div>
                   </Link>

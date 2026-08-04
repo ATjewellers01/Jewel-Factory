@@ -8,7 +8,7 @@ import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/orders/OrderItemDetailModal';
 import { Button } from '@/components/ui/button';
-import { formatOrderStatus } from '@/lib/format';
+import { formatOrderStatus, formatOrderLevelStatus } from '@/lib/format';
 import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
 /**
@@ -177,7 +177,7 @@ export default function StoreCatalogueOrdersPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {o.needsApproval && <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-semibold text-yellow-800">Needs approval</span>}
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderStatus(o.status)}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span>
                   {open === o.key ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                 </div>
               </button>
