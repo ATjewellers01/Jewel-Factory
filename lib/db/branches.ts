@@ -130,6 +130,11 @@ export async function createBranchManager(retailerId: string, branchId: string, 
   const phone = input.phone.trim();
   const email = input.email ? input.email.toLowerCase().trim() : null;
 
+  // One Retailer User per Store — client decision (2026-08-04): a store is run
+  // by a single staff login, not a shared pool of accounts.
+  const existingCount = await prisma.branchManager.count({ where: { branchId } });
+  if (existingCount >= 1) return { error: 'limit_reached' as const };
+
   // Duplicate check: email (if given) must be free within this branch; a phone
   // with no email must be free branch-wide, since the phone becomes the login
   // username for email-less Retailer Users.

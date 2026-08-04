@@ -176,7 +176,10 @@ storePortalRoutes.post('/branches/:id/managers', storeGuard, zValidator('json', 
   const b = c.req.valid('json');
   const res = await createBranchManager(c.get('storeId'), c.req.param('id'), { phone: b.phone, email: b.email ?? null });
   if (res === null) return sendError(c, 'not_found', 'Branch not found', 404);
-  if ('error' in res) return sendError(c, 'conflict', 'A Retailer User with this email or mobile number already exists for this store.', 409);
+  if ('error' in res) {
+    if (res.error === 'limit_reached') return sendError(c, 'conflict', 'This store already has a Retailer User. Remove the existing one before adding another.', 409);
+    return sendError(c, 'conflict', 'A Retailer User with this email or mobile number already exists for this store.', 409);
+  }
   return sendData(c, res.manager, 201);
 });
 

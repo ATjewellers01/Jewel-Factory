@@ -14,7 +14,7 @@ import {
   setProductTryon,
   removeProductTryon,
 } from '@/lib/db/manufacturer-catalog';
-import { signUpload, manufacturerFolder } from '@/lib/storage';
+import { signUpload, manufacturerFolder, getPublicBaseUrl } from '@/lib/storage';
 import { getManufacturerDashboard } from '@/lib/db/manufacturer-dashboard';
 import { indexManufacturerProduct } from '@/lib/db/indexing';
 import { sendData, sendError } from '../envelope';
@@ -29,6 +29,31 @@ manufacturerCatalogRoutes.use('*', manufacturerGuard);
 manufacturerCatalogRoutes.get('/dashboard', async (c) => {
   const data = await getManufacturerDashboard(c.get('manufacturerId'));
   return sendData(c, data);
+});
+
+// Server-side image fetch for the catalogue PDF export — the browser's own
+// fetch() to S3/CloudFront is subject to CORS, which isn't configured there,
+// so jsPDF's client-side image-to-dataURL conversion silently fails and the
+// PDF ships with blank image boxes. Proxying through our own origin sidesteps
+// that. Restricted to our own S3/CloudFront domain to avoid an open proxy.
+manufacturerCatalogRoutes.get('/catalog-pdf-image', async (c) => {
+  const url = c.req.query('url');
+  if (!url) return sendError(c, 'bad_request', 'Missing url', 400);
+
+  if (!url.startsWith(getPublicBaseUrl())) {
+    return sendError(c, 'bad_request', 'Invalid image URL', 400);
+  }
+
+  const upstream = await fetch(url);
+  if (!upstream.ok || !upstream.body) return sendError(c, 'not_found', 'Image not found', 404);
+
+  return new Response(upstream.body, {
+    status: 200,
+    headers: {
+      'Content-Type': upstream.headers.get('content-type') ?? 'image/jpeg',
+      'Cache-Control': 'public, max-age=86400',
+    },
+  });
 });
 
 // ── List / read ───────────────────────────────────────────────────────────────

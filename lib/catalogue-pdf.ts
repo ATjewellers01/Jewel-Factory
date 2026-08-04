@@ -18,7 +18,12 @@ export type CataloguePdfProduct = {
 
 async function imageToDataUrl(url: string): Promise<string | null> {
   try {
-    const res = await fetch(url, { mode: 'cors', cache: 'force-cache' });
+    // Fetched through our own API (not directly from S3/CloudFront) — the
+    // browser's own fetch() to that origin is subject to CORS, which isn't
+    // configured there, so a direct fetch silently fails and the PDF ships
+    // with blank image boxes.
+    const proxied = `/api/manufacturer/catalog-pdf-image?url=${encodeURIComponent(url)}`;
+    const res = await fetch(proxied, { credentials: 'same-origin', cache: 'force-cache' });
     if (!res.ok) return null;
     const blob = await res.blob();
     return await new Promise<string>((resolve, reject) => {

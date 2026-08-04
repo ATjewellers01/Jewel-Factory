@@ -53,7 +53,6 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   const router = useRouter();
   const isEdit = Boolean(initial?.id);
   const imageInput = useRef<HTMLInputElement>(null);
-  const tryonInput = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<ProductFormData>(
     initial ?? {
@@ -614,9 +613,6 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
                 <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiCatalog(true)} title="Regenerate catalog with this instruction">
                   <RefreshCw className="mr-1 h-3.5 w-3.5" />Catalogue
                 </Button>
-                <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiTransparent(true)} title="Regenerate try-on with this instruction">
-                  <RefreshCw className="mr-1 h-3.5 w-3.5" />Try-on
-                </Button>
                 <Button type="button" size="sm" variant="outline" disabled={!aiRaw || !!aiBusy || !aiInstr.trim()} onClick={() => aiDescribe(true)} title="Regenerate description with this instruction">
                   <RefreshCw className="mr-1 h-3.5 w-3.5" />Description
                 </Button>
@@ -652,20 +648,6 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
                   <X className="h-3 w-3" />
                 </button>
               </div>
-              {isEdit && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => generateTryOnFromImage(img.secureUrl)}
-                  disabled={!!aiBusy}
-                  className="h-7 w-full text-[11px]"
-                  title="Generate AR try-on from this image"
-                >
-                  {aiBusy === 'transparent' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                  <span className="ml-1">Try-on</span>
-                </Button>
-              )}
             </div>
           ))}
           <button
@@ -697,32 +679,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
             </div>
           </div>
         ) : (
-          <div className="flex flex-wrap items-end gap-3">
-            <div>
-              <label className="text-xs text-muted-foreground">Jewellery type</label>
-              <select className="mt-1 h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={tryonType} onChange={(e) => setTryonType(e.target.value)}>
-                {JEWELLERY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <Button type="button" variant="outline" size="sm" disabled={uploadingTryon || !form.id} title={!form.id ? 'Save the product first to upload try-on' : undefined} onClick={() => tryonInput.current?.click()}>
-              {uploadingTryon ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Upload className="mr-1.5 h-3.5 w-3.5" />}
-              Upload PNG
-            </Button>
-            {aiEnabled && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => aiTransparent(false)}
-                disabled={!aiRaw || !!aiBusy}
-                title={!aiRaw ? 'Upload a raw photo in the AI panel first' : undefined}
-              >
-                {aiBusy === 'transparent' ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />}
-                Generate Try-On
-              </Button>
-            )}
-            <input ref={tryonInput} type="file" accept="image/png,image/webp" hidden onChange={(e) => e.target.files?.[0] && handleTryonUpload(e.target.files[0])} />
-          </div>
+          <p className="text-sm text-muted-foreground">No try-on asset yet.</p>
         )}
       </section>
 

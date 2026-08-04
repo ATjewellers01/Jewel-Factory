@@ -242,14 +242,18 @@ function BranchRetailerUsers({ branch, onChange }: { branch: Branch; onChange: (
         </div>
       )}
 
-      <form onSubmit={add} className="grid gap-2 rounded-lg border bg-card p-3 sm:grid-cols-2">
-        <Input type="tel" inputMode="numeric" maxLength={10} placeholder="User Mobile Number *" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} required autoComplete="off" />
-        <Input type="email" placeholder="Retail User Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} autoComplete="off" />
-        {err && <p className="text-sm text-red-600 sm:col-span-2">{err}</p>}
-        <div className="sm:col-span-2">
-          <Button type="submit" size="sm" disabled={adding} className="metal-sheen text-[#17120b] font-semibold">{adding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Plus className="mr-1 h-3.5 w-3.5" />Add Retailer User</>}</Button>
-        </div>
-      </form>
+      {/* One Retailer User per Store — a store already carrying one doesn't
+          get a second add-form; remove the existing one first. */}
+      {(data?.length ?? 0) === 0 && (
+        <form onSubmit={add} className="grid gap-2 rounded-lg border bg-card p-3 sm:grid-cols-2">
+          <Input type="tel" inputMode="numeric" maxLength={10} placeholder="User Mobile Number *" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} required autoComplete="off" />
+          <Input type="email" placeholder="Retail User Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} autoComplete="off" />
+          {err && <p className="text-sm text-red-600 sm:col-span-2">{err}</p>}
+          <div className="sm:col-span-2">
+            <Button type="submit" size="sm" disabled={adding} className="metal-sheen text-[#17120b] font-semibold">{adding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Plus className="mr-1 h-3.5 w-3.5" />Add Retailer User</>}</Button>
+          </div>
+        </form>
+      )}
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">

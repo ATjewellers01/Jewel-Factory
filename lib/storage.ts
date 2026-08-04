@@ -40,6 +40,11 @@ function storageConfig(): { bucket: string; publicBaseUrl: string } {
   };
 }
 
+/** The public base URL images are served from (CloudFront, or the S3 fallback). */
+export function getPublicBaseUrl(): string {
+  return storageConfig().publicBaseUrl;
+}
+
 export function manufacturerFolder(manufacturerId: string, bucket: 'catalog' | 'tryon'): string {
   return `jewelfactory/manufacturer/${manufacturerId}/${bucket}`;
 }
