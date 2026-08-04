@@ -664,10 +664,12 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         </div>
       </section>
 
-      {/* AR Try-On */}
-      <section className="space-y-2 rounded-xl border p-4">
-        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">AR Try-On (transparent PNG)</label>
-        {tryon ? (
+      {/* AR Try-On — only shown when a try-on asset already exists; the
+          upload/generate controls are hidden (client request), so there's
+          nothing useful to show here when there isn't one yet. */}
+      {tryon && (
+        <section className="space-y-2 rounded-xl border p-4">
+          <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">AR Try-On (transparent PNG)</label>
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={tryon.assetUrl} alt="try-on" onClick={() => setZoom({ src: tryon.assetUrl, checker: true })} title="Click to enlarge" className="h-20 w-20 cursor-zoom-in rounded-lg border object-contain bg-[repeating-conic-gradient(#eee_0_25%,#fff_0_50%)] bg-[length:16px_16px]" />
@@ -678,10 +680,8 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
               </button>
             </div>
           </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">No try-on asset yet.</p>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* Description — moved to the bottom, after photos + AR try-on. */}
       <section>
