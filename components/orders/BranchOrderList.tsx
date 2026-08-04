@@ -9,17 +9,8 @@ import { OrderFilters } from '@/components/orders/OrderFilters';
 import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/orders/OrderItemDetailModal';
 import { Button } from '@/components/ui/button';
 import { useApi, apiPost } from '@/hooks/use-api';
-import { formatOrderStatus, formatOrderLevelStatus, titleCaseName } from '@/lib/format';
-import { SM_STATUS_OPTIONS, inDateRange, statusOf, bucketOf, uniqueBranchOptions } from '@/lib/order-filters';
-
-// Manufacturer's status colors — used both order-level (Manufacturer Status
-// block) and per-item (a single order can have items at different stages, one
-// piece Ghat Received while another is Dispatched).
-const MFR_STATUS: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800', IN_PROCESS: 'bg-blue-100 text-blue-800',
-  GHAT_RECEIVED: 'bg-purple-100 text-purple-800', READY_FOR_DELIVERY: 'bg-indigo-100 text-indigo-800',
-  DISPATCHED: 'bg-amber-100 text-amber-800', COMPLETED: 'bg-green-100 text-green-800', CANCELLED: 'bg-red-100 text-red-700',
-};
+import { titleCaseName } from '@/lib/format';
+import { SM_STATUS_OPTIONS, inDateRange, statusOf, bucketOf } from '@/lib/order-filters';
 
 type Item = {
   id: string; productNameSnapshot: string | null; productImageSnapshot: string | null; quantity: number;
@@ -32,7 +23,6 @@ type BaseOrder = {
   pendingStoreApproval?: boolean; pendingManagerApproval?: boolean;
   forwardedToManufacturer?: boolean; completedAt?: string | null; createdAt: string;
   trackingNumber?: string | null;
-  salesCode?: string | null; salesPersonName?: string | null;
   items?: Item[];
 };
 
@@ -54,24 +44,17 @@ export function BranchOrderList({ kind, endpoint }: { kind: BranchOrderKind; end
   const [busy, setBusy] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
-  const [salesPerson, setSalesPerson] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [zoomItem, setZoomItem] = useState<Item | null>(null);
   const [productModal, setProductModal] = useState<OrderItemProductSafe | null>(null);
 
-  // Only Kiosk orders ever carry sales info (Restock is intentionally excluded),
-  // so this dropdown naturally stays hidden on the Restock view — no orders
-  // there will ever have a non-null salesPersonName to populate it with.
-  const salesPersonOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((o) => o.salesPersonName)), [data]);
-
   const filtered = useMemo(() => (data ?? []).filter((o) => {
     if (search.trim() && !o.orderNumber.toLowerCase().includes(search.trim().toLowerCase())) return false;
     if (status && bucketOf(o) !== status) return false;
-    if (salesPerson && o.salesPersonName !== salesPerson) return false;
     if (!inDateRange(o.createdAt, from, to)) return false;
     return true;
-  }), [data, search, status, salesPerson, from, to]);
+  }), [data, search, status, from, to]);
 
   async function complete(id: string) {
     setBusy(id);
@@ -86,12 +69,6 @@ export function BranchOrderList({ kind, endpoint }: { kind: BranchOrderKind; end
   return (
     <div className="space-y-3">
       <OrderFilters search={search} onSearch={setSearch} status={status} onStatus={setStatus} statusOptions={SM_STATUS_OPTIONS} from={from} to={to} onFrom={setFrom} onTo={setTo} />
-      {salesPersonOptions.length > 0 && (
-        <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={salesPerson} onChange={(e) => setSalesPerson(e.target.value)}>
-          <option value="">All sales people</option>
-          {salesPersonOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-      )}
       {filtered.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No orders match your filters.</p>}
       {filtered.map((o) => {
         const st = statusOf(o);
@@ -109,26 +86,10 @@ export function BranchOrderList({ kind, endpoint }: { kind: BranchOrderKind; end
             </button>
             {open === o.id && (
               <div className="border-t bg-muted/10 px-4 pb-4 pt-3 space-y-3">
-                {(o.salesCode || o.salesPersonName) && (
-                  <div className="flex flex-wrap gap-4 rounded-lg border bg-card px-3 py-2 text-xs">
-                    {o.salesPersonName && <span><span className="text-muted-foreground">Sales person: </span><span className="font-medium">{o.salesPersonName}</span></span>}
-                    {o.salesCode && <span><span className="text-muted-foreground">Sales code: </span><span className="font-medium">{o.salesCode}</span></span>}
-                  </div>
-                )}
-                {/* Two separate concepts, kept visually distinct: the badge above
-                    (from statusOf) is the Retailer Admin's approval decision; this
-                    block is the manufacturer's own production status, only
-                    meaningful once the order has actually reached them. */}
-                {o.forwardedToManufacturer && o.status && (
-                  <div className="rounded-lg border bg-card px-3 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Manufacturer Status</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-xs text-muted-foreground">{o.orderNumber}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${MFR_STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span>
-                      {o.trackingNumber && <span className="text-xs text-muted-foreground">Tracking: {o.trackingNumber}</span>}
-                    </div>
-                  </div>
-                )}
+                {/* The Retailer User only ever sees the simple Pending/Approved/
+                    Completed badge above (from statusOf) — the manufacturer's own
+                    granular production status (and per-item status) is HO-only,
+                    so no "Manufacturer Status" block is rendered here. */}
                 <div className="space-y-2">
                   {o.items?.map((it) => (
                     <button
@@ -160,7 +121,6 @@ export function BranchOrderList({ kind, endpoint }: { kind: BranchOrderKind; end
                       </span>
                       <div className="flex shrink-0 flex-col items-end gap-1">
                         <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${MFR_STATUS[it.status] ?? ''}`}>{formatOrderStatus(it.status)}</span>
                       </div>
                     </button>
                   ))}

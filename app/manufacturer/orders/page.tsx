@@ -3,6 +3,7 @@
 import { ChevronDown, ChevronUp, Loader2, ShoppingBag } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+import { CustomSpecList } from '@/components/orders/CustomSpecList';
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { ManufacturerOrderItemModal, type OrderItemProduct } from '@/components/orders/ManufacturerOrderItemModal';
 import { OrderFilters } from '@/components/orders/OrderFilters';
@@ -11,12 +12,15 @@ import { apiSend } from '@/hooks/use-api';
 import { formatOrderStatus, formatOrderLevelStatus } from '@/lib/format';
 import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
-// Catalogue Orders merges the manufacturer's two order sources — B2B/restock
-// orders and kiosk (customer) orders — into one list. Both originate from a
-// Purchase manager either way, so the manufacturer has no reason to see them
-// as separate pages; `source` is tracked only to route detail-fetch/advance
-// calls to the right API, never rendered.
-type Source = 'b2b' | 'kiosk';
+// Catalogue Orders merges the manufacturer's three order sources — B2B/restock
+// orders, kiosk (customer) orders, and customised design orders — into one
+// list. All three originate from a Purchase manager either way, so the
+// manufacturer has no reason to see them as separate pages; `source` is
+// tracked only to route detail-fetch/advance calls to the right API, never
+// rendered. The manufacturer's own separate Customised Orders page/nav entry
+// (app/manufacturer/custom-designs/page.tsx) stays untouched — this merge is
+// additive, the same orders now also surface here.
+type Source = 'b2b' | 'kiosk' | 'custom';
 
 type B2bOrder = { id: string; orderNumber: string; status: string; totalItems: number; createdAt: string; storeName: string | null; storeCity: string | null; karigarCodes?: string[] };
 type KioskOrder = {
@@ -25,10 +29,22 @@ type KioskOrder = {
   branchNameSnapshot: string | null; requirementNote: string | null;
   shipToStoreAddress: string; karigarCodes?: string[];
 };
+type CustomOrder = {
+  id: string; orderNumber: string; status: string; createdAt: string;
+  storeNameSnapshot: string; storeAddressSnapshot: string;
+  category: string; subCategory: string | null;
+  weightGramsMin: string | null; weightGramsMax: string | null; purity: string | null;
+  referenceImageUrl: string | null; referenceImageUrls: string[]; designNotes: string | null;
+  orderRef: string | null; deliveryDate: string | null; quantity: string | null;
+  meena: string | null; length: string | null; size: string | null;
+  broadness: string | null; screw: string | null; sampleWeightGrams: string | null;
+  karigarCode: string | null;
+};
 
 type Row = {
   id: string; source: Source; orderNumber: string; status: string; totalItems: number; createdAt: string;
   storeName: string | null; storeCity: string | null; branchName: string | null; karigarCodes: string[];
+  custom?: CustomOrder;
 };
 
 type Item = {
@@ -52,9 +68,9 @@ const STATUS: Record<string, string> = {
 const ALL_ITEM_STATUSES = ['PENDING', 'IN_PROCESS', 'GHAT_RECEIVED', 'READY_FOR_DELIVERY', 'DISPATCHED', 'COMPLETED', 'CANCELLED'];
 
 function endpointFor(source: Source, id?: string) {
-  return source === 'kiosk'
-    ? `/api/manufacturer/kiosk-orders${id ? `/${id}` : ''}`
-    : `/api/manufacturer/orders${id ? `/${id}` : ''}`;
+  if (source === 'kiosk') return `/api/manufacturer/kiosk-orders${id ? `/${id}` : ''}`;
+  if (source === 'custom') return `/api/manufacturer/custom-designs${id ? `/${id}` : ''}`;
+  return `/api/manufacturer/orders${id ? `/${id}` : ''}`;
 }
 
 export default function ManufacturerOrdersPage() {
@@ -72,20 +88,23 @@ export default function ManufacturerOrdersPage() {
   const [to, setTo] = useState('');
   const [karigarFilter, setKarigarFilter] = useState('');
   const [zoomItem, setZoomItem] = useState<Item | null>(null);
+  const [zoomCustomImages, setZoomCustomImages] = useState<string[] | null>(null);
   const [productModal, setProductModal] = useState<OrderItemProduct | null>(null);
 
   async function loadList() {
     setLoading(true);
     try {
-      const [b2bRes, kioskRes] = await Promise.all([
+      const [b2bRes, kioskRes, customRes] = await Promise.all([
         fetch('/api/manufacturer/orders', { cache: 'no-store', credentials: 'same-origin' }),
         fetch('/api/manufacturer/kiosk-orders', { cache: 'no-store', credentials: 'same-origin' }),
+        fetch('/api/manufacturer/custom-designs', { cache: 'no-store', credentials: 'same-origin' }),
       ]);
-      if (b2bRes.status === 401 || kioskRes.status === 401) { window.location.assign('/manufacturer/login'); return; }
+      if (b2bRes.status === 401 || kioskRes.status === 401 || customRes.status === 401) { window.location.assign('/manufacturer/login'); return; }
       const b2bJson = (await b2bRes.json()) as { data?: B2bOrder[]; error?: { message: string } };
       const kioskJson = (await kioskRes.json()) as { data?: KioskOrder[]; error?: { message: string } };
-      if (!b2bRes.ok || b2bJson.error || !kioskRes.ok || kioskJson.error) {
-        setError(b2bJson.error?.message ?? kioskJson.error?.message ?? 'Failed to load');
+      const customJson = (await customRes.json()) as { data?: CustomOrder[]; error?: { message: string } };
+      if (!b2bRes.ok || b2bJson.error || !kioskRes.ok || kioskJson.error || !customRes.ok || customJson.error) {
+        setError(b2bJson.error?.message ?? kioskJson.error?.message ?? customJson.error?.message ?? 'Failed to load');
         return;
       }
       const b2bRows: Row[] = (b2bJson.data ?? []).map((o) => ({
@@ -98,7 +117,12 @@ export default function ManufacturerOrdersPage() {
         createdAt: o.createdAt, storeName: o.storeNameSnapshot, storeCity: o.storeCitySnapshot,
         branchName: o.branchNameSnapshot, karigarCodes: o.karigarCodes ?? [],
       }));
-      setRows([...b2bRows, ...kioskRows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      const customRows: Row[] = (customJson.data ?? []).map((o) => ({
+        id: o.id, source: 'custom', orderNumber: o.orderNumber, status: o.status, totalItems: 0,
+        createdAt: o.createdAt, storeName: o.storeNameSnapshot, storeCity: null, branchName: null,
+        karigarCodes: o.karigarCode ? [o.karigarCode] : [], custom: o,
+      }));
+      setRows([...b2bRows, ...kioskRows, ...customRows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
       setError(null);
     } catch {
       setError('Network error');
@@ -122,6 +146,9 @@ export default function ManufacturerOrdersPage() {
   async function toggle(row: Row) {
     if (expanded === row.id) { setExpanded(null); setDetail(null); return; }
     setExpanded(row.id); setDetail(null);
+    // Custom orders have no separate detail endpoint — listCustomOrdersByManufacturer
+    // already returns the full spec, so the row itself carries everything needed.
+    if (row.source === 'custom') return;
     const res = await fetch(endpointFor(row.source, row.id), { cache: 'no-store', credentials: 'same-origin' });
     const json = (await res.json()) as { data?: Record<string, unknown> };
     if (!json.data) return;
@@ -219,12 +246,55 @@ export default function ManufacturerOrdersPage() {
                 <div className="grid flex-1 grid-cols-2 gap-x-4 sm:grid-cols-4">
                   <div><p className="text-xs text-muted-foreground">Order</p><p className="text-sm font-medium">{o.orderNumber}</p></div>
                   <div><p className="text-xs text-muted-foreground">Customer</p><p className="text-sm font-medium text-primary truncate">{o.storeName ?? '—'}</p><p className="text-xs text-muted-foreground truncate">{o.branchName ?? o.storeCity ?? ''}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Items</p><p className="text-sm tabular-nums">{o.totalItems}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Items</p><p className="text-sm tabular-nums">{o.source === 'custom' ? '—' : o.totalItems}</p></div>
                   <div className="flex items-start"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span></div>
                 </div>
                 {expanded === o.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
               </button>
-              {expanded === o.id && (
+              {expanded === o.id && o.source === 'custom' && o.custom && (
+                <div className="border-t bg-muted/10 px-4 pb-4 pt-3 space-y-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to</p>
+                    <p className="text-sm">{o.custom.storeAddressSnapshot || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Design</p>
+                    <p className="text-sm">{o.custom.category}{o.custom.subCategory ? ` › ${o.custom.subCategory}` : ''}</p>
+                  </div>
+                  <CustomSpecList spec={o.custom} />
+                  {o.custom.designNotes && <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Remarks</p><p className="whitespace-pre-wrap text-sm">{o.custom.designNotes}</p></div>}
+                  {(() => {
+                    const images = o.custom.referenceImageUrls.length > 0 ? o.custom.referenceImageUrls : (o.custom.referenceImageUrl ? [o.custom.referenceImageUrl] : []);
+                    return images.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {images.map((url) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            key={url}
+                            src={url}
+                            alt="reference"
+                            className="h-20 w-20 rounded-lg border object-cover cursor-pointer hover:shadow-md transition-shadow"
+                            onClick={() => setZoomCustomImages(images)}
+                          />
+                        ))}
+                      </div>
+                    ) : null;
+                  })()}
+                  <div className="flex flex-wrap gap-2">
+                    {o.status === 'PENDING' && (
+                      <Button size="sm" disabled={busy === o.id} onClick={() => advance(o, 'IN_PROCESS')} className="metal-sheen text-[#17120b] font-semibold">
+                        {busy === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Mark as Approved'}
+                      </Button>
+                    )}
+                    {o.status !== 'COMPLETED' && o.status !== 'CANCELLED' && (
+                      <Button size="sm" variant="outline" disabled={busy === o.id} onClick={() => advance(o, 'COMPLETED')}>
+                        {busy === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Mark as Complete'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+              {expanded === o.id && o.source !== 'custom' && (
                 <div className="border-t bg-muted/10 px-4 pb-4 pt-3 space-y-3">
                   {!detail && <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
                   {detail?.branchNameSnapshot && (
@@ -322,6 +392,15 @@ export default function ManufacturerOrdersPage() {
           images={[zoomItem.productImageSnapshot]}
           productName={zoomItem.productNameSnapshot}
           onClose={() => setZoomItem(null)}
+        />
+      )}
+
+      {zoomCustomImages && (
+        <ImageZoomModal
+          isOpen={!!zoomCustomImages}
+          images={zoomCustomImages}
+          productName="Reference Image"
+          onClose={() => setZoomCustomImages(null)}
         />
       )}
 

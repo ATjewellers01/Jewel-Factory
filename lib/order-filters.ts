@@ -65,11 +65,6 @@ type SmOrder = {
   pendingManagerApproval?: boolean;
 };
 
-type SmCustom = {
-  completedAt?: string | null;
-  status: string;
-};
-
 /** Label + badge colour for a kiosk/b2b order in the Store Manager's view. */
 export function statusOf(o: SmOrder): { label: string; cls: string } {
   if (o.completedAt) return { label: 'Completed', cls: 'bg-green-100 text-green-800' };
@@ -83,14 +78,6 @@ export function bucketOf(o: SmOrder): 'COMPLETED' | 'PENDING' | 'APPROVED' | 'RE
   if (o.completedAt) return 'COMPLETED';
   if (o.status === 'CANCELLED') return 'REJECTED';
   if (o.pendingStoreApproval || o.pendingManagerApproval) return 'PENDING';
-  return 'APPROVED';
-}
-
-/** Derived filter bucket for custom requests. APPROVED and FORWARDED → APPROVED. */
-export function customBucketOf(r: SmCustom): 'COMPLETED' | 'PENDING' | 'REJECTED' | 'APPROVED' {
-  if (r.completedAt) return 'COMPLETED';
-  if (r.status === 'PENDING') return 'PENDING';
-  if (r.status === 'REJECTED') return 'REJECTED';
   return 'APPROVED';
 }
 

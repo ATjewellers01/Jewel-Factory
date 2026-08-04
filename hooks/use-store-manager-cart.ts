@@ -11,7 +11,7 @@ export type StoreManagerCartItem = {
   purity?: string;
 };
 
-type StoredCart = { items: StoreManagerCartItem[]; note: string; salesCode: string; salesPersonName: string };
+type StoredCart = { items: StoreManagerCartItem[]; note: string };
 
 const EVENT = 'jf_store_manager_cart_change';
 
@@ -20,17 +20,15 @@ function cartKey(kind: 'kiosk' | 'restock', branchId: string) {
 }
 
 function read(key: string): StoredCart {
-  if (typeof window === 'undefined') return { items: [], note: '', salesCode: '', salesPersonName: '' };
+  if (typeof window === 'undefined') return { items: [], note: '' };
   try {
     const stored = JSON.parse(localStorage.getItem(key) ?? 'null') as Partial<StoredCart> | null;
     return {
       items: Array.isArray(stored?.items) ? stored.items : [],
       note: typeof stored?.note === 'string' ? stored.note : '',
-      salesCode: typeof stored?.salesCode === 'string' ? stored.salesCode : '',
-      salesPersonName: typeof stored?.salesPersonName === 'string' ? stored.salesPersonName : '',
     };
   } catch {
-    return { items: [], note: '', salesCode: '', salesPersonName: '' };
+    return { items: [], note: '' };
   }
 }
 
@@ -46,7 +44,7 @@ function write(key: string, value: StoredCart) {
  */
 function useStoreManagerCart(kind: 'kiosk' | 'restock', branchId: string) {
   const key = useMemo(() => cartKey(kind, branchId), [branchId, kind]);
-  const [cart, setCart] = useState<StoredCart>({ items: [], note: '', salesCode: '', salesPersonName: '' });
+  const [cart, setCart] = useState<StoredCart>({ items: [], note: '' });
 
   useEffect(() => {
     const sync = () => setCart(read(key));
@@ -93,20 +91,12 @@ function useStoreManagerCart(kind: 'kiosk' | 'restock', branchId: string) {
     write(key, { ...read(key), note });
   }, [key]);
 
-  const setSalesCode = useCallback((salesCode: string) => {
-    write(key, { ...read(key), salesCode });
-  }, [key]);
-
-  const setSalesPersonName = useCallback((salesPersonName: string) => {
-    write(key, { ...read(key), salesPersonName });
-  }, [key]);
-
-  const clear = useCallback(() => write(key, { items: [], note: '', salesCode: '', salesPersonName: '' }), [key]);
+  const clear = useCallback(() => write(key, { items: [], note: '' }), [key]);
   const count = cart.items.reduce((total, line) => total + line.quantity, 0);
 
   return {
-    items: cart.items, note: cart.note, salesCode: cart.salesCode, salesPersonName: cart.salesPersonName,
-    count, add, setQuantity, setItemPurity, setNote, setSalesCode, setSalesPersonName, clear,
+    items: cart.items, note: cart.note,
+    count, add, setQuantity, setItemPurity, setNote, clear,
   };
 }
 

@@ -25,10 +25,10 @@ const DRAWER_NAV = [
   { label: 'Dashboard', href: '/store/dashboard', icon: LayoutDashboard, section: 'Overview' },
   // Operations runs in the order the work actually flows: browse the orders that
   // came in, then the bespoke ones, then what still needs signing off. Kiosk
-  // Orders is gone — it is merged into Catalogue Orders (same as the
+  // Orders is gone — it is merged into Order History (same as the
   // manufacturer portal), since both are orders from this retailer's stores.
-  { label: 'Catalogue Orders', href: '/store/b2b-orders', icon: Package, section: 'Operations' },
-  { label: 'Customised Orders', href: '/store/custom-designs', icon: PencilLine, section: 'Operations' },
+  { label: 'Order History', href: '/store/b2b-orders', icon: Package, section: 'Operations' },
+  { label: 'Customised Order', href: '/store/custom-designs/new', icon: PencilLine, section: 'Operations' },
   { label: 'Pending Approvals', href: '/store/pending-approvals', icon: ClipboardCheck, section: 'Operations' },
   { label: 'Intelligence', href: '/store/intelligence', icon: Lightbulb, section: 'Insights' },
   // Kiosk PIN is managed per-Store on the Stores (Branches) page.

@@ -194,18 +194,10 @@ export function CatalogOrderPanel({
   async function place() {
     setPlaceError(null);
     setSubmitErr(null);
-    if (!showPopularity && (!orderCart.salesCode.trim() || !orderCart.salesPersonName.trim())) {
-      setPlaceError('Please enter the sales code and sales person name.');
-      return;
-    }
     setPlacing(true);
     try {
       const order = (await apiPost(placeEndpoint, {
         requirementNote: orderCart.note.trim() || undefined,
-        ...(showPopularity ? {} : {
-          salesCode: orderCart.salesCode.trim() || undefined,
-          salesPersonName: orderCart.salesPersonName.trim() || undefined,
-        }),
         items: cart.map((l) => ({ manufacturerProductId: l.productId, quantity: l.quantity, purity: l.purity || undefined })),
       })) as { orderNumber?: string };
       orderCart.clear(); setShowCart(false);
@@ -358,20 +350,6 @@ export function CatalogOrderPanel({
                   );
                 })}
               </div>
-              {!showPopularity && (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">Sales code</label>
-                    <Input value={orderCart.salesCode} onChange={(e) => orderCart.setSalesCode(e.target.value)} placeholder="e.g. SC-104" className="mt-1 h-10" />
-                    <FieldError errors={toFieldErrors(fieldError(submitErr, 'salesCode'))} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">Sales person name</label>
-                    <Input value={orderCart.salesPersonName} onChange={(e) => orderCart.setSalesPersonName(e.target.value)} placeholder="Who's placing this order?" className="mt-1 h-10" />
-                    <FieldError errors={toFieldErrors(fieldError(submitErr, 'salesPersonName'))} />
-                  </div>
-                </div>
-              )}
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Remark (goes to Head Office)</label>
                 <textarea value={orderCart.note} onChange={(e) => orderCart.setNote(e.target.value)} placeholder={notePlaceholder} className="mt-1 min-h-[90px] w-full rounded-lg border border-black/15 bg-white/60 px-3 py-2 text-sm" />

@@ -12,7 +12,7 @@ import {
   updateKioskRequirementNote, updateB2bRequirementNote,
 } from '@/lib/db/orders';
 import {
-  listCustomRequests, getCustomRequestForStore, forwardCustomRequest, rejectCustomRequest, placeCustomRequest,
+  listCustomRequests, forwardCustomRequest, placeCustomRequest,
 } from '@/lib/db/custom-design';
 import { listOrderMessages, addOrderMessage } from '@/lib/db/messages';
 import { signUpload, storeFolder } from '@/lib/storage';
@@ -129,6 +129,7 @@ const StoreCustomBody = z.object({
   purity: optionalText(40),
   designNotes: optionalText(2000),
   referenceImageUrl: z.preprocess(emptyToUndefined, z.string().url().optional()),
+  referenceImageUrls: z.array(z.string().url()).max(10).optional(),
   orderRef: optionalText(60),
   deliveryDate: z.preprocess(emptyToUndefined, z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a valid date').optional()),
   quantity: optionalText(30),
@@ -162,6 +163,7 @@ storeOpsRoutes.post('/custom-designs', jsonValidator(StoreCustomBody), async (c)
     purity: body.purity as string | undefined,
     designNotes: body.designNotes as string | undefined,
     referenceImageUrl: body.referenceImageUrl as string | undefined,
+    referenceImageUrls: body.referenceImageUrls,
     orderRef: body.orderRef as string | undefined,
     deliveryDate: body.deliveryDate ? new Date(`${body.deliveryDate as string}T00:00:00Z`) : undefined,
     quantity: body.quantity,
@@ -181,30 +183,6 @@ storeOpsRoutes.post('/custom-designs', jsonValidator(StoreCustomBody), async (c)
 
 storeOpsRoutes.get('/custom-designs', async (c) => {
   return sendData(c, await listCustomRequests(c.get('storeId')));
-});
-// Pending-only variant, mirroring /kiosk-orders/pending and /b2b-orders/pending.
-// listCustomRequests has no pending filter, so fetch all and filter PENDING here
-// (same as the mobile client's §4.3 v1 workaround) — no DB query changed.
-storeOpsRoutes.get('/custom-designs/pending', async (c) => {
-  const all = await listCustomRequests(c.get('storeId'));
-  return sendData(c, all.filter((r) => r.status === 'PENDING'));
-});
-storeOpsRoutes.post('/custom-designs/:id/approve', async (c) => {
-  const req = await getCustomRequestForStore(c.get('storeId'), c.req.param('id'));
-  if (!req) return sendError(c, 'not_found', 'Request not found', 404);
-  const result = await forwardCustomRequest(c.get('storeId'), c.req.param('id'), approverIdOrNull(c));
-  if (!result.ok) {
-    if (result.reason === 'no_manufacturer') {
-      return sendError(c, 'bad_request', 'Store is not linked to a manufacturer yet.', 400);
-    }
-    return sendError(c, 'not_found', 'Request not found', 404);
-  }
-  return sendData(c, { ok: true });
-});
-storeOpsRoutes.post('/custom-designs/:id/reject', async (c) => {
-  const ok = await rejectCustomRequest(c.get('storeId'), c.req.param('id'), approverIdOrNull(c));
-  if (!ok) return sendError(c, 'not_found', 'Request not found', 404);
-  return sendData(c, { ok: true });
 });
 
 // ── Per-order chat (HO Manager side) ──────────────────────────────────────────

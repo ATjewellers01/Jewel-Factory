@@ -2,7 +2,7 @@ import type { CustomOrderStatus } from '@prisma/client';
 
 import { prisma } from '@/lib/prisma';
 import { formatStoreAddress } from '@/lib/db/stores';
-import { nextCustomOrderNumber } from '@/lib/db/order-number';
+import { nextCatalogOrderNumber } from '@/lib/db/order-number';
 
 // ── Kiosk: customer submits a request (has PII) ───────────────────────────────
 
@@ -14,6 +14,7 @@ export async function placeCustomRequest(input: {
   customerNotes?: string;
   referenceImageUrl?: string;
   referenceImagePublicId?: string;
+  referenceImageUrls?: string[];
   category: string;
   subCategory?: string;
   weightGramsMin?: number;
@@ -30,8 +31,6 @@ export async function placeCustomRequest(input: {
   broadness?: string;
   screw?: string;
   sampleWeightGrams?: number;
-  salesCode?: string | null;
-  salesPersonName?: string | null;
 }) {
   return prisma.customDesignRequest.create({
     data: {
@@ -42,6 +41,7 @@ export async function placeCustomRequest(input: {
       customerNotes: input.customerNotes ?? null,
       referenceImageUrl: input.referenceImageUrl ?? null,
       referenceImagePublicId: input.referenceImagePublicId ?? null,
+      referenceImageUrls: input.referenceImageUrls ?? [],
       category: input.category,
       subCategory: input.subCategory ?? null,
       weightGramsMin: input.weightGramsMin ?? null,
@@ -57,8 +57,6 @@ export async function placeCustomRequest(input: {
       broadness: input.broadness ?? null,
       screw: input.screw ?? null,
       sampleWeightGrams: input.sampleWeightGrams ?? null,
-      salesCode: input.salesCode ?? null,
-      salesPersonName: input.salesPersonName ?? null,
     },
     select: { id: true },
   });
@@ -79,27 +77,6 @@ export async function listCustomRequests(storeId: string) {
   });
 }
 
-export async function getCustomRequestForStore(storeId: string, id: string) {
-  return prisma.customDesignRequest.findFirst({ where: { id, storeId } });
-}
-
-// Store Manager: custom requests for THIS branch (their own view) + mfr status.
-export async function getCustomRequestsByBranch(branchId: string) {
-  return prisma.customDesignRequest.findMany({
-    where: { branchId },
-    orderBy: { createdAt: 'desc' },
-    include: { order: { select: { id: true, status: true, orderNumber: true, trackingNumber: true } } },
-  });
-}
-
-// Store Manager marks a custom request Completed (piece delivered to customer).
-export async function markCustomCompleted(branchId: string, id: string) {
-  const r = await prisma.customDesignRequest.findFirst({ where: { id, branchId }, select: { id: true } });
-  if (!r) return false;
-  await prisma.customDesignRequest.update({ where: { id }, data: { completedAt: new Date() } });
-  return true;
-}
-
 /**
  * Approve + forward: create a SANITIZED custom_design_order (store identity +
  * specs only, NO customer PII), then flip the request to FORWARDED. Atomic.
@@ -118,7 +95,7 @@ export async function forwardCustomRequest(storeId: string, requestId: string, r
   if (!store) return { ok: false as const, reason: 'not_found' };
   if (!store.manufacturerId) return { ok: false as const, reason: 'no_manufacturer' };
 
-  const orderNum = await nextCustomOrderNumber(store.manufacturerId);
+  const orderNum = await nextCatalogOrderNumber(store.manufacturerId);
 
   await prisma.$transaction(async (tx) => {
     await tx.customDesignOrder.create({
@@ -134,6 +111,7 @@ export async function forwardCustomRequest(storeId: string, requestId: string, r
         weightGramsMax: req.weightGramsMax,
         purity: req.purity,
         referenceImageUrl: req.referenceImageUrl,
+        referenceImageUrls: req.referenceImageUrls,
         designNotes: req.designNotes,
         // The whole counter spec travels to the manufacturer — it carries no PII.
         orderRef: req.orderRef,
@@ -145,8 +123,6 @@ export async function forwardCustomRequest(storeId: string, requestId: string, r
         broadness: req.broadness,
         screw: req.screw,
         sampleWeightGrams: req.sampleWeightGrams,
-        salesCode: req.salesCode,
-        salesPersonName: req.salesPersonName,
         orderNumber: orderNum,
       },
     });
@@ -158,16 +134,6 @@ export async function forwardCustomRequest(storeId: string, requestId: string, r
   return { ok: true as const };
 }
 
-export async function rejectCustomRequest(storeId: string, requestId: string, reviewedById: string | null, reason?: string) {
-  const req = await prisma.customDesignRequest.findFirst({ where: { id: requestId, storeId }, select: { id: true } });
-  if (!req) return false;
-  await prisma.customDesignRequest.update({
-    where: { id: requestId },
-    data: { status: 'REJECTED', reviewedById, reviewedAt: new Date(), rejectionReason: reason ?? null },
-  });
-  return true;
-}
-
 // ── Manufacturer: list + advance status (sanitized, no PII) ───────────────────
 
 export async function listCustomOrdersByManufacturer(manufacturerId: string) {
@@ -177,7 +143,7 @@ export async function listCustomOrdersByManufacturer(manufacturerId: string) {
     select: {
       id: true, orderNumber: true, storeNameSnapshot: true, storeAddressSnapshot: true,
       category: true, subCategory: true, weightGramsMin: true, weightGramsMax: true, purity: true,
-      referenceImageUrl: true, designNotes: true,
+      referenceImageUrl: true, referenceImageUrls: true, designNotes: true,
       orderRef: true, deliveryDate: true, quantity: true, meena: true,
       length: true, size: true, broadness: true, screw: true, sampleWeightGrams: true,
       status: true, trackingNumber: true, karigarCode: true, createdAt: true,

@@ -19,11 +19,9 @@ import {
   placeKioskOrder, placeB2bOrder,
   getKioskOrdersByBranch, getB2bOrdersByBranch, markKioskCompleted, markB2bCompleted,
 } from '@/lib/db/orders';
-import { placeCustomRequest, getCustomRequestsByBranch, markCustomCompleted } from '@/lib/db/custom-design';
 import { listOrderMessages, addOrderMessage } from '@/lib/db/messages';
 import { formatStoreAddress } from '@/lib/db/stores';
 import { listFavorites, addFavorite, removeFavorite } from '@/lib/db/favorites';
-import { signUpload, storeFolder } from '@/lib/storage';
 import { embedImageBase64, searchByVector } from '@/lib/search';
 import { sendData, sendError } from '../envelope';
 import { branchManagerGuard, type AppEnv } from '../guards';
@@ -196,8 +194,6 @@ branchManagerRoutes.post('/search/image', branchManagerGuard, jsonValidator(z.ob
 
 const KioskOrderBody = z.object({
   requirementNote: z.string().max(2000).optional(),
-  salesCode: z.string().max(60).optional(),
-  salesPersonName: z.string().max(120).optional(),
   items: z.array(z.object({ manufacturerProductId: z.string().uuid(), quantity: z.number().int().positive(), purity: z.string().max(40).optional() })).min(1),
 });
 
@@ -229,8 +225,6 @@ branchManagerRoutes.post('/kiosk-orders', branchManagerGuard, jsonValidator(Kios
     storeEmailSnapshot: retailer.email ?? undefined,
     pickupStore: true, // store-managed order; delivery handled between HO and branch
     requirementNote: body.requirementNote,
-    salesCode: body.salesCode,
-    salesPersonName: body.salesPersonName,
     items: body.items.map((i) => {
       const p = byId.get(i.manufacturerProductId)!;
       return {
@@ -241,76 +235,6 @@ branchManagerRoutes.post('/kiosk-orders', branchManagerGuard, jsonValidator(Kios
     }),
   });
   return sendData(c, order, 201);
-});
-
-// ── Custom design request (from the kiosk, on behalf of a customer) ───────────
-
-const emptyToUndefined = (v: unknown) => (typeof v === 'string' && v.trim() === '' ? undefined : v);
-const optionalText = (max: number) => z.preprocess(emptyToUndefined, z.string().max(max).optional());
-
-const CustomBody = z.object({
-  category: z.string().min(1),
-  subCategory: optionalText(120),
-  weightGramsMin: z.number().positive().optional(),
-  weightGramsMax: z.number().positive().optional(),
-  purity: optionalText(40),
-  designNotes: optionalText(2000), // shown as "Remarks" on the form
-  referenceImageUrl: z.preprocess(emptyToUndefined, z.string().url().optional()),
-  // Counter spec — free text where the shop writes units ("18 inch", "2.5 mm").
-  orderRef: optionalText(60),
-  deliveryDate: z.preprocess(emptyToUndefined, z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a valid date').optional()),
-  quantity: optionalText(30), // free text — "2 pcs", not a strict count
-  meena: optionalText(60),
-  length: optionalText(60),
-  size: optionalText(60),
-  broadness: optionalText(60),
-  screw: optionalText(60),
-  sampleWeightGrams: z.coerce.number().positive().max(99999).optional(),
-  salesCode: optionalText(60),
-  salesPersonName: optionalText(120),
-});
-
-// Signed Cloudinary upload for the customer's reference photo (branch-scoped).
-branchManagerRoutes.post('/custom-designs/upload-sign', branchManagerGuard, async (c) => {
-  try {
-    const signed = await signUpload({ folder: storeFolder(c.get('storeId'), 'custom'), bucket: 'custom' });
-    return sendData(c, signed);
-  } catch (err) {
-    return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Object storage not configured', 503);
-  }
-});
-
-branchManagerRoutes.post('/custom-designs', branchManagerGuard, jsonValidator(CustomBody), async (c) => {
-  const retailerId = c.get('storeId');
-  const branchId = c.get('branchId');
-  const body = c.req.valid('json');
-  // Sub-category has its own column now; it used to be glued onto `category` as
-  // "Bangles — Fusion Bangle". Older rows keep that glued form, which is why
-  // readers still print `category` as-is.
-  const req = await placeCustomRequest({
-    storeId: retailerId,
-    branchId,
-    category: body.category,
-    subCategory: body.subCategory as string | undefined,
-    weightGramsMin: body.weightGramsMin,
-    weightGramsMax: body.weightGramsMax,
-    purity: body.purity as string | undefined,
-    designNotes: body.designNotes as string | undefined,
-    referenceImageUrl: body.referenceImageUrl as string | undefined,
-    orderRef: body.orderRef as string | undefined,
-    // Parsed as a plain calendar date (no timezone shifting on a DATE column).
-    deliveryDate: body.deliveryDate ? new Date(`${body.deliveryDate as string}T00:00:00Z`) : undefined,
-    quantity: body.quantity,
-    meena: body.meena as string | undefined,
-    length: body.length as string | undefined,
-    size: body.size as string | undefined,
-    broadness: body.broadness as string | undefined,
-    screw: body.screw as string | undefined,
-    sampleWeightGrams: body.sampleWeightGrams,
-    salesCode: body.salesCode as string | undefined,
-    salesPersonName: body.salesPersonName as string | undefined,
-  });
-  return sendData(c, req, 201);
 });
 
 // ── Restock PIN gate (protects the restock page from customers) ───────────────
@@ -405,16 +329,13 @@ branchManagerRoutes.post('/restock-orders', branchManagerGuard, jsonValidator(Re
   return sendData(c, order, 201);
 });
 
-// ── My Orders (this branch's kiosk + b2b + custom orders) ─────────────────────
+// ── My Orders (this branch's kiosk + b2b orders) ───────────────────────────────
 
 branchManagerRoutes.get('/my-orders/kiosk', branchManagerGuard, async (c) => {
   return sendData(c, await getKioskOrdersByBranch(c.get('branchId')));
 });
 branchManagerRoutes.get('/my-orders/b2b', branchManagerGuard, async (c) => {
   return sendData(c, await getB2bOrdersByBranch(c.get('branchId')));
-});
-branchManagerRoutes.get('/my-orders/custom', branchManagerGuard, async (c) => {
-  return sendData(c, await getCustomRequestsByBranch(c.get('branchId')));
 });
 
 // Mark Completed (piece reached customer/store)
@@ -425,7 +346,6 @@ branchManagerRoutes.post('/my-orders/:kind/:id/complete', branchManagerGuard, as
   let ok = false;
   if (kind === 'kiosk') ok = await markKioskCompleted(branchId, id);
   else if (kind === 'b2b') ok = await markB2bCompleted(branchId, id);
-  else if (kind === 'custom') ok = await markCustomCompleted(branchId, id);
   else return sendError(c, 'bad_request', 'Invalid order kind', 400);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, { ok: true });

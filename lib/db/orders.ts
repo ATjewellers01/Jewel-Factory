@@ -32,8 +32,6 @@ export async function placeKioskOrder(input: {
   pickupStore: boolean;
   notes?: string;
   requirementNote?: string | null;
-  salesCode?: string | null;
-  salesPersonName?: string | null;
   items: KioskItemInput[];
 }) {
   const totalItems = input.items.reduce((s, i) => s + i.quantity, 0);
@@ -55,8 +53,6 @@ export async function placeKioskOrder(input: {
       pickupStore: input.pickupStore,
       notes: input.notes ?? null,
       requirementNote: input.requirementNote ?? null,
-      salesCode: input.salesCode ?? null,
-      salesPersonName: input.salesPersonName ?? null,
       orderNumber: orderNum,
       totalItems,
       items: {

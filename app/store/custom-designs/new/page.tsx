@@ -21,58 +21,59 @@ function formatWeight3(value: string): string {
   return value.trim() && Number.isFinite(n) ? n.toFixed(3) : value;
 }
 
+const MAX_IMAGES = 10;
+
 const EMPTY_FORM = {
   orderRef: '', deliveryDate: '',
   category: CATEGORIES[0], subCategory: '',
   quantity: '', weightFrom: '', weightTo: '', purity: '',
   meena: '', length: '', size: '', broadness: '', screw: '', sampleWeight: '',
-  notes: '', imageUrl: '',
+  notes: '',
 };
-
-function isPreviewableUrl(value: string): boolean {
-  const trimmed = value.trim();
-  if (!trimmed) return false;
-  try {
-    const parsed = new URL(trimmed);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
 
 export default function StoreCustomDesignNewPage() {
   const [form, setForm] = useState(EMPTY_FORM);
+  const [images, setImages] = useState<string[]>([]);
   const [subCustom, setSubCustom] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitErr, setSubmitErr] = useState<unknown>(null);
   const [done, setDone] = useState(false);
-  const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload');
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   function set(k: string, v: string) { setForm((p) => ({ ...p, [k]: v })); }
   const subOptions = subCategoriesFor(form.category);
 
-  async function handleUpload(file: File) {
+  async function handleUpload(files: FileList) {
     setError(null); setUploading(true);
     try {
-      const signRes = await fetch('/api/store/custom-designs/upload-sign', { method: 'POST', credentials: 'same-origin' });
-      if (signRes.status === 401) { window.location.assign('/store/login'); return; }
-      const signJson = (await signRes.json()) as { data?: { uploadUrl: string; secureUrl: string; maxBytes: number }; error?: { message: string } };
-      if (!signRes.ok || !signJson.data) { setError(signJson.error?.message ?? 'Upload unavailable.'); return; }
-      const s = signJson.data;
-      if (file.size > s.maxBytes) { setError(`Image too large (max ${Math.round(s.maxBytes / 1024 / 1024)}MB).`); return; }
-      const upRes = await fetch(s.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type || 'application/octet-stream' },
-        body: file,
-      });
-      if (!upRes.ok) { setError(`Upload failed (${upRes.status}).`); return; }
-      set('imageUrl', s.secureUrl);
+      const room = MAX_IMAGES - images.length;
+      const toUpload = Array.from(files).slice(0, Math.max(room, 0));
+      const uploaded: string[] = [];
+      for (const file of toUpload) {
+        const signRes = await fetch('/api/store/custom-designs/upload-sign', { method: 'POST', credentials: 'same-origin' });
+        if (signRes.status === 401) { window.location.assign('/store/login'); return; }
+        const signJson = (await signRes.json()) as { data?: { uploadUrl: string; secureUrl: string; maxBytes: number }; error?: { message: string } };
+        if (!signRes.ok || !signJson.data) { setError(signJson.error?.message ?? 'Upload unavailable.'); return; }
+        const s = signJson.data;
+        if (file.size > s.maxBytes) { setError(`Image too large (max ${Math.round(s.maxBytes / 1024 / 1024)}MB).`); continue; }
+        const upRes = await fetch(s.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': file.type || 'application/octet-stream' },
+          body: file,
+        });
+        if (!upRes.ok) { setError(`Upload failed (${upRes.status}).`); continue; }
+        uploaded.push(s.secureUrl);
+      }
+      setImages((prev) => [...prev, ...uploaded]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Upload failed.');
     } finally { setUploading(false); }
+  }
+
+  function removeImage(url: string) {
+    setImages((prev) => prev.filter((u) => u !== url));
   }
 
   async function submit(e: React.FormEvent) {
@@ -80,7 +81,7 @@ export default function StoreCustomDesignNewPage() {
     setError(null);
     setSubmitErr(null);
 
-    if (!form.imageUrl.trim()) { setError('Please add a reference image.'); return; }
+    if (images.length === 0) { setError('Please add at least one reference image.'); return; }
 
     const from = form.weightFrom ? Number(form.weightFrom) : undefined;
     const to = form.weightTo ? Number(form.weightTo) : undefined;
@@ -100,7 +101,8 @@ export default function StoreCustomDesignNewPage() {
         weightGramsMax,
         purity: form.purity || undefined,
         designNotes: form.notes.trim() || undefined,
-        referenceImageUrl: form.imageUrl.trim() || undefined,
+        referenceImageUrl: images[0],
+        referenceImageUrls: images,
         orderRef: form.orderRef.trim() || undefined,
         deliveryDate: form.deliveryDate || undefined,
         quantity: form.quantity.trim() || undefined,
@@ -125,7 +127,7 @@ export default function StoreCustomDesignNewPage() {
         <h1 className="mt-4 font-display text-2xl font-medium">Order placed</h1>
         <p className="mt-2 text-sm text-muted-foreground">Forwarded to the manufacturer.</p>
         <div className="mt-6 flex gap-3">
-          <Button variant="outline" onClick={() => { setDone(false); setForm(EMPTY_FORM); }}>New order</Button>
+          <Button variant="outline" onClick={() => { setDone(false); setForm(EMPTY_FORM); setImages([]); }}>New order</Button>
           <Link href="/store/custom-designs"><Button className="metal-sheen text-[#17120b] font-semibold">Back to Customised Orders</Button></Link>
         </div>
       </div>
@@ -272,71 +274,49 @@ export default function StoreCustomDesignNewPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Length</label>
-              <Input required className="mt-1 h-10" placeholder="e.g. 18 inch" value={form.length} onChange={(e) => set('length', e.target.value)} />
+              <label className="text-xs font-medium text-muted-foreground">Length <span className="normal-case text-muted-foreground/70">(optional)</span></label>
+              <Input className="mt-1 h-10" placeholder="e.g. 18 inch" value={form.length} onChange={(e) => set('length', e.target.value)} />
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'length'))} />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Size</label>
-              <Input required className="mt-1 h-10" placeholder="e.g. 2.6 or 2.6.5" value={form.size} onChange={(e) => set('size', e.target.value)} />
+              <label className="text-xs font-medium text-muted-foreground">Size <span className="normal-case text-muted-foreground/70">(optional)</span></label>
+              <Input className="mt-1 h-10" placeholder="e.g. 2.6 or 2.6.5" value={form.size} onChange={(e) => set('size', e.target.value)} />
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'size'))} />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Broadness</label>
-              <Input required className="mt-1 h-10" placeholder="e.g. 8 mm" value={form.broadness} onChange={(e) => set('broadness', e.target.value)} />
+              <label className="text-xs font-medium text-muted-foreground">Broadness <span className="normal-case text-muted-foreground/70">(optional)</span></label>
+              <Input className="mt-1 h-10" placeholder="e.g. 8 mm" value={form.broadness} onChange={(e) => set('broadness', e.target.value)} />
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'broadness'))} />
             </div>
           </div>
 
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <label className="text-xs font-medium text-muted-foreground">Reference image</label>
-              <div className="flex gap-1 text-xs">
-                <button type="button" onClick={() => { setImageMode('upload'); set('imageUrl', ''); }} className={`rounded px-2 py-0.5 ${imageMode === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>Upload</button>
-                <button type="button" onClick={() => { setImageMode('url'); set('imageUrl', ''); }} className={`rounded px-2 py-0.5 ${imageMode === 'url' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>URL</button>
-              </div>
+              <label className="text-xs font-medium text-muted-foreground">Reference images</label>
+              <span className="text-[11px] text-muted-foreground">{images.length}/{MAX_IMAGES}</span>
             </div>
-            {form.imageUrl && imageMode === 'upload' ? (
-              <div className="relative inline-block">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={form.imageUrl} alt="reference" className="h-32 w-32 rounded-xl border object-cover" />
-                <button type="button" onClick={() => set('imageUrl', '')} className="absolute -right-2 -top-2 rounded-full bg-black/70 p-1 text-white hover:bg-black" aria-label="Remove">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ) : imageMode === 'upload' ? (
-              <>
-                <button type="button" onClick={() => fileInput.current?.click()} disabled={uploading}
-                  className="flex h-32 w-full flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-black/15 text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary disabled:opacity-60 sm:w-48">
-                  {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Upload className="h-6 w-6" />}
-                  <span className="text-xs">{uploading ? 'Uploading…' : 'Choose photo'}</span>
-                </button>
-                <input ref={fileInput} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])} />
-              </>
-            ) : (
-              <div className="space-y-2">
-                <Input
-                  type="url"
-                  inputMode="url"
-                  placeholder="https://…"
-                  value={form.imageUrl}
-                  onChange={(e) => set('imageUrl', e.target.value)}
-                />
-                {isPreviewableUrl(form.imageUrl) ? (
-                  <div className="relative inline-block">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={form.imageUrl.trim()}
-                      alt="reference"
-                      className="h-32 w-32 rounded-xl border object-cover"
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      onLoad={(e) => { e.currentTarget.style.display = ''; }}
-                    />
-                  </div>
-                ) : null}
-              </div>
-            )}
-            <FieldError errors={toFieldErrors(fieldError(submitErr, 'referenceImageUrl'))} />
+            <div className="flex flex-wrap gap-3">
+              {images.map((url) => (
+                <div key={url} className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="reference" className="h-28 w-28 rounded-xl border object-cover" />
+                  <button type="button" onClick={() => removeImage(url)} className="absolute -right-2 -top-2 rounded-full bg-black/70 p-1 text-white hover:bg-black" aria-label="Remove">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              {images.length < MAX_IMAGES && (
+                <>
+                  <button type="button" onClick={() => fileInput.current?.click()} disabled={uploading}
+                    className="flex h-28 w-28 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-black/15 text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary disabled:opacity-60">
+                    {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Upload className="h-6 w-6" />}
+                    <span className="text-xs">{uploading ? 'Uploading…' : 'Add photo'}</span>
+                  </button>
+                  <input ref={fileInput} type="file" accept="image/*" multiple hidden onChange={(e) => e.target.files && handleUpload(e.target.files)} />
+                </>
+              )}
+            </div>
+            <FieldError errors={toFieldErrors(fieldError(submitErr, 'referenceImageUrl') ?? fieldError(submitErr, 'referenceImageUrls'))} />
           </div>
 
           <div>

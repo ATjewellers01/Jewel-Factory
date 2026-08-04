@@ -10,7 +10,6 @@ import {
   LogOut,
   Menu,
   Package,
-  PencilRuler,
   ScanSearch,
   Shield,
   ShoppingBag,
@@ -44,7 +43,6 @@ const PAGE_LABELS: Record<string, string> = {
   '/store-manager': 'Home',
   '/store-manager/kiosk': 'Catalogue',
   '/store-manager/search': 'Search by Photo',
-  '/store-manager/custom-design': 'Custom Design',
   '/store-manager/try-on': 'Try-On',
   '/store-manager/restock': 'Restock',
   '/store-manager/my-orders': 'My Orders',
@@ -59,7 +57,6 @@ function pageLabelFor(pathname: string): string {
 const nav = [
   { href: '/store-manager/kiosk', label: 'Catalogue', icon: LayoutGrid },
   { href: '/store-manager/search', label: 'Photo Search', icon: ScanSearch },
-  { href: '/store-manager/custom-design', label: 'Custom Design', icon: PencilRuler },
   { href: '/store-manager/my-orders', label: 'My Orders', icon: ClipboardList },
 ];
 
@@ -254,7 +251,7 @@ function Shell({ children }: { children: ReactNode }) {
                     <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.17em] text-[#c9a84c]">{data.branch.name}</p>
                   </div>
                 </div>
-                <p className="mt-4 max-w-sm text-sm leading-6 text-white/45">Explore the purchase manager&apos;s collection with assisted discovery, custom design requests, and virtual try-on.</p>
+                <p className="mt-4 max-w-sm text-sm leading-6 text-white/45">Explore the purchase manager&apos;s collection with assisted discovery and virtual try-on.</p>
                 {data.retailer.city ? <p className="mt-3 text-xs text-white/35">Visit us in {data.retailer.city}</p> : null}
               </div>
               <FooterColumn title="Discover" links={[
@@ -263,7 +260,6 @@ function Shell({ children }: { children: ReactNode }) {
                 ['/store-manager/try-on', 'Virtual Try-On'],
               ]} />
               <FooterColumn title="Requests" links={[
-                ['/store-manager/custom-design', 'Custom Design'],
                 ['/store-manager/my-orders', 'My Orders'],
               ]} />
               <FooterColumn title="Store Operations" links={[

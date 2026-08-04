@@ -542,11 +542,6 @@ model KioskOrder {
   // can edit it; it IS forwarded to the manufacturer (no personal data).
   requirementNote String? @map("requirement_note")
 
-  // Captured from the Retailer User at "Add to Cart" — who sold this, so the
-  // Retailer Admin can see which staff member/counter placed the order.
-  salesCode       String? @map("sales_code")
-  salesPersonName String? @map("sales_person_name")
-
   orderNumber    String      @unique @map("order_number") // GK-YYYYMMDD-XXXX
   orderSource    String      @default("kiosk") @map("order_source")
   status         OrderStatus @default(PENDING)
@@ -627,8 +622,9 @@ model CustomDesignRequest {
   customerPhone String? @map("customer_phone")
   customerNotes String? @map("customer_notes")
 
-  referenceImageUrl      String?      @map("reference_image_url")
+  referenceImageUrl      String?      @map("reference_image_url") // legacy single-image column, superseded by referenceImageUrls below
   referenceImagePublicId String?      @map("reference_image_public_id")
+  referenceImageUrls     String[]     @default([]) @map("reference_image_urls")
   category               String
   subCategory            String?      @map("sub_category")
 
@@ -649,10 +645,6 @@ model CustomDesignRequest {
   weightGramsMax         Decimal?     @map("weight_grams_max") @db.Decimal(8, 3)
   purity                 String?
   designNotes            String?      @map("design_notes")
-  // Captured from the Retailer User at submission — who sold this, so the
-  // Retailer Admin can see which staff member/counter placed the order.
-  salesCode              String?      @map("sales_code")
-  salesPersonName        String?      @map("sales_person_name")
   status                 CustomStatus @default(PENDING)
   reviewedById           String?      @map("reviewed_by_id") // null = owner reviewed
   reviewedAt             DateTime?    @map("reviewed_at")
@@ -685,11 +677,9 @@ model CustomDesignOrder {
   weightGramsMin       Decimal? @map("weight_grams_min") @db.Decimal(8, 3)
   weightGramsMax       Decimal? @map("weight_grams_max") @db.Decimal(8, 3)
   purity               String?
-  referenceImageUrl    String? @map("reference_image_url")
+  referenceImageUrl    String?  @map("reference_image_url") // legacy single-image column, superseded by referenceImageUrls below
+  referenceImageUrls   String[] @default([]) @map("reference_image_urls")
   designNotes          String? @map("design_notes")
-  // Copied through from the request — who sold this (not customer PII).
-  salesCode            String? @map("sales_code")
-  salesPersonName      String? @map("sales_person_name")
 
   // Copied verbatim from the request on approval so the manufacturer builds to
   // the same spec the shop wrote down. `orderRef` is the SHOP's order number —
