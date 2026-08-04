@@ -175,10 +175,13 @@ storeOpsRoutes.post('/custom-designs', jsonValidator(StoreCustomBody), async (c)
     sampleWeightGrams: body.sampleWeightGrams,
   });
   const result = await forwardCustomRequest(storeId, req.id, approverIdOrNull(c));
-  if (!result.ok && result.reason === 'no_manufacturer') {
-    return sendError(c, 'bad_request', 'Store is not linked to a manufacturer yet.', 400);
+  if (!result.ok) {
+    if (result.reason === 'no_manufacturer') {
+      return sendError(c, 'bad_request', 'Store is not linked to a manufacturer yet.', 400);
+    }
+    return sendError(c, 'not_found', 'Request not found', 404);
   }
-  return sendData(c, { id: req.id }, 201);
+  return sendData(c, { id: req.id, orderNumber: result.orderNumber }, 201);
 });
 
 storeOpsRoutes.get('/custom-designs', async (c) => {

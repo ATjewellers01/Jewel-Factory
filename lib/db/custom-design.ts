@@ -131,7 +131,7 @@ export async function forwardCustomRequest(storeId: string, requestId: string, r
       data: { status: 'FORWARDED', reviewedById, reviewedAt: new Date() },
     });
   });
-  return { ok: true as const };
+  return { ok: true as const, orderNumber: orderNum };
 }
 
 // ── Manufacturer: list + advance status (sanitized, no PII) ───────────────────

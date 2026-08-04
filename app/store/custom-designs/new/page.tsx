@@ -39,6 +39,7 @@ export default function StoreCustomDesignNewPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitErr, setSubmitErr] = useState<unknown>(null);
   const [done, setDone] = useState(false);
+  const [placedOrderNumber, setPlacedOrderNumber] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -94,7 +95,7 @@ export default function StoreCustomDesignNewPage() {
 
     setLoading(true);
     try {
-      await apiPost('/api/store/custom-designs', {
+      const result = (await apiPost('/api/store/custom-designs', {
         category: form.category,
         subCategory: form.subCategory.trim() || undefined,
         weightGramsMin,
@@ -112,7 +113,8 @@ export default function StoreCustomDesignNewPage() {
         broadness: form.broadness.trim() || undefined,
         screw: form.screw || undefined,
         sampleWeightGrams: form.sampleWeight ? Number(form.sampleWeight) : undefined,
-      });
+      })) as { orderNumber?: string };
+      setPlacedOrderNumber(result.orderNumber ?? null);
       setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not submit');
@@ -125,10 +127,13 @@ export default function StoreCustomDesignNewPage() {
       <div className="mx-auto flex max-w-md flex-col items-center px-4 py-24 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-700"><CheckCircle2 className="h-7 w-7" /></div>
         <h1 className="mt-4 font-display text-2xl font-medium">Order placed</h1>
+        {placedOrderNumber && (
+          <p className="mt-2 font-mono text-lg font-semibold tracking-wide text-[#a0824a]">{placedOrderNumber}</p>
+        )}
         <p className="mt-2 text-sm text-muted-foreground">Forwarded to the manufacturer.</p>
         <div className="mt-6 flex gap-3">
-          <Button variant="outline" onClick={() => { setDone(false); setForm(EMPTY_FORM); setImages([]); }}>New order</Button>
-          <Link href="/store/custom-designs"><Button className="metal-sheen text-[#17120b] font-semibold">Back to Customised Orders</Button></Link>
+          <Button variant="outline" onClick={() => { setDone(false); setForm(EMPTY_FORM); setImages([]); setPlacedOrderNumber(null); }}>New order</Button>
+          <Link href="/store/b2b-orders"><Button className="metal-sheen text-[#17120b] font-semibold">Back to Order History</Button></Link>
         </div>
       </div>
     );
