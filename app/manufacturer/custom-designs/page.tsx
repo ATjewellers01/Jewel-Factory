@@ -1,188 +1,24 @@
 'use client';
 
-import { Loader2, PencilLine, ChevronDown, ChevronUp } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { PencilLine } from 'lucide-react';
 
-import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
-import { CustomSpecList } from '@/components/orders/CustomSpecList';
-import { OrderFilters } from '@/components/orders/OrderFilters';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useApi, apiSend } from '@/hooks/use-api';
-import { formatOrderStatus } from '@/lib/format';
-import { CUSTOM_ORDER_STATUS_OPTIONS, matchOrder } from '@/lib/order-filters';
-
-// The manufacturer never sees the retailer's store name here — only the ship-to
-// address and the design spec/remarks (see CLAUDE.md 2026-08-05: manufacturer
-// order views strip store identity, keep only ship-to + notes).
-type Order = {
-  id: string; orderNumber: string; storeAddressSnapshot: string;
-  category: string; weightGramsMin: string | null; weightGramsMax: string | null; purity: string | null;
-  referenceImageUrl: string | null; designNotes: string | null;
-  orderRef: string | null; deliveryDate: string | null; quantity: string | null;
-  meena: string | null; length: string | null; size: string | null;
-  broadness: string | null; screw: string | null; sampleWeightGrams: string | null;
-  subCategory: string | null;
-  status: string; trackingNumber: string | null; createdAt: string;
-  karigarCode: string | null;
-};
-
-function formatWeightRange(min: string | null, max: string | null): string {
-  if (!min && !max) return '';
-  const lo = min ? parseFloat(min) : null;
-  const hi = max ? parseFloat(max) : null;
-  if (lo != null && hi != null && lo !== hi) return `${lo}g – ${hi}g`;
-  return `${lo ?? hi}g`;
-}
-
-const STATUS: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800', IN_PROCESS: 'bg-blue-100 text-blue-800',
-  GHAT_RECEIVED: 'bg-purple-100 text-purple-800', READY_FOR_DELIVERY: 'bg-indigo-100 text-indigo-800',
-  DISPATCHED: 'bg-amber-100 text-amber-800', COMPLETED: 'bg-green-100 text-green-800', CANCELLED: 'bg-red-100 text-red-700',
-};
-const NEXT: Record<string, string> = {
-  PENDING: 'IN_PROCESS', IN_PROCESS: 'GHAT_RECEIVED', GHAT_RECEIVED: 'READY_FOR_DELIVERY',
-  READY_FOR_DELIVERY: 'DISPATCHED', DISPATCHED: 'COMPLETED',
-};
-
+// This page is intentionally empty for now — the sidebar nav entry stays
+// active (per client request, 2026-08-05: "abhi ke liye poori tarah khaali
+// rakho, baad mein use karenge"), but the Customised Orders list/data that
+// used to render here (merged into app/manufacturer/orders/page.tsx per the
+// 2026-08-04 punch list item 7) is deliberately not fetched or shown on this
+// route. Re-enable by restoring the previous list implementation when the
+// manufacturer starts using this page again.
 export default function ManufacturerCustomDesignsPage() {
-  const { data, error, loading, reload } = useApi<Order[]>('/api/manufacturer/custom-designs', '/manufacturer/login');
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const [zoomUrl, setZoomUrl] = useState<string | null>(null);
-  const [karigarFilter, setKarigarFilter] = useState('');
-  const [karigarDraft, setKarigarDraft] = useState<Record<string, string>>({});
-  const [savingKarigar, setSavingKarigar] = useState<string | null>(null);
-
-  const karigarOptions = useMemo(() => [...new Set((data ?? []).map((o) => o.karigarCode).filter((k): k is string => !!k))].sort(), [data]);
-  const filtered = useMemo(
-    () => (data ?? []).filter((o) =>
-      matchOrder(o, { search, status, searchLabel: o.category, from, to }) &&
-      (!karigarFilter || o.karigarCode === karigarFilter),
-    ),
-    [data, search, status, from, to, karigarFilter],
-  );
-
-  async function advance(id: string, status: string) {
-    setBusy(id);
-    try { await apiSend('PATCH', `/api/manufacturer/custom-designs/${id}`, { status }); void reload(); }
-    catch (e) { alert(e instanceof Error ? e.message : 'Failed'); } finally { setBusy(null); }
-  }
-
-  async function saveKarigarCode(id: string) {
-    const value = (karigarDraft[id] ?? '').trim();
-    setSavingKarigar(id);
-    try {
-      await apiSend('PATCH', `/api/manufacturer/custom-designs/${id}/karigar-code`, { karigarCode: value || null });
-      void reload();
-    } catch (e) { alert(e instanceof Error ? e.message : 'Could not save karigar code'); }
-    finally { setSavingKarigar(null); }
-  }
-
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4">
       <div>
         <h1 className="text-2xl font-medium tracking-tight">Customised Orders</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Sanitized from stores — no customer data, no store identity. Ship to the address below.</p>
       </div>
-      {data && data.length > 0 && (
-        <div className="space-y-2">
-          <OrderFilters
-            search={search} onSearch={setSearch} searchPlaceholder="Search by order ID / category…"
-            status={status} onStatus={setStatus} statusOptions={CUSTOM_ORDER_STATUS_OPTIONS}
-            from={from} to={to} onFrom={setFrom} onTo={setTo}
-          />
-          {karigarOptions.length > 0 && (
-            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={karigarFilter} onChange={(e) => setKarigarFilter(e.target.value)}>
-              <option value="">All karigars</option>
-              {karigarOptions.map((k) => <option key={k} value={k}>{k}</option>)}
-            </select>
-          )}
-        </div>
-      )}
-      {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-      {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
-      {data && data.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
-          <PencilLine className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No customised design orders yet.</p>
-        </div>
-      )}
-      {data && data.length > 0 && filtered.length === 0 && (
-        <p className="py-12 text-center text-sm text-muted-foreground">No orders match your filters.</p>
-      )}
-      {filtered.length > 0 && (
-        <div className="space-y-3">
-          {filtered.map((o) => (
-            <div key={o.id} className="rounded-xl border bg-card overflow-hidden">
-              <button type="button" onClick={() => setExpanded(expanded === o.id ? null : o.id)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30">
-                <div className="grid flex-1 grid-cols-2 gap-x-4 sm:grid-cols-3">
-                  <div><p className="text-xs text-muted-foreground">Order</p><p className="text-sm font-medium">{o.orderNumber}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Category</p><p className="text-sm">{o.category}{o.subCategory ? ` › ${o.subCategory}` : ''}</p></div>
-                  <div className="flex items-start gap-1.5">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderStatus(o.status)}</span>
-                    {o.karigarCode && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Karigar: {o.karigarCode}</span>}
-                  </div>
-                </div>
-                {expanded === o.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-              </button>
-              {expanded === o.id && (
-                <div className="border-t bg-muted/10 px-4 pb-4 pt-3 space-y-3">
-                  <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-                    {formatWeightRange(o.weightGramsMin, o.weightGramsMax) && <div><p className="text-xs text-muted-foreground">Weight</p><p>{formatWeightRange(o.weightGramsMin, o.weightGramsMax)}</p></div>}
-                    {o.purity && <div><p className="text-xs text-muted-foreground">Purity</p><p>{o.purity}</p></div>}
-                    {o.trackingNumber && <div><p className="text-xs text-muted-foreground">Tracking</p><p className="font-mono text-xs">{o.trackingNumber}</p></div>}
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Karigar Code</p>
-                    <div className="mt-1 flex gap-2">
-                      <Input
-                        placeholder="e.g. K-104"
-                        value={karigarDraft[o.id] ?? o.karigarCode ?? ''}
-                        onChange={(e) => setKarigarDraft((prev) => ({ ...prev, [o.id]: e.target.value }))}
-                        className="h-9 max-w-[160px] text-sm"
-                      />
-                      <Button size="sm" variant="outline" disabled={savingKarigar === o.id} onClick={() => saveKarigarCode(o.id)}>
-                        {savingKarigar === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
-                      </Button>
-                    </div>
-                  </div>
-                  <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to (store address)</p><p className="text-sm">{o.storeAddressSnapshot}</p></div>
-                  <CustomSpecList spec={o} />
-                  {o.designNotes && <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Remarks</p><p className="text-sm">{o.designNotes}</p></div>}
-                  {o.referenceImageUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={o.referenceImageUrl}
-                      alt="reference"
-                      className="max-h-56 rounded-lg border object-contain cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => setZoomUrl(o.referenceImageUrl)}
-                    />
-                  )}
-                  <div className="rounded-lg bg-blue-50 border border-blue-100 px-3 py-2 text-xs text-blue-700">Customer details are not shared. Ship to the store address above.</div>
-                  {NEXT[o.status] && (
-                    <Button size="sm" disabled={busy === o.id} onClick={() => advance(o.id, NEXT[o.status])} className="metal-sheen text-[#17120b] font-semibold">
-                      {busy === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : `Mark as ${formatOrderStatus(NEXT[o.status])}`}
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {zoomUrl && (
-        <ImageZoomModal
-          isOpen={!!zoomUrl}
-          images={[zoomUrl]}
-          productName="Reference Image"
-          onClose={() => setZoomUrl(null)}
-        />
-      )}
+      <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
+        <PencilLine className="h-10 w-10 text-muted-foreground/40" />
+        <p className="text-sm text-muted-foreground">Not in use right now.</p>
+      </div>
     </div>
   );
 }

@@ -127,36 +127,38 @@ function ProductBlock({
   const selectedImage = product.images[imageIndex] ?? product.images[0];
 
   return (
-    <div className="grid md:grid-cols-2">
-      <div className="bg-[#ece5da] p-3 sm:p-4">
-        <div className="aspect-square overflow-hidden rounded-xl bg-white">
-          {selectedImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={selectedImage.secureUrl} alt={product.designNumber} onClick={() => onZoom(selectedImage.secureUrl)} className="h-full w-full cursor-zoom-in object-contain" title="Click to enlarge" />
-          ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-10 w-10" /></div>}
-        </div>
-        {product.images.length > 1 ? (
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-            {product.images.map((image, index) => (
-              <button key={image.secureUrl} type="button" onClick={() => setImageIndex(index)} aria-label={`View image ${index + 1}`} className={`h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border-2 ${index === imageIndex ? 'border-primary' : 'border-transparent'}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={image.secureUrl} alt="" className="h-full w-full object-cover" />
-              </button>
-            ))}
+    <div className="grid md:grid-cols-2 md:items-center">
+      <div className="flex items-center justify-center bg-[#ece5da] p-4 sm:p-6">
+        <div className="w-full max-w-sm">
+          <div className="aspect-square overflow-hidden rounded-xl bg-white shadow-sm">
+            {selectedImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={selectedImage.secureUrl} alt={product.designNumber} onClick={() => onZoom(selectedImage.secureUrl)} className="h-full w-full cursor-zoom-in object-contain" title="Click to enlarge" />
+            ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-10 w-10" /></div>}
           </div>
-        ) : null}
+          {product.images.length > 1 ? (
+            <div className="mt-3 flex justify-center gap-2 overflow-x-auto pb-1">
+              {product.images.map((image, index) => (
+                <button key={image.secureUrl} type="button" onClick={() => setImageIndex(index)} aria-label={`View image ${index + 1}`} className={`h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-colors ${index === imageIndex ? 'border-primary' : 'border-transparent hover:border-primary/40'}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={image.secureUrl} alt="" className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </div>
 
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-5 p-5 sm:p-8">
         <div className="pr-8">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">{product.category ?? 'Jewellery'}{product.subCategory ? ` · ${product.subCategory}` : ''}</p>
-          <h2 className="mt-1 font-display text-xl font-medium sm:text-2xl">Design {product.designNumber}</h2>
+          <h2 className="mt-1.5 font-display text-2xl font-medium sm:text-3xl">Design {product.designNumber}</h2>
         </div>
-        <div className="overflow-hidden rounded-lg border text-sm">
-          {product.purity ? <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">Purity</span><span className="font-medium">{product.purity}</span></div> : null}
-          {formatWeight(product.weightGrams) ? <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">Weight</span><span className="font-medium">{formatWeight(product.weightGrams)}</span></div> : null}
-          {product.size ? <div className="flex justify-between px-4 py-2.5"><span className="text-muted-foreground">Size</span><span className="font-medium">{product.size}</span></div> : null}
-          <div className="flex justify-between gap-4 bg-muted/40 px-4 py-2.5"><span className="text-muted-foreground">Category</span><span className="text-right font-medium">{product.category ?? '—'}{product.subCategory ? ` › ${product.subCategory}` : ''}</span></div>
+        <div className="overflow-hidden rounded-xl border text-sm">
+          {product.purity ? <div className="flex justify-between px-4 py-3"><span className="text-muted-foreground">Purity</span><span className="font-medium">{product.purity}</span></div> : null}
+          {formatWeight(product.weightGrams) ? <div className="flex justify-between border-t px-4 py-3"><span className="text-muted-foreground">Weight</span><span className="font-medium">{formatWeight(product.weightGrams)}</span></div> : null}
+          {product.size ? <div className="flex justify-between border-t px-4 py-3"><span className="text-muted-foreground">Size</span><span className="font-medium">{product.size}</span></div> : null}
+          <div className="flex justify-between gap-4 border-t bg-muted/40 px-4 py-3"><span className="text-muted-foreground">Category</span><span className="text-right font-medium">{product.category ?? '—'}{product.subCategory ? ` › ${product.subCategory}` : ''}</span></div>
         </div>
         {product.description && product.description.trim().length >= 4 ? <p className="text-sm leading-relaxed text-muted-foreground">{product.description}</p> : null}
         <div className="flex flex-col gap-2 sm:flex-row">

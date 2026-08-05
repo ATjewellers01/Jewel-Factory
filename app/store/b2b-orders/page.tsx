@@ -66,15 +66,15 @@ type CustomRequest = {
 
 type Row = {
   key: string; id: string; source: Source; orderNumber: string; status: string; totalItems: number;
-  branchNameSnapshot: string | null; needsApproval: boolean; meta: string;
+  branchNameSnapshot: string | null; placedByYou: boolean; needsApproval: boolean; meta: string;
   createdAt: string; items?: Item[];
   custom?: CustomRequest;
 };
 
 // A null branch means the Retailer Admin placed this order directly (not
-// via a Retailer User/branch) — labelled explicitly so it's never a blank
-// spot in the list, and so it flows through the existing branch filter
-// dropdown as its own selectable option.
+// via a Retailer User/branch) — tracked as its own boolean (placedByYou)
+// rather than folded into branchNameSnapshot, so a real branch name and
+// "you placed this" can both show as separate badges when relevant.
 const PLACED_BY_YOU = 'Placed by you';
 
 const STATUS: Record<string, string> = {
@@ -84,11 +84,12 @@ const STATUS: Record<string, string> = {
 };
 
 // Restock (B2B) = the store ordering stock for itself; Kiosk = a walk-in
-// customer's order taken at the counter; Customised = a bespoke design
-// request. Retailer Admin needs to tell these apart at a glance in the
-// merged list, so each row gets a small source-kind chip.
+// customer's order taken at the counter (labelled "Store Customer" here, not
+// "Kiosk" — the client's own wording for a customer order); Customised = a
+// bespoke design request. Retailer Admin needs to tell these apart at a
+// glance in the merged list, so each row gets a small source-kind chip.
 const SOURCE_LABEL: Record<Source, string> = {
-  b2b: 'Restock', kiosk: 'Kiosk', custom: 'Customised',
+  b2b: 'Restock', kiosk: 'Store Customer', custom: 'Customised',
 };
 const SOURCE_STYLE: Record<Source, string> = {
   b2b: 'bg-sky-100 text-sky-800', kiosk: 'bg-rose-100 text-rose-800', custom: 'bg-violet-100 text-violet-800',
@@ -139,14 +140,14 @@ export default function StoreCatalogueOrdersPage() {
         const b2bRows: Row[] = (b2bJson.data ?? []).map((o) => ({
           key: `b2b-${o.id}`, id: o.id, source: 'b2b',
           orderNumber: o.orderNumber, status: o.status, totalItems: o.totalItems,
-          branchNameSnapshot: o.branchNameSnapshot ?? PLACED_BY_YOU, needsApproval: o.pendingManagerApproval,
+          branchNameSnapshot: o.branchNameSnapshot, placedByYou: !o.branchNameSnapshot, needsApproval: o.pendingManagerApproval,
           meta: `${o.totalItems} item(s)${o.trackingNumber ? ` · Tracking: ${o.trackingNumber}` : ''}`,
           createdAt: o.createdAt, items: o.items,
         }));
         const kioskRows: Row[] = (kioskJson.data ?? []).map((o) => ({
           key: `kiosk-${o.id}`, id: o.id, source: 'kiosk',
           orderNumber: o.orderNumber, status: o.status, totalItems: o.totalItems,
-          branchNameSnapshot: o.branchNameSnapshot ?? PLACED_BY_YOU, needsApproval: o.pendingStoreApproval,
+          branchNameSnapshot: o.branchNameSnapshot, placedByYou: !o.branchNameSnapshot, needsApproval: o.pendingStoreApproval,
           // No customer name/phone here — kiosk orders carry no PII by design.
           meta: `${o.totalItems} item(s) · ${o.pickupStore ? 'Pickup' : 'Delivery'}`,
           createdAt: o.createdAt, items: o.items,
@@ -157,7 +158,7 @@ export default function StoreCatalogueOrdersPage() {
         const customRows: Row[] = (customJson.data ?? []).map((r) => ({
           key: `custom-${r.id}`, id: r.id, source: 'custom',
           orderNumber: r.order?.orderNumber ?? '—', status: r.order?.status ?? 'PENDING', totalItems: 0,
-          branchNameSnapshot: r.branch?.name ?? PLACED_BY_YOU, needsApproval: false,
+          branchNameSnapshot: r.branch?.name ?? null, placedByYou: !r.branch?.name, needsApproval: false,
           meta: `${r.category}${r.subCategory ? ` › ${r.subCategory}` : ''}${formatWeightRange(r.weightGramsMin, r.weightGramsMax) ? ` · ${formatWeightRange(r.weightGramsMin, r.weightGramsMax)}` : ''}`,
           createdAt: r.createdAt, custom: r,
         }));
@@ -173,10 +174,24 @@ export default function StoreCatalogueOrdersPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const branchOptions = useMemo(() => uniqueBranchOptions((rows ?? []).map((o) => o.branchNameSnapshot)), [rows]);
+  // "Placed by" dropdown mixes real branch names with the synthetic
+  // PLACED_BY_YOU value (only added when at least one row qualifies), and a
+  // separate source-type dropdown (Restock/Kiosk/Customised) filters
+  // independently — both apply together (AND), matching how status/date do.
+  const branchOptions = useMemo(() => {
+    const names = uniqueBranchOptions((rows ?? []).map((o) => o.branchNameSnapshot));
+    const hasSelfPlaced = (rows ?? []).some((o) => o.placedByYou);
+    return hasSelfPlaced ? [{ value: PLACED_BY_YOU, label: PLACED_BY_YOU }, ...names] : names;
+  }, [rows]);
+  const [sourceFilter, setSourceFilter] = useState('');
   const filtered = useMemo(
-    () => (rows ?? []).filter((o) => matchOrder(o, { search, status, branch, branchName: o.branchNameSnapshot, from, to })),
-    [rows, search, status, branch, from, to],
+    () => (rows ?? []).filter((o) => {
+      const placedByLabel = o.placedByYou ? PLACED_BY_YOU : o.branchNameSnapshot;
+      if (!matchOrder(o, { search, status, branch, branchName: placedByLabel, from, to })) return false;
+      if (sourceFilter && o.source !== sourceFilter) return false;
+      return true;
+    }),
+    [rows, search, status, branch, sourceFilter, from, to],
   );
 
   return (
@@ -190,12 +205,20 @@ export default function StoreCatalogueOrdersPage() {
       </div>
 
       {rows && rows.length > 0 && (
-        <OrderFilters
-          search={search} onSearch={setSearch}
-          status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
-          group={branch} onGroup={setBranch} groupOptions={branchOptions} groupAllLabel="All stores" groupLabel="Placed by"
-          from={from} to={to} onFrom={setFrom} onTo={setTo}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <OrderFilters
+            search={search} onSearch={setSearch}
+            status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
+            group={branch} onGroup={setBranch} groupOptions={branchOptions} groupAllLabel="All stores" groupLabel="Placed by"
+            from={from} to={to} onFrom={setFrom} onTo={setTo}
+          />
+          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} aria-label="Order type">
+            <option value="">All order types</option>
+            <option value="b2b">{SOURCE_LABEL.b2b}</option>
+            <option value="kiosk">{SOURCE_LABEL.kiosk}</option>
+            <option value="custom">{SOURCE_LABEL.custom}</option>
+          </select>
+        </div>
       )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
@@ -215,8 +238,14 @@ export default function StoreCatalogueOrdersPage() {
                 <div className="min-w-0">
                   <p className="text-sm font-medium">
                     {o.orderNumber}
-                    <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${SOURCE_STYLE[o.source]}`}>{SOURCE_LABEL[o.source]}</span>
-                    {o.branchNameSnapshot === PLACED_BY_YOU
+                    {/* Type badge: hidden for a self-placed Restock order (redundant
+                        with "Placed by you" alone), shown everywhere else — kiosk
+                        rows always keep their type badge ("Store Customer") next
+                        to the branch name, never replacing it. */}
+                    {!(o.placedByYou && o.source === 'b2b') && (
+                      <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${SOURCE_STYLE[o.source]}`}>{SOURCE_LABEL[o.source]}</span>
+                    )}
+                    {o.placedByYou
                       ? <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">{PLACED_BY_YOU}</span>
                       : o.branchNameSnapshot ? <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{o.branchNameSnapshot}</span> : null}
                   </p>
