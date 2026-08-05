@@ -10,7 +10,7 @@ import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
 import { apiSend } from '@/hooks/use-api';
 import { formatOrderStatus, formatOrderLevelStatus } from '@/lib/format';
-import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
+import { KIOSK_B2B_STATUS_OPTIONS, matchOrder } from '@/lib/order-filters';
 
 // Catalogue Orders merges the manufacturer's three order sources — B2B/restock
 // orders, kiosk (customer) orders, and customised design orders — into one
@@ -20,18 +20,23 @@ import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib
 // rendered. The manufacturer's own separate Customised Orders page/nav entry
 // (app/manufacturer/custom-designs/page.tsx) stays untouched — this merge is
 // additive, the same orders now also surface here.
+//
+// The manufacturer never sees the retailer/store's identity (business name,
+// city, branch name) on any order view — only the ship-to address and any
+// remark/note the retailer wrote. Backend (getB2bOrdersByManufacturer,
+// sanitizeKiosk, listCustomOrdersByManufacturer) already strips these
+// fields, so none of the types below carry a name/city field.
 type Source = 'b2b' | 'kiosk' | 'custom';
 
-type B2bOrder = { id: string; orderNumber: string; status: string; totalItems: number; createdAt: string; storeName: string | null; storeCity: string | null; karigarCodes?: string[] };
+type B2bOrder = { id: string; orderNumber: string; status: string; totalItems: number; createdAt: string; karigarCodes?: string[] };
 type KioskOrder = {
   id: string; orderNumber: string; status: string; totalItems: number; createdAt: string;
-  storeNameSnapshot: string; storeCitySnapshot: string | null;
-  branchNameSnapshot: string | null; requirementNote: string | null;
+  requirementNote: string | null;
   shipToStoreAddress: string; karigarCodes?: string[];
 };
 type CustomOrder = {
   id: string; orderNumber: string; status: string; createdAt: string;
-  storeNameSnapshot: string; storeAddressSnapshot: string;
+  storeAddressSnapshot: string;
   category: string; subCategory: string | null;
   weightGramsMin: string | null; weightGramsMax: string | null; purity: string | null;
   referenceImageUrl: string | null; referenceImageUrls: string[]; designNotes: string | null;
@@ -43,7 +48,7 @@ type CustomOrder = {
 
 type Row = {
   id: string; source: Source; orderNumber: string; status: string; totalItems: number; createdAt: string;
-  storeName: string | null; storeCity: string | null; branchName: string | null; karigarCodes: string[];
+  karigarCodes: string[];
   custom?: CustomOrder;
 };
 
@@ -54,7 +59,7 @@ type Item = {
   product: OrderItemProduct | null;
 };
 type Detail = {
-  requirementNote: string | null; shipToStoreAddress: string; branchNameSnapshot: string | null; items: Item[];
+  requirementNote: string | null; shipToStoreAddress: string; items: Item[];
 };
 
 const STATUS: Record<string, string> = {
@@ -83,7 +88,6 @@ export default function ManufacturerOrdersPage() {
   const [itemBusy, setItemBusy] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
-  const [retailer, setRetailer] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [karigarFilter, setKarigarFilter] = useState('');
@@ -109,18 +113,15 @@ export default function ManufacturerOrdersPage() {
       }
       const b2bRows: Row[] = (b2bJson.data ?? []).map((o) => ({
         id: o.id, source: 'b2b', orderNumber: o.orderNumber, status: o.status, totalItems: o.totalItems,
-        createdAt: o.createdAt, storeName: o.storeName, storeCity: o.storeCity, branchName: null,
-        karigarCodes: o.karigarCodes ?? [],
+        createdAt: o.createdAt, karigarCodes: o.karigarCodes ?? [],
       }));
       const kioskRows: Row[] = (kioskJson.data ?? []).map((o) => ({
         id: o.id, source: 'kiosk', orderNumber: o.orderNumber, status: o.status, totalItems: o.totalItems,
-        createdAt: o.createdAt, storeName: o.storeNameSnapshot, storeCity: o.storeCitySnapshot,
-        branchName: o.branchNameSnapshot, karigarCodes: o.karigarCodes ?? [],
+        createdAt: o.createdAt, karigarCodes: o.karigarCodes ?? [],
       }));
       const customRows: Row[] = (customJson.data ?? []).map((o) => ({
         id: o.id, source: 'custom', orderNumber: o.orderNumber, status: o.status, totalItems: 0,
-        createdAt: o.createdAt, storeName: o.storeNameSnapshot, storeCity: null, branchName: null,
-        karigarCodes: o.karigarCode ? [o.karigarCode] : [], custom: o,
+        createdAt: o.createdAt, karigarCodes: o.karigarCode ? [o.karigarCode] : [], custom: o,
       }));
       setRows([...b2bRows, ...kioskRows, ...customRows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
       setError(null);
@@ -133,14 +134,13 @@ export default function ManufacturerOrdersPage() {
 
   useEffect(() => { void loadList(); }, []);
 
-  const retailerOptions = useMemo(() => uniqueBranchOptions((rows ?? []).map((o) => o.storeName)), [rows]);
   const karigarOptions = useMemo(() => [...new Set((rows ?? []).flatMap((o) => o.karigarCodes))].sort(), [rows]);
   const filtered = useMemo(
     () => (rows ?? []).filter((o) =>
-      matchOrder(o, { search, status, branch: retailer, branchName: o.storeName, from, to }) &&
+      matchOrder(o, { search, status, from, to }) &&
       (!karigarFilter || o.karigarCodes.includes(karigarFilter)),
     ),
-    [rows, search, status, retailer, from, to, karigarFilter],
+    [rows, search, status, from, to, karigarFilter],
   );
 
   async function toggle(row: Row) {
@@ -156,14 +156,12 @@ export default function ManufacturerOrdersPage() {
       setDetail({
         requirementNote: (json.data.requirementNote as string | null) ?? null,
         shipToStoreAddress: (json.data.shipToStoreAddress as string) ?? '',
-        branchNameSnapshot: (json.data.branchNameSnapshot as string | null) ?? null,
         items: (json.data.items as Item[]) ?? [],
       });
     } else {
       setDetail({
         requirementNote: (json.data.requirementNote as string | null) ?? null,
         shipToStoreAddress: (json.data.deliveryAddress as string) ?? '',
-        branchNameSnapshot: (json.data.branchNameSnapshot as string | null) ?? null,
         items: ((json.data.items as Array<Record<string, unknown>>) ?? []).map((i) => ({
           id: i.id as string,
           productNameSnapshot: (i.productNameSnapshot as string) ?? '',
@@ -217,7 +215,6 @@ export default function ManufacturerOrdersPage() {
           <OrderFilters
             search={search} onSearch={setSearch}
             status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
-            group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All customers" groupLabel="Customer"
             from={from} to={to} onFrom={setFrom} onTo={setTo}
           />
           {karigarOptions.length > 0 && (
@@ -243,9 +240,8 @@ export default function ManufacturerOrdersPage() {
           {filtered.map((o) => (
             <div key={o.id}>
               <button type="button" onClick={() => toggle(o)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30">
-                <div className="grid flex-1 grid-cols-2 gap-x-4 sm:grid-cols-4">
+                <div className="grid flex-1 grid-cols-2 gap-x-4 sm:grid-cols-3">
                   <div><p className="text-xs text-muted-foreground">Order</p><p className="text-sm font-medium">{o.orderNumber}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Customer</p><p className="text-sm font-medium text-primary truncate">{o.storeName ?? '—'}</p><p className="text-xs text-muted-foreground truncate">{o.branchName ?? o.storeCity ?? ''}</p></div>
                   <div><p className="text-xs text-muted-foreground">Items</p><p className="text-sm tabular-nums">{o.source === 'custom' ? '—' : o.totalItems}</p></div>
                   <div className="flex items-start"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span></div>
                 </div>
@@ -297,12 +293,6 @@ export default function ManufacturerOrdersPage() {
               {expanded === o.id && o.source !== 'custom' && (
                 <div className="border-t bg-muted/10 px-4 pb-4 pt-3 space-y-3">
                   {!detail && <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
-                  {detail?.branchNameSnapshot && (
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">For store</p>
-                      <p className="text-sm font-medium">{detail.branchNameSnapshot}</p>
-                    </div>
-                  )}
                   {detail?.requirementNote && (
                     <div>
                       <p className="text-xs text-muted-foreground uppercase tracking-wider">Remark</p>

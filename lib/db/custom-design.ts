@@ -134,14 +134,16 @@ export async function forwardCustomRequest(storeId: string, requestId: string, r
   return { ok: true as const, orderNumber: orderNum };
 }
 
-// ── Manufacturer: list + advance status (sanitized, no PII) ───────────────────
+// ── Manufacturer: list + advance status (sanitized, no PII, no store identity) ─
+// storeNameSnapshot is intentionally NOT selected — the manufacturer ships to
+// storeAddressSnapshot, not to a named retailer (see CLAUDE.md 2026-08-05).
 
 export async function listCustomOrdersByManufacturer(manufacturerId: string) {
   return prisma.customDesignOrder.findMany({
     where: { manufacturerId },
     orderBy: { createdAt: 'desc' },
     select: {
-      id: true, orderNumber: true, storeNameSnapshot: true, storeAddressSnapshot: true,
+      id: true, orderNumber: true, storeAddressSnapshot: true,
       category: true, subCategory: true, weightGramsMin: true, weightGramsMax: true, purity: true,
       referenceImageUrl: true, referenceImageUrls: true, designNotes: true,
       orderRef: true, deliveryDate: true, quantity: true, meena: true,

@@ -20,7 +20,7 @@ export const CATEGORY_TREE: Record<string, string[]> = {
     'Antique Bangles',
     'Baby Bangles',
     'Gajra Bangles',
-    'Hollow Bangles',
+    'Hollow Pipe Bangles',
     'Indo Italian Bangles',
     'Machine Bangles',
     'Plaster Bangles',

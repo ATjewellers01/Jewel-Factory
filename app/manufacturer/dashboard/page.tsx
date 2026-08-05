@@ -19,7 +19,6 @@ type Dashboard = {
     status: string;
     totalItems: number;
     createdAt: string;
-    storeName: string | null;
   }[];
 };
 
@@ -113,7 +112,7 @@ export default function ManufacturerDashboardPage() {
                       <div>
                         <p className="text-sm font-medium">{o.orderNumber}</p>
                         <p className="text-xs text-muted-foreground">
-                          {o.storeName ?? '—'} · {o.totalItems} item{o.totalItems !== 1 ? 's' : ''}
+                          {o.totalItems} item{o.totalItems !== 1 ? 's' : ''}
                         </p>
                       </div>
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_COLORS[o.status] ?? ''}`}>

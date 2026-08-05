@@ -10,10 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApi, apiSend } from '@/hooks/use-api';
 import { formatOrderStatus } from '@/lib/format';
-import { CUSTOM_ORDER_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
+import { CUSTOM_ORDER_STATUS_OPTIONS, matchOrder } from '@/lib/order-filters';
 
+// The manufacturer never sees the retailer's store name here — only the ship-to
+// address and the design spec/remarks (see CLAUDE.md 2026-08-05: manufacturer
+// order views strip store identity, keep only ship-to + notes).
 type Order = {
-  id: string; orderNumber: string; storeNameSnapshot: string; storeAddressSnapshot: string;
+  id: string; orderNumber: string; storeAddressSnapshot: string;
   category: string; weightGramsMin: string | null; weightGramsMax: string | null; purity: string | null;
   referenceImageUrl: string | null; designNotes: string | null;
   orderRef: string | null; deliveryDate: string | null; quantity: string | null;
@@ -48,7 +51,6 @@ export default function ManufacturerCustomDesignsPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
-  const [retailer, setRetailer] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [zoomUrl, setZoomUrl] = useState<string | null>(null);
@@ -56,14 +58,13 @@ export default function ManufacturerCustomDesignsPage() {
   const [karigarDraft, setKarigarDraft] = useState<Record<string, string>>({});
   const [savingKarigar, setSavingKarigar] = useState<string | null>(null);
 
-  const retailerOptions = useMemo(() => uniqueBranchOptions((data ?? []).map((o) => o.storeNameSnapshot)), [data]);
   const karigarOptions = useMemo(() => [...new Set((data ?? []).map((o) => o.karigarCode).filter((k): k is string => !!k))].sort(), [data]);
   const filtered = useMemo(
     () => (data ?? []).filter((o) =>
-      matchOrder(o, { search, status, searchLabel: o.category, branch: retailer, branchName: o.storeNameSnapshot, from, to }) &&
+      matchOrder(o, { search, status, searchLabel: o.category, from, to }) &&
       (!karigarFilter || o.karigarCode === karigarFilter),
     ),
-    [data, search, status, retailer, from, to, karigarFilter],
+    [data, search, status, from, to, karigarFilter],
   );
 
   async function advance(id: string, status: string) {
@@ -86,14 +87,13 @@ export default function ManufacturerCustomDesignsPage() {
     <div className="mx-auto w-full max-w-3xl space-y-4">
       <div>
         <h1 className="text-2xl font-medium tracking-tight">Customised Orders</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Sanitized from stores — no customer data. Ship to the store address.</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">Sanitized from stores — no customer data, no store identity. Ship to the address below.</p>
       </div>
       {data && data.length > 0 && (
         <div className="space-y-2">
           <OrderFilters
             search={search} onSearch={setSearch} searchPlaceholder="Search by order ID / category…"
             status={status} onStatus={setStatus} statusOptions={CUSTOM_ORDER_STATUS_OPTIONS}
-            group={retailer} onGroup={setRetailer} groupOptions={retailerOptions} groupAllLabel="All customers" groupLabel="Customer"
             from={from} to={to} onFrom={setFrom} onTo={setTo}
           />
           {karigarOptions.length > 0 && (
@@ -119,9 +119,8 @@ export default function ManufacturerCustomDesignsPage() {
           {filtered.map((o) => (
             <div key={o.id} className="rounded-xl border bg-card overflow-hidden">
               <button type="button" onClick={() => setExpanded(expanded === o.id ? null : o.id)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30">
-                <div className="grid flex-1 grid-cols-2 gap-x-4 sm:grid-cols-4">
+                <div className="grid flex-1 grid-cols-2 gap-x-4 sm:grid-cols-3">
                   <div><p className="text-xs text-muted-foreground">Order</p><p className="text-sm font-medium">{o.orderNumber}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Store</p><p className="text-sm font-medium text-primary truncate">{o.storeNameSnapshot}</p></div>
                   <div><p className="text-xs text-muted-foreground">Category</p><p className="text-sm">{o.category}{o.subCategory ? ` › ${o.subCategory}` : ''}</p></div>
                   <div className="flex items-start gap-1.5">
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderStatus(o.status)}</span>
