@@ -14,12 +14,12 @@ import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } 
 
 const FALLBACK_STORE_LOGO = '/storeRe-logo.avif';
 
-// Top navbar — the Retailer's day-to-day browsing/discovery actions, always visible.
-// shortLabel is an abbreviated form shown on the narrowest phones (< 420px); the
-// full label shows from there up, so a label is never fully hidden at any width.
+// Top navbar — the Retailer's day-to-day browsing/discovery actions, always
+// visible. The full label always shows, at every screen width (no shortLabel
+// abbreviation) — new users need the whole name to know what an icon does.
 const TOP_NAV = [
   { label: 'Home', href: '/store/home', icon: Home },
-  { label: 'Similar Design Search', shortLabel: 'Search', href: '/store/similar-search', icon: Search },
+  { label: 'Search Similar Design', href: '/store/similar-search', icon: Search },
 ];
 
 // Dashboard drawer — operations/admin/account pages, opened via the "Dashboard" button.
@@ -103,24 +103,22 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
             </span>
           </Link>
 
-          {/* Browsing pages sit next to the logo. Labels are always visible (not
-              just from lg up) so new users can tell what each icon does at every
-              screen size — a shorter abbreviated label below sm keeps the bar
-              from overflowing on the narrowest phones. */}
-          <nav className="ml-1 flex min-w-0 items-center gap-1 sm:ml-2" aria-label="Primary navigation">
-            {TOP_NAV.map(({ label, shortLabel, href, icon: Icon }) => {
+          {/* Browsing pages sit next to the logo — the full label is always
+              visible at every screen width so new users can tell what each
+              icon does; the bar scrolls horizontally on the narrowest phones
+              rather than clipping or abbreviating a label. */}
+          <nav className="ml-1 flex min-w-0 items-center gap-1 overflow-x-auto sm:ml-2" aria-label="Primary navigation">
+            {TOP_NAV.map(({ label, href, icon: Icon }) => {
               const active = isActive(href);
               return (
                 <Link
                   key={href}
                   href={href}
                   aria-current={active ? 'page' : undefined}
-                  title={label}
-                  className={`flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full px-2.5 text-[13px] font-medium transition-colors sm:gap-2 lg:px-4 ${active ? 'bg-[#c99d37] text-white shadow-[0_5px_16px_rgba(174,127,30,0.18)]' : 'text-[#5f5750] hover:bg-[#f3efe8] hover:text-[#26221e]'}`}
+                  className={`flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[13px] font-medium transition-colors sm:gap-2 lg:px-4 ${active ? 'bg-[#c99d37] text-white shadow-[0_5px_16px_rgba(174,127,30,0.18)]' : 'text-[#5f5750] hover:bg-[#f3efe8] hover:text-[#26221e]'}`}
                 >
                   <Icon className="h-[18px] w-[18px] shrink-0 lg:h-4 lg:w-4" />
-                  <span className="hidden min-[420px]:inline lg:hidden">{shortLabel ?? label}</span>
-                  <span className="hidden lg:inline">{label}</span>
+                  <span>{label}</span>
                 </Link>
               );
             })}
@@ -134,11 +132,10 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
               onClick={() => setDrawerOpen(true)}
               aria-haspopup="dialog"
               aria-expanded={drawerOpen}
-              title="Dashboard"
-              className="flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full border border-[#e3ddd3] bg-white px-2.5 text-[13px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea] sm:gap-2 lg:px-4"
+              className="flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#e3ddd3] bg-white px-2.5 text-[13px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea] sm:gap-2 lg:px-4"
             >
               <LayoutDashboard className="h-[18px] w-[18px] shrink-0 lg:h-4 lg:w-4" />
-              <span className="hidden min-[420px]:inline">Dashboard</span>
+              <span>Dashboard</span>
             </button>
           </div>
         </div>

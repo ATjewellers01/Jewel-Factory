@@ -70,16 +70,26 @@ export function BranchOrderList({ kind, endpoint }: { kind: BranchOrderKind; end
     <div className="space-y-3">
       <OrderFilters search={search} onSearch={setSearch} status={status} onStatus={setStatus} statusOptions={SM_STATUS_OPTIONS} from={from} to={to} onFrom={setFrom} onTo={setTo} />
       {filtered.length === 0 && <p className="py-8 text-center text-sm text-muted-foreground">No orders match your filters.</p>}
+      {/* Column headings — new users otherwise have to guess what each value
+          in a row represents. */}
+      {filtered.length > 0 && (
+        <div className="hidden grid-cols-[1fr_9rem_11rem] items-center gap-3 px-4 sm:grid">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Order ID</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Order Date</span>
+          <span className="text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</span>
+        </div>
+      )}
       {filtered.map((o) => {
         const st = statusOf(o);
         return (
           <div key={o.id} className="rounded-xl border bg-card overflow-hidden">
-            <button onClick={() => setOpen(open === o.id ? null : o.id)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30">
+            <button onClick={() => setOpen(open === o.id ? null : o.id)} className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30 sm:grid sm:grid-cols-[1fr_9rem_11rem]">
               <div className="min-w-0">
                 <p className="text-sm font-medium">{o.orderNumber}</p>
-                <p className="text-xs text-muted-foreground">{o.totalItems ?? 0} item(s) · {new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</p>
+                <p className="text-xs text-muted-foreground">{o.totalItems ?? 0} item(s)</p>
               </div>
-              <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground sm:text-sm">{new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+              <div className="flex items-center gap-2 sm:justify-end">
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${st.cls}`}>{st.label}</span>
                 {open === o.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
               </div>

@@ -15,44 +15,41 @@ export function ForgotPasswordForm({
   title,
   apiPath,
   backHref,
-  lookupPath,
 }: {
   title: string;
   apiPath: string; // e.g. /api/store/forgot-password
   backHref: string;
-  /** When set, offers "Forgot your email?" — looks the address up by mobile number. */
-  lookupPath?: string;
 }) {
-  const [email, setEmail] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [blocked, setBlocked] = useState<string | null>(null);
+  const [mobileOnly, setMobileOnly] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-  // "Forgot your email?" — recover the sign-in address from a mobile number.
-  const [showLookup, setShowLookup] = useState(false);
-  const [mobile, setMobile] = useState('');
-  const [lookupBusy, setLookupBusy] = useState(false);
-  const [lookupError, setLookupError] = useState<string | null>(null);
-  const [lookupFieldErrors, setLookupFieldErrors] = useState<Record<string, string>>({});
-  const [foundEmail, setFoundEmail] = useState<string | null>(null);
-  const [mobileOnly, setMobileOnly] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setBlocked(null);
+    setMobileOnly(null);
     setFieldErrors({});
     try {
       const res = await fetch(apiPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ mobileNumber: mobileNumber.trim() }),
       });
       // A deactivated account is told plainly — a reset link can't restore access.
       if (res.status === 403) {
         const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
         setBlocked(json?.error?.message ?? 'This account is deactivated.');
+        return;
+      }
+      // Registered with a mobile number only — there's no email to send a link
+      // to, and no separate password to reset.
+      if (res.status === 400) {
+        const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+        setMobileOnly(json?.error?.message ?? 'This account signs in with your mobile number as both the username and password.');
         return;
       }
       if (!res.ok) {
@@ -65,40 +62,6 @@ export function ForgotPasswordForm({
       setSent(true);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function lookup(e: React.FormEvent) {
-    e.preventDefault();
-    setLookupBusy(true);
-    setLookupError(null);
-    setLookupFieldErrors({});
-    setFoundEmail(null);
-    setMobileOnly(false);
-    try {
-      const res = await fetch(lookupPath!, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mobileNumber: mobile.trim() }),
-      });
-      const json = (await res.json().catch(() => null)) as
-        | { data?: { email: string | null; usesMobileLogin: boolean }; error?: { message?: string; fields?: Record<string, string> } }
-        | null;
-      if (!res.ok || !json?.data) {
-        setLookupFieldErrors(json?.error?.fields ?? {});
-        setLookupError(json?.error?.message ?? 'Could not look up that mobile number.');
-        return;
-      }
-      if (json.data.usesMobileLogin || !json.data.email) {
-        setMobileOnly(true);
-        return;
-      }
-      setFoundEmail(json.data.email);
-      setEmail(json.data.email); // pre-fill so they can send the link immediately
-    } catch {
-      setLookupError('Network error. Please try again.');
-    } finally {
-      setLookupBusy(false);
     }
   }
 
@@ -119,25 +82,27 @@ export function ForgotPasswordForm({
       <div className="relative z-10 flex flex-1 items-center justify-center px-4 pb-16">
         <div className="w-full max-w-sm space-y-5 rounded-3xl border bg-card p-6 shadow-xl sm:p-8">
           <div className="text-center">
-            {sent && !blocked && (
+            {sent && !blocked && !mobileOnly && (
               <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-700">
                 <MailCheck className="h-6 w-6" />
               </div>
             )}
-            {blocked && (
+            {(blocked || mobileOnly) && (
               <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-700">
                 <ShieldAlert className="h-6 w-6" />
               </div>
             )}
             <h1 className="font-display text-2xl font-medium tracking-tight">
-              {blocked ? 'Account deactivated' : title}
+              {blocked ? 'Account deactivated' : mobileOnly ? 'No email on this account' : title}
             </h1>
             <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
               {blocked
                 ? blocked
-                : sent
-                  ? 'If an account exists, a reset link has been sent to that email.'
-                  : 'Enter your email and we will send a reset link.'}
+                : mobileOnly
+                  ? mobileOnly
+                  : sent
+                    ? 'If an account is registered with this mobile number, a reset link has been sent to the email on file.'
+                    : 'Enter your mobile number and, if an email is on file for your account, we will send a reset link there.'}
             </p>
           </div>
 
@@ -159,83 +124,37 @@ export function ForgotPasswordForm({
                 onClick={() => { setBlocked(null); setSent(false); }}
                 className="pt-1 text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
               >
-                Try a different email
+                Try a different mobile number
               </button>
             </div>
           )}
 
-          {!sent && !blocked && (
+          {/* Mobile-only account: sign in directly, no reset needed. */}
+          {mobileOnly && (
+            <div className="space-y-2 rounded-xl border border-blue-200 bg-blue-50/70 p-4 text-sm text-blue-900">
+              <p>Sign in using your mobile number as both the username and the password.</p>
+              <Link href={backHref} className="inline-block font-semibold underline underline-offset-4">
+                Back to sign in
+              </Link>
+            </div>
+          )}
+
+          {!sent && !blocked && !mobileOnly && (
             <form onSubmit={submit} className="space-y-4">
               <Input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="10-digit mobile number"
+                value={mobileNumber}
+                onChange={(e) => setMobileNumber(e.target.value)}
                 required
               />
-              <FieldError errors={toFieldErrors(fieldErrors.email)} />
+              <FieldError errors={toFieldErrors(fieldErrors.mobileNumber)} />
               <Button type="submit" className="h-11 w-full metal-sheen text-[#17120b] font-semibold" disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send reset link'}
               </Button>
             </form>
-          )}
-
-          {/* Recover the sign-in email from a mobile number. */}
-          {lookupPath && !sent && !blocked && (
-            <div className="border-t pt-4">
-              {!showLookup ? (
-                <button
-                  type="button"
-                  onClick={() => setShowLookup(true)}
-                  className="w-full text-center text-sm font-medium text-primary underline underline-offset-4"
-                >
-                  Forgot your email?
-                </button>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-xs leading-5 text-muted-foreground">
-                    Enter the mobile number you registered with and we&apos;ll show the email on your account.
-                  </p>
-                  <form onSubmit={lookup} className="flex gap-2">
-                    <Input
-                      type="tel"
-                      inputMode="numeric"
-                      maxLength={10}
-                      placeholder="10-digit mobile number"
-                      value={mobile}
-                      onChange={(e) => setMobile(e.target.value)}
-                      required
-                    />
-                    <Button type="submit" variant="outline" disabled={lookupBusy} className="shrink-0">
-                      {lookupBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Find'}
-                    </Button>
-                  </form>
-                  <FieldError errors={toFieldErrors(lookupFieldErrors.mobileNumber)} />
-
-                  {lookupError && <p className="text-sm text-red-600">{lookupError}</p>}
-
-                  {foundEmail && (
-                    <div className="rounded-xl border border-green-200 bg-green-50/70 p-3 text-sm">
-                      <p className="text-muted-foreground">Your registered email is</p>
-                      <p className="mt-0.5 break-all font-semibold text-green-900">{foundEmail}</p>
-                      <p className="mt-1.5 text-xs text-muted-foreground">Filled in above — send the reset link to continue.</p>
-                    </div>
-                  )}
-
-                  {/* Registered with a mobile number only: there is no email to
-                      recover, and the number itself is the password. */}
-                  {mobileOnly && (
-                    <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3 text-sm text-blue-900">
-                      <p className="font-medium">No email on this account</p>
-                      <p className="mt-1 text-xs leading-5">
-                        You registered with a mobile number only — sign in using that number as both your
-                        username and password. You can add an email later from your profile.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
           )}
 
           <p className="text-center text-sm text-muted-foreground">

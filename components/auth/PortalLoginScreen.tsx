@@ -221,11 +221,10 @@ export function PortalLoginScreen({
             </div>
           </div>
 
-          <p className="relative z-10 flex items-center gap-2 text-xs text-[#aaa196]">
-            <ShieldCheck className="h-4 w-4 text-[#d2aa4e]" /> {content.leftFooter}
-          </p>
-          <p className="relative z-10 mt-1.5 text-xs text-[#aaa196]">
-            Need help? <a href={SUPPORT_PHONE_HREF} className="font-semibold text-[#d9b764] hover:text-white">{SUPPORT_PHONE}</a>
+          <p className="relative z-10 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#aaa196]">
+            <span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 shrink-0 text-[#d2aa4e]" /> {content.leftFooter}</span>
+            <span className="text-[#6f665c]">·</span>
+            <span>Need help? <a href={SUPPORT_PHONE_HREF} className="font-semibold text-[#d9b764] hover:text-white">{SUPPORT_PHONE}</a></span>
           </p>
         </section>
 

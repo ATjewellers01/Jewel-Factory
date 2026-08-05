@@ -257,22 +257,36 @@ export default function ManufacturerOrdersPage() {
         <p className="py-12 text-center text-sm text-muted-foreground">No orders match your filters.</p>
       )}
       {filtered.length > 0 && (
-        <div className="rounded-xl border bg-card overflow-hidden divide-y">
+        <div className="rounded-xl border bg-card overflow-hidden">
+          {/* Column headings — new users otherwise have to guess what each
+              value in a row represents. */}
+          <div className="hidden grid-cols-[1fr_1fr_auto_8rem_9rem] items-center gap-4 border-b bg-muted/20 px-4 py-2 sm:grid">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Order ID</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Customer</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Items</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Order Date</span>
+            <span className="text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</span>
+          </div>
+          <div className="divide-y">
           {filtered.map((o) => (
             <div key={o.id}>
               <button type="button" onClick={() => toggle(o)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30">
-                <div className="grid flex-1 grid-cols-2 gap-x-4 sm:grid-cols-4">
+                <div className="grid flex-1 grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-[1fr_1fr_auto_8rem_9rem] sm:items-center sm:gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground">Order</p>
+                    <p className="text-xs text-muted-foreground sm:hidden">Order</p>
                     <p className="text-sm font-medium">{o.orderNumber}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Customer</p>
+                    <p className="text-xs text-muted-foreground sm:hidden">Customer</p>
                     <p className="text-sm font-medium text-primary truncate">{o.storeName ?? '—'}</p>
                     {o.source === 'custom' && <span className="mt-0.5 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800">Customised</span>}
                   </div>
-                  <div><p className="text-xs text-muted-foreground">Items</p><p className="text-sm tabular-nums">{o.source === 'custom' ? '—' : o.totalItems}</p></div>
-                  <div className="flex items-start"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span></div>
+                  <div><p className="text-xs text-muted-foreground sm:hidden">Items</p><p className="text-sm tabular-nums">{o.source === 'custom' ? '—' : o.totalItems}</p></div>
+                  <div>
+                    <p className="text-xs text-muted-foreground sm:hidden">Order Date</p>
+                    <p className="text-sm text-muted-foreground">{new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                  </div>
+                  <div className="flex items-start sm:justify-end"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span></div>
                 </div>
                 {expanded === o.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
               </button>
@@ -402,6 +416,7 @@ export default function ManufacturerOrdersPage() {
               )}
             </div>
           ))}
+          </div>
         </div>
       )}
 

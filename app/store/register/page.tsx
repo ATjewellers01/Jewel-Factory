@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { toFieldErrors } from '@/lib/field-error';
+import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
 
 interface FormState {
   name: string;
@@ -188,19 +189,36 @@ export default function StoreRegisterPage() {
     return (
       <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#f4f0e8] px-3 py-3 text-[#28231e] sm:px-5 sm:py-5">
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_10%,rgba(206,166,72,0.18),transparent_30rem)]" />
+        {/* No "Back to sign in" or any other action button here — sign-in is
+            not possible yet (the account isn't approved), so offering it
+            would be misleading. This is a purely informational card. */}
         <div className="relative w-full max-w-xl rounded-[26px] border border-[#ded6ca] bg-[#fffdf9] px-6 py-10 text-center shadow-[0_28px_90px_rgba(62,48,29,0.12)] sm:px-10 sm:py-12">
           <Wordmark href="/" size="sm" className="mx-auto justify-center" />
-          <div className="mt-9 space-y-4">
+          <div className="mt-9 space-y-5">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-green-100 text-green-700">
               <CheckCircle2 className="h-7 w-7" />
             </div>
-            <h2 className="font-display text-[1.75rem] font-medium tracking-tight">Registration submitted</h2>
-            <p className="text-sm leading-6 text-muted-foreground">
-              You will receive access after the manufacturer reviews and approves your store.
-            </p>
-            <Link href="/store/login" className="metal-sheen mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-[#17120b]">
-              Back to sign in
-            </Link>
+            <div className="space-y-2">
+              <h2 className="font-display text-[1.75rem] font-medium tracking-tight">Registration submitted</h2>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Thank you for registering with Jewel Factory. Your application is now with the manufacturer for review.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[#e3dccd] bg-[#f8f4ea] px-5 py-4 text-left">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8a7a4f]">What happens next</p>
+              <p className="mt-1.5 text-sm leading-6 text-[#4a4038]">
+                The manufacturer will review your details and approve your account shortly. Once approved, you&apos;ll be able to sign in and start placing orders.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border-2 border-[#e8c976] bg-[#fdf6e3] px-5 py-4 text-left shadow-sm">
+              <p className="text-sm font-semibold text-[#5c4a1f]">Need help or have a question about your approval?</p>
+              <p className="mt-1 text-sm leading-6 text-[#5c4a1f]">
+                Call <a href={SUPPORT_PHONE_HREF} className="font-semibold underline underline-offset-4">{SUPPORT_PHONE}</a> or email{' '}
+                <a href={SUPPORT_EMAIL_HREF} className="break-all font-semibold underline underline-offset-4">{SUPPORT_EMAIL}</a> — you can reach out anytime to check your approval status, or simply wait; we&apos;ll notify you once your account is approved.
+              </p>
+            </div>
           </div>
         </div>
       </main>
@@ -238,13 +256,18 @@ export default function StoreRegisterPage() {
                   </label>
                   <FieldError errors={toFieldErrors(fieldErrors.email)} />
                   {/* With an email the username is the email; without one the mobile
-                      number is both username and password, so the note has to say so. */}
-                  <p className="flex items-start gap-2 rounded-xl bg-[#f4f0e8] px-4 py-3 text-xs leading-5 text-[#746b62]">
-                    <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-[#a77d31]" />
-                    {form.email.trim()
-                      ? 'No password to set — after approval, sign in with this email and mobile number.'
-                      : 'No password to set — after approval, sign in with your mobile number as both the username and the password. You can add an email later from your portal profile.'}
-                  </p>
+                      number is both username and password, so the note has to say so.
+                      Made visually prominent (amber border/background, bolder text)
+                      per client request — this is easy to miss otherwise and users
+                      then don't know how to sign in after approval. */}
+                  <div className="flex items-start gap-3 rounded-xl border-2 border-[#e8c976] bg-[#fdf6e3] px-4 py-3.5 shadow-sm">
+                    <LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-[#a77d31]" />
+                    <p className="text-sm font-medium leading-6 text-[#5c4a1f]">
+                      {form.email.trim()
+                        ? <>No password to set — after approval, sign in with this email and mobile number (e.g. mobile <span className="font-semibold">9876543210</span>).</>
+                        : <>No password to set — after approval, sign in with your mobile number as <span className="font-semibold">both the username and the password</span> (e.g. <span className="font-semibold">9876543210</span> / <span className="font-semibold">9876543210</span>). You can add an email later from your portal profile.</>}
+                    </p>
+                  </div>
                 </fieldset>
 
                 <fieldset className="space-y-5">

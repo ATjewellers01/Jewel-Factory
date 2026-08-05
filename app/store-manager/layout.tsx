@@ -42,7 +42,7 @@ const FALLBACK_STORE_LOGO = '/storeRe-logo.avif';
 const PAGE_LABELS: Record<string, string> = {
   '/store-manager': 'Home',
   '/store-manager/kiosk': 'Catalogue',
-  '/store-manager/search': 'Search by Photo',
+  '/store-manager/search': 'Search Similar Design',
   '/store-manager/try-on': 'Try-On',
   '/store-manager/restock': 'Restock',
   '/store-manager/my-orders': 'My Orders',

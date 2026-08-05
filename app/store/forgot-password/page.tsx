@@ -8,7 +8,6 @@ export default function StoreForgotPasswordPage() {
       title="Forgot password"
       apiPath="/api/store/forgot-password"
       backHref="/store/login"
-      lookupPath="/api/store/lookup-email"
     />
   );
 }

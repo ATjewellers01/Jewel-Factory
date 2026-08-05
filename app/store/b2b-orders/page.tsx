@@ -2,13 +2,14 @@
 
 import { Loader2, Package, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { CustomSpecList } from '@/components/orders/CustomSpecList';
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/orders/OrderItemDetailModal';
 import { Button } from '@/components/ui/button';
 import { formatOrderLevelStatus, formatOrderStatus } from '@/lib/format';
+import { uniqueBranchOptions } from '@/lib/order-filters';
 
 /**
  * Order History merges the retailer's three incoming order sources — restock
@@ -106,6 +107,7 @@ export default function StoreCatalogueOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState<string | null>(null);
+  const [store, setStore] = useState('');
   const [zoomItem, setZoomItem] = useState<Item | null>(null);
   const [zoomCustomImages, setZoomCustomImages] = useState<string[] | null>(null);
   const [productModal, setProductModal] = useState<OrderItemProductSafe | null>(null);
@@ -167,6 +169,23 @@ export default function StoreCatalogueOrdersPage() {
     return () => { cancelled = true; };
   }, []);
 
+  // Only the Store filter survives from the earlier filter bar (client asked
+  // for the others removed, then asked for this one back) — it includes
+  // "Placed by you" as its own option alongside real branch names.
+  const storeOptions = useMemo(() => {
+    const names = uniqueBranchOptions((rows ?? []).map((o) => (o.placedByYou ? null : o.branchNameSnapshot)));
+    const hasSelfPlaced = (rows ?? []).some((o) => o.placedByYou);
+    return hasSelfPlaced ? [{ value: PLACED_BY_YOU, label: PLACED_BY_YOU }, ...names] : names;
+  }, [rows]);
+  const filtered = useMemo(
+    () => (rows ?? []).filter((o) => {
+      if (!store) return true;
+      const label = o.placedByYou ? PLACED_BY_YOU : o.branchNameSnapshot;
+      return label === store;
+    }),
+    [rows, store],
+  );
+
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -177,6 +196,12 @@ export default function StoreCatalogueOrdersPage() {
         <Link href="/store/manufacturer-catalog"><Button className="metal-sheen text-[#17120b] font-semibold"><Plus className="mr-1.5 h-4 w-4" />New Order</Button></Link>
       </div>
 
+      {rows && rows.length > 0 && storeOptions.length > 0 && (
+        <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={store} onChange={(e) => setStore(e.target.value)} aria-label="Store">
+          <option value="">All stores</option>
+          {storeOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
       {rows && rows.length === 0 && (
@@ -184,18 +209,23 @@ export default function StoreCatalogueOrdersPage() {
           <Package className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No orders yet.</p>
         </div>
       )}
-      {rows && rows.length > 0 && (
+      {rows && rows.length > 0 && filtered.length === 0 && (
+        <p className="py-12 text-center text-sm text-muted-foreground">No orders match this store.</p>
+      )}
+      {filtered.length > 0 && (
         <div className="space-y-3">
           {/* Column headings — new users otherwise have to guess what each
-              value in a row represents. */}
-          <div className="hidden grid-cols-[1fr_auto_auto] items-center gap-3 px-4 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
-            <span>Order ID</span>
-            <span>Order Date</span>
-            <span>Status</span>
+              value in a row represents. Widths/alignment match the row grid
+              below exactly (same grid-cols, same column order) so headings
+              sit directly above their values instead of drifting apart. */}
+          <div className="hidden grid-cols-[1fr_9rem_11rem] items-center gap-3 px-4 sm:grid">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Order ID</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Order Date</span>
+            <span className="text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</span>
           </div>
-          {rows.map((o) => (
+          {filtered.map((o) => (
             <div key={o.key} className="rounded-xl border bg-card overflow-hidden">
-              <button type="button" onClick={() => setOpen(open === o.key ? null : o.key)} className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30 sm:grid sm:grid-cols-[1fr_auto_auto]">
+              <button type="button" onClick={() => setOpen(open === o.key ? null : o.key)} className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30 sm:grid sm:grid-cols-[1fr_9rem_11rem]">
                 <div className="min-w-0">
                   <p className="text-sm font-medium">
                     {o.orderNumber}
@@ -213,7 +243,7 @@ export default function StoreCatalogueOrdersPage() {
                   <p className="text-xs text-muted-foreground">{o.meta}</p>
                 </div>
                 <p className="text-xs text-muted-foreground sm:text-sm">{new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 sm:justify-end">
                   {o.needsApproval && <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-semibold text-yellow-800">Needs approval</span>}
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span>
                   {open === o.key ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}

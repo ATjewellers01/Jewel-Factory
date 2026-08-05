@@ -195,15 +195,26 @@ storeAuthRoutes.post('/register', jsonValidator(RegisterBody), async (c) => {
 
 // ── Forgot / Reset password (store owner) ─────────────────────────────────────
 
-const ForgotBody = z.object({ email: z.string().email() });
+// The user enters their MOBILE NUMBER (their username) — the server looks up
+// the store's own registered email internally and sends the reset link
+// there, so the user never has to know/type/see their email address. A
+// retailer who registered with a mobile number only (no email on file) has
+// nowhere to send a reset link — their password IS their mobile number, so
+// they're told that instead of being sent nothing silently.
+const ForgotBody = z.object({
+  mobileNumber: z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number'),
+});
 
-// POST /api/store/forgot-password — always 200 (anti-enumeration)
+// POST /api/store/forgot-password — always 200 (anti-enumeration) except for
+// the two states (deactivated / mobile-only login) that the account holder
+// already knows about and must act on directly rather than via a dead-end link.
 storeAuthRoutes.post('/forgot-password', jsonValidator(ForgotBody), async (c) => {
   const env = getServerEnv();
-  const email = c.req.valid('json').email.toLowerCase().trim();
-  const store = await prisma.store.findUnique({
-    where: { email },
-    select: { id: true, name: true, logoUrl: true, isActive: true },
+  const { mobileNumber } = c.req.valid('json');
+  const store = await prisma.store.findFirst({
+    where: { ownerPhone: mobileNumber },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, name: true, logoUrl: true, isActive: true, email: true },
   });
 
   // A deactivated account can reset its password successfully and still be
@@ -220,8 +231,19 @@ storeAuthRoutes.post('/forgot-password', jsonValidator(ForgotBody), async (c) =>
     );
   }
 
-  if (store) {
-    const token = await createResetToken(email, 'STORE_OWNER', store.id);
+  // No email on file: the mobile number itself is the password, so a reset
+  // link has nowhere to go and nothing to reset — tell the user directly.
+  if (store && store.isActive && !store.email) {
+    return sendError(
+      c,
+      'bad_request',
+      'This account signs in with your mobile number as both the username and password — there is no separate password to reset.',
+      400,
+    );
+  }
+
+  if (store && store.email) {
+    const token = await createResetToken(store.email, 'STORE_OWNER', store.id);
     const url = buildAppUrl(env.NEXT_PUBLIC_APP_URL, `/store/reset-password?token=${encodeURIComponent(token)}`);
     const { subject, html } = passwordResetEmail({
       resetUrl: url,
@@ -229,37 +251,9 @@ storeAuthRoutes.post('/forgot-password', jsonValidator(ForgotBody), async (c) =>
       retailerLogoUrl: store.logoUrl,
       retailerName: store.name,
     });
-    void sendEmail({ to: email, subject, html }); // fire-and-forget
+    void sendEmail({ to: store.email, subject, html }); // fire-and-forget
   }
   return sendData(c, { ok: true });
-});
-
-// ── Recover the sign-in email from a mobile number ────────────────────────────
-// For a Retailer Admin who forgot WHICH email they registered with. Only works
-// for accounts that actually have an email on file — a retailer who registered
-// with a mobile number only signs in with that number as both username and
-// password, so there is nothing to recover for them.
-const LookupBody = z.object({
-  mobileNumber: z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number'),
-});
-
-// POST /api/store/lookup-email
-storeAuthRoutes.post('/lookup-email', jsonValidator(LookupBody), async (c) => {
-  const { mobileNumber } = c.req.valid('json');
-  const store = await prisma.store.findFirst({
-    where: { ownerPhone: mobileNumber },
-    orderBy: { createdAt: 'asc' },
-    select: { email: true, registrationStatus: true },
-  });
-
-  if (!store || store.registrationStatus !== 'APPROVED') {
-    return sendError(c, 'not_found', 'No approved account is registered with this mobile number.', 404);
-  }
-  if (!store.email) {
-    // Registered with a mobile number only — the number IS the username.
-    return sendData(c, { email: null, usesMobileLogin: true });
-  }
-  return sendData(c, { email: store.email, usesMobileLogin: false });
 });
 
 const ResetBody = z.object({
