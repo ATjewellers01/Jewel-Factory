@@ -521,7 +521,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Weight (g)</label>
+            <label className="text-xs font-medium text-muted-foreground">Weight (gm)</label>
             <Input className="mt-1" type="number" step="0.001" placeholder="12.5" value={form.weightGrams} onChange={set('weightGrams')} />
             <FieldError errors={toFieldErrors(fieldErrors.weightGrams)} />
           </div>

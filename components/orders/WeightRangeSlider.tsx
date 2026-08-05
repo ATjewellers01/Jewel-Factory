@@ -25,7 +25,7 @@ export function WeightRangeSlider({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold">Weight (g)</p>
+        <p className="text-sm font-semibold">Weight (gm)</p>
         {value ? (
           <button type="button" onClick={() => onChange(null)} className="text-xs font-medium text-primary hover:underline">Reset</button>
         ) : null}

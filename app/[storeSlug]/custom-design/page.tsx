@@ -141,7 +141,7 @@ export default function CustomDesignPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div><label className="text-xs font-medium text-muted-foreground">Weight (g)</label><Input className="mt-1" type="number" step="0.1" value={form.weight} onChange={(e) => set('weight', e.target.value)} /><FieldError errors={toFieldErrors(fieldErrors.weightGrams)} /></div>
+          <div><label className="text-xs font-medium text-muted-foreground">Weight (gm)</label><Input className="mt-1" type="number" step="0.1" value={form.weight} onChange={(e) => set('weight', e.target.value)} /><FieldError errors={toFieldErrors(fieldErrors.weightGrams)} /></div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">Purity</label>
             <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.purity} onChange={(e) => set('purity', e.target.value)}>

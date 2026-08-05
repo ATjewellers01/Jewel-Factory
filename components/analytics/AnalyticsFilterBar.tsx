@@ -98,7 +98,7 @@ export function AnalyticsFilterBar({ filters, onChange, unitsLabel = 'Units sold
           </FilterField>
         )}
 
-        <FilterField label="Weight (g) — min">
+        <FilterField label="Weight (gm) — min">
           <input
             type="number"
             step="0.01"
@@ -111,7 +111,7 @@ export function AnalyticsFilterBar({ filters, onChange, unitsLabel = 'Units sold
           />
         </FilterField>
 
-        <FilterField label="Weight (g) — max">
+        <FilterField label="Weight (gm) — max">
           <input
             type="number"
             step="0.01"

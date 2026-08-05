@@ -21,13 +21,19 @@ function formatWeight3(value: string): string {
   return value.trim() && Number.isFinite(n) ? n.toFixed(3) : value;
 }
 
+/** Today's date as YYYY-MM-DD, for the delivery-date input's `min` attribute. */
+function todayIso(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
 const MAX_IMAGES = 10;
 
 const EMPTY_FORM = {
   orderRef: '', deliveryDate: '',
   category: CATEGORIES[0], subCategory: '',
   quantity: '', weightFrom: '', weightTo: '', purity: '',
-  meena: '', length: '', size: '', broadness: '', screw: '', sampleWeight: '',
+  meena: '', length: '', size: '', broadness: '', screw: '',
   notes: '',
 };
 
@@ -112,7 +118,6 @@ export default function StoreCustomDesignNewPage() {
         size: form.size.trim() || undefined,
         broadness: form.broadness.trim() || undefined,
         screw: form.screw || undefined,
-        sampleWeightGrams: form.sampleWeight ? Number(form.sampleWeight) : undefined,
       })) as { orderNumber?: string };
       setPlacedOrderNumber(result.orderNumber ?? null);
       setDone(true);
@@ -161,7 +166,7 @@ export default function StoreCustomDesignNewPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="text-xs font-medium text-muted-foreground">Delivery date</label>
-              <Input required type="date" className="mt-1 h-10" value={form.deliveryDate} onChange={(e) => set('deliveryDate', e.target.value)} />
+              <Input required type="date" min={todayIso()} className="mt-1 h-10" value={form.deliveryDate} onChange={(e) => set('deliveryDate', e.target.value)} />
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'deliveryDate'))} />
             </div>
           </div>
@@ -198,26 +203,10 @@ export default function StoreCustomDesignNewPage() {
               </div>
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'quantity'))} />
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Sample weight (g)</label>
-              <Input
-                required
-                type="number"
-                step="0.001"
-                min="0"
-                inputMode="decimal"
-                placeholder="0.000"
-                value={form.sampleWeight}
-                onChange={(e) => set('sampleWeight', e.target.value)}
-                onBlur={(e) => set('sampleWeight', formatWeight3(e.target.value))}
-                className="mt-1 h-10"
-              />
-              <FieldError errors={toFieldErrors(fieldError(submitErr, 'sampleWeightGrams'))} />
-            </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Weight range (g)</label>
+              <label className="text-xs font-medium text-muted-foreground">Weight range (gm)</label>
               <div className="mt-1 flex items-center gap-2">
                 <Input
                   required

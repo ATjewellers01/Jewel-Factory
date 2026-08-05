@@ -245,6 +245,48 @@ export default function StoreRegisterPage() {
                       ? 'No password to set — after approval, sign in with this email and mobile number.'
                       : 'No password to set — after approval, sign in with your mobile number as both the username and the password. You can add an email later from your portal profile.'}
                   </p>
+                </fieldset>
+
+                <fieldset className="space-y-5">
+                  <legend className="font-display text-[1.35rem] tracking-tight">Where should orders arrive?</legend>
+                  <p className="-mt-3 text-sm leading-6 text-[#7b7269]">Approved orders are shipped to this fixed Head Office address.</p>
+                  <label className={labelClass}>
+                    <span className="flex items-center justify-between">
+                      Pincode
+                      {pincodeLookup === 'loading' && <span className="inline-flex items-center gap-1 font-normal normal-case tracking-normal text-[#a39a91]"><Loader2 className="h-3 w-3 animate-spin" />Looking up…</span>}
+                      {pincodeLookup === 'not-found' && <span className="font-normal normal-case tracking-normal text-red-600">PIN not found — enter city/state manually</span>}
+                    </span>
+                    <Input autoComplete="postal-code" inputMode="numeric" maxLength={6} placeholder="6-digit PIN code" value={form.addressPincode} onChange={set('addressPincode')} className={fieldClass} />
+                  </label>
+                  <FieldError errors={toFieldErrors(fieldErrors.addressPincode)} />
+                  <div className="grid gap-5 lg:grid-cols-2">
+                    <div>
+                      <label className={labelClass}>City <Input autoComplete="address-level2" placeholder="City" value={form.addressCity} onChange={set('addressCity')} className={fieldClass} /></label>
+                      <FieldError errors={toFieldErrors(fieldErrors.addressCity)} />
+                    </div>
+                    <div>
+                      <label className={labelClass}>State <Input autoComplete="address-level1" placeholder="State" value={form.addressState} onChange={set('addressState')} className={fieldClass} /></label>
+                      <FieldError errors={toFieldErrors(fieldErrors.addressState)} />
+                    </div>
+                  </div>
+                  {/* Street + landmark are optional here — both can be added or
+                      edited later from the purchase manager's profile page. */}
+                  <label className={labelClass}>
+                    <span className="flex flex-wrap items-center gap-x-2">
+                      Street address <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
+                    </span>
+                    <Input autoComplete="street-address" placeholder="Building, street and area" value={form.addressStreet} onChange={set('addressStreet')} className={fieldClass} />
+                  </label>
+                  <FieldError errors={toFieldErrors(fieldErrors.addressStreet)} />
+                  <label className={labelClass}>
+                    <span className="flex flex-wrap items-center gap-x-2">
+                      Landmark <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
+                    </span>
+                    <Input placeholder="Nearby landmark" value={form.addressLandmark} onChange={set('addressLandmark')} className={fieldClass} />
+                  </label>
+                  <FieldError errors={toFieldErrors(fieldErrors.addressLandmark)} />
+                  <p className="text-xs leading-5 text-[#8a8178]">You can add or change the street address and landmark later from your portal profile.</p>
+
                   <div className={labelClass}>
                     <span className="flex flex-wrap items-center gap-x-2">
                       Store logo <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
@@ -289,47 +331,6 @@ export default function StoreRegisterPage() {
                     {logoError ? <span className="font-normal normal-case tracking-normal text-[11px] text-red-600">{logoError}</span> : null}
                     <FieldError errors={toFieldErrors(fieldErrors.logoUrl)} />
                   </div>
-                </fieldset>
-
-                <fieldset className="space-y-5">
-                  <legend className="font-display text-[1.35rem] tracking-tight">Where should orders arrive?</legend>
-                  <p className="-mt-3 text-sm leading-6 text-[#7b7269]">Approved orders are shipped to this fixed Head Office address.</p>
-                  <label className={labelClass}>
-                    <span className="flex items-center justify-between">
-                      Pincode
-                      {pincodeLookup === 'loading' && <span className="inline-flex items-center gap-1 font-normal normal-case tracking-normal text-[#a39a91]"><Loader2 className="h-3 w-3 animate-spin" />Looking up…</span>}
-                      {pincodeLookup === 'not-found' && <span className="font-normal normal-case tracking-normal text-red-600">PIN not found — enter city/state manually</span>}
-                    </span>
-                    <Input autoComplete="postal-code" inputMode="numeric" maxLength={6} placeholder="6-digit PIN code" value={form.addressPincode} onChange={set('addressPincode')} className={fieldClass} />
-                  </label>
-                  <FieldError errors={toFieldErrors(fieldErrors.addressPincode)} />
-                  <div className="grid gap-5 lg:grid-cols-2">
-                    <div>
-                      <label className={labelClass}>City <Input autoComplete="address-level2" placeholder="City" value={form.addressCity} onChange={set('addressCity')} className={fieldClass} /></label>
-                      <FieldError errors={toFieldErrors(fieldErrors.addressCity)} />
-                    </div>
-                    <div>
-                      <label className={labelClass}>State <Input autoComplete="address-level1" placeholder="State" value={form.addressState} onChange={set('addressState')} className={fieldClass} /></label>
-                      <FieldError errors={toFieldErrors(fieldErrors.addressState)} />
-                    </div>
-                  </div>
-                  {/* Street + landmark are optional here — both can be added or
-                      edited later from the purchase manager's profile page. */}
-                  <label className={labelClass}>
-                    <span className="flex flex-wrap items-center gap-x-2">
-                      Street address <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
-                    </span>
-                    <Input autoComplete="street-address" placeholder="Building, street and area" value={form.addressStreet} onChange={set('addressStreet')} className={fieldClass} />
-                  </label>
-                  <FieldError errors={toFieldErrors(fieldErrors.addressStreet)} />
-                  <label className={labelClass}>
-                    <span className="flex flex-wrap items-center gap-x-2">
-                      Landmark <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
-                    </span>
-                    <Input placeholder="Nearby landmark" value={form.addressLandmark} onChange={set('addressLandmark')} className={fieldClass} />
-                  </label>
-                  <FieldError errors={toFieldErrors(fieldErrors.addressLandmark)} />
-                  <p className="text-xs leading-5 text-[#8a8178]">You can add or change the street address and landmark later from your portal profile.</p>
                 </fieldset>
             </section>
 

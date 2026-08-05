@@ -179,7 +179,7 @@ export default function ManufacturerIntelligencePage() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">#{idx + 1} {p.designNumber}</p>
                     <p className="text-xs text-muted-foreground">
-                      {p.category ?? ''}{p.subCategory ? ` › ${p.subCategory}` : ''}{p.weight != null ? ` · ${p.weight}g` : ''}
+                      {p.category ?? ''}{p.subCategory ? ` › ${p.subCategory}` : ''}{p.weight != null ? ` · ${p.weight}gm` : ''}
                     </p>
                   </div>
                   <span className="shrink-0 font-semibold tabular-nums">{p.units}</span>

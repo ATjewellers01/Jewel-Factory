@@ -22,7 +22,8 @@ export function ItemsPerRowControl({
   max: number;
 }) {
   return (
-    <div className="flex items-center gap-1 rounded-lg border border-black/15 bg-white/50 px-1.5 py-1" role="group" aria-label="Items per row">
+    <div className="flex items-center gap-1.5 rounded-lg border border-black/15 bg-white/50 px-1.5 py-1" role="group" aria-label="Items per row">
+      <span className="hidden pl-1 text-xs font-medium text-[#746b62] min-[420px]:inline">Items per row</span>
       <button
         type="button"
         onClick={() => onChange(Math.max(min, value - 1))}

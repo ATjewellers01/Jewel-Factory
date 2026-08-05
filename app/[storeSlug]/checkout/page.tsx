@@ -97,7 +97,7 @@ export default function KioskCheckoutPage() {
                   <p className="truncate text-xs text-muted-foreground">
                     {i.category ?? '—'}
                     {i.subCategory ? ` › ${i.subCategory}` : ''}
-                    {i.weightGrams != null ? ` · ${i.weightGrams}g` : ''}
+                    {i.weightGrams != null ? ` · ${i.weightGrams}gm` : ''}
                   </p>
                 </div>
                 {/* Quantity stepper */}

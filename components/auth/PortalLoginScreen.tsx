@@ -19,6 +19,7 @@ import type { ReactNode } from 'react';
 import { StaffLoginForm } from '@/components/auth/StaffLoginForm';
 import { Wordmark } from '@/components/landing/Wordmark';
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
+import { SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
 
 type PortalKind = 'retailer' | 'manager' | 'manufacturer' | 'retailer-registration';
 
@@ -148,9 +149,15 @@ export function PortalLoginScreen({
             subtitle=""
             {...(portal === 'retailer'
               ? {
-                  identifierLabel: 'Email or mobile number',
-                  identifierPlaceholder: 'you@company.com or 10-digit mobile',
-                  identifierHint: 'Registered without an email? Use your mobile number as both username and password.',
+                  identifierLabel: 'Mobile number (or email)',
+                  identifierPlaceholder: '10-digit mobile or you@company.com',
+                  identifierHint: 'Sign in with your mobile number as both username and password. Registered an email too? You can use that instead.',
+                }
+              : portal === 'manager'
+              ? {
+                  identifierLabel: 'Mobile number',
+                  identifierPlaceholder: '10-digit mobile number',
+                  identifierHint: 'Your mobile number is both your username and your password.',
                 }
               : {})}
             loginPath={loginPath}
@@ -164,6 +171,14 @@ export function PortalLoginScreen({
       <p className="mt-6 flex items-start gap-2 text-xs leading-5 text-[#8a8178]">
         <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#aa7d2b]" />
         {content.rightFooter}
+      </p>
+
+      {/* Support/helpline number — always visible here (near the primary
+          action) so a retailer can reach out immediately if something goes
+          wrong during sign-in or registration. Also repeated in the page
+          footer below for the same reason. */}
+      <p className="mt-2 text-xs leading-5 text-[#8a8178]">
+        Need help? Call <a href={SUPPORT_PHONE_HREF} className="font-semibold text-[#8a6426] underline decoration-[#c9a84c]/45 underline-offset-4 hover:text-[#5f4319]">{SUPPORT_PHONE}</a>
       </p>
     </div>
   );
@@ -208,6 +223,9 @@ export function PortalLoginScreen({
 
           <p className="relative z-10 flex items-center gap-2 text-xs text-[#aaa196]">
             <ShieldCheck className="h-4 w-4 text-[#d2aa4e]" /> {content.leftFooter}
+          </p>
+          <p className="relative z-10 mt-1.5 text-xs text-[#aaa196]">
+            Need help? <a href={SUPPORT_PHONE_HREF} className="font-semibold text-[#d9b764] hover:text-white">{SUPPORT_PHONE}</a>
           </p>
         </section>
 

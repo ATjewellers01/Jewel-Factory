@@ -190,7 +190,7 @@ function BranchBreakdown() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{p.designNumber ?? p.productName}</p>
                       <p className="text-xs text-muted-foreground">
-                        {p.category}{p.subCategory ? ` › ${p.subCategory}` : ''}{p.weight != null ? ` · ${p.weight}g` : ''}
+                        {p.category}{p.subCategory ? ` › ${p.subCategory}` : ''}{p.weight != null ? ` · ${p.weight}gm` : ''}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">

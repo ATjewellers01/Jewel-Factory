@@ -203,7 +203,7 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
                   <span className="block text-xs text-muted-foreground">
                     {it.product.category ?? '—'}
                     {it.product.subCategory ? ` › ${it.product.subCategory}` : ''}
-                    {it.product.weightGrams != null ? ` · ${it.product.weightGrams}g` : ''}
+                    {it.product.weightGrams != null ? ` · ${it.product.weightGrams}gm` : ''}
                     {it.purity ? ` · ${it.purity}` : ''}
                   </span>
                 )}

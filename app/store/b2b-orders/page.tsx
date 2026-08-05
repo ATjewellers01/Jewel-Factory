@@ -2,15 +2,13 @@
 
 import { Loader2, Package, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { CustomSpecList } from '@/components/orders/CustomSpecList';
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
-import { OrderFilters } from '@/components/orders/OrderFilters';
 import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/orders/OrderItemDetailModal';
 import { Button } from '@/components/ui/button';
 import { formatOrderLevelStatus, formatOrderStatus } from '@/lib/format';
-import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
 /**
  * Order History merges the retailer's three incoming order sources — restock
@@ -99,8 +97,8 @@ function formatWeightRange(min: string | null, max: string | null): string {
   if (!min && !max) return '';
   const lo = min ? parseFloat(min) : null;
   const hi = max ? parseFloat(max) : null;
-  if (lo != null && hi != null && lo !== hi) return `${lo}g – ${hi}g`;
-  return `${lo ?? hi}g`;
+  if (lo != null && hi != null && lo !== hi) return `${lo}gm – ${hi}gm`;
+  return `${lo ?? hi}gm`;
 }
 
 export default function StoreCatalogueOrdersPage() {
@@ -108,11 +106,6 @@ export default function StoreCatalogueOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
-  const [branch, setBranch] = useState('');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
   const [zoomItem, setZoomItem] = useState<Item | null>(null);
   const [zoomCustomImages, setZoomCustomImages] = useState<string[] | null>(null);
   const [productModal, setProductModal] = useState<OrderItemProductSafe | null>(null);
@@ -174,26 +167,6 @@ export default function StoreCatalogueOrdersPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // "Placed by" dropdown mixes real branch names with the synthetic
-  // PLACED_BY_YOU value (only added when at least one row qualifies), and a
-  // separate source-type dropdown (Restock/Kiosk/Customised) filters
-  // independently — both apply together (AND), matching how status/date do.
-  const branchOptions = useMemo(() => {
-    const names = uniqueBranchOptions((rows ?? []).map((o) => o.branchNameSnapshot));
-    const hasSelfPlaced = (rows ?? []).some((o) => o.placedByYou);
-    return hasSelfPlaced ? [{ value: PLACED_BY_YOU, label: PLACED_BY_YOU }, ...names] : names;
-  }, [rows]);
-  const [sourceFilter, setSourceFilter] = useState('');
-  const filtered = useMemo(
-    () => (rows ?? []).filter((o) => {
-      const placedByLabel = o.placedByYou ? PLACED_BY_YOU : o.branchNameSnapshot;
-      if (!matchOrder(o, { search, status, branch, branchName: placedByLabel, from, to })) return false;
-      if (sourceFilter && o.source !== sourceFilter) return false;
-      return true;
-    }),
-    [rows, search, status, branch, sourceFilter, from, to],
-  );
-
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -204,22 +177,6 @@ export default function StoreCatalogueOrdersPage() {
         <Link href="/store/manufacturer-catalog"><Button className="metal-sheen text-[#17120b] font-semibold"><Plus className="mr-1.5 h-4 w-4" />New Order</Button></Link>
       </div>
 
-      {rows && rows.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          <OrderFilters
-            search={search} onSearch={setSearch}
-            status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
-            group={branch} onGroup={setBranch} groupOptions={branchOptions} groupAllLabel="All stores" groupLabel="Placed by"
-            from={from} to={to} onFrom={setFrom} onTo={setTo}
-          />
-          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)} aria-label="Order type">
-            <option value="">All order types</option>
-            <option value="b2b">{SOURCE_LABEL.b2b}</option>
-            <option value="kiosk">{SOURCE_LABEL.kiosk}</option>
-            <option value="custom">{SOURCE_LABEL.custom}</option>
-          </select>
-        </div>
-      )}
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
       {rows && rows.length === 0 && (
@@ -227,14 +184,18 @@ export default function StoreCatalogueOrdersPage() {
           <Package className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No orders yet.</p>
         </div>
       )}
-      {rows && rows.length > 0 && filtered.length === 0 && (
-        <p className="py-12 text-center text-sm text-muted-foreground">No orders match your filters.</p>
-      )}
-      {filtered.length > 0 && (
+      {rows && rows.length > 0 && (
         <div className="space-y-3">
-          {filtered.map((o) => (
+          {/* Column headings — new users otherwise have to guess what each
+              value in a row represents. */}
+          <div className="hidden grid-cols-[1fr_auto_auto] items-center gap-3 px-4 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
+            <span>Order ID</span>
+            <span>Order Date</span>
+            <span>Status</span>
+          </div>
+          {rows.map((o) => (
             <div key={o.key} className="rounded-xl border bg-card overflow-hidden">
-              <button type="button" onClick={() => setOpen(open === o.key ? null : o.key)} className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30">
+              <button type="button" onClick={() => setOpen(open === o.key ? null : o.key)} className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30 sm:grid sm:grid-cols-[1fr_auto_auto]">
                 <div className="min-w-0">
                   <p className="text-sm font-medium">
                     {o.orderNumber}
@@ -251,6 +212,7 @@ export default function StoreCatalogueOrdersPage() {
                   </p>
                   <p className="text-xs text-muted-foreground">{o.meta}</p>
                 </div>
+                <p className="text-xs text-muted-foreground sm:text-sm">{new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                 <div className="flex items-center gap-2">
                   {o.needsApproval && <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-semibold text-yellow-800">Needs approval</span>}
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span>
@@ -306,7 +268,7 @@ export default function StoreCatalogueOrdersPage() {
                           <p className="text-xs text-muted-foreground">
                             {it.product?.category ?? '—'}
                             {it.product?.subCategory ? ` › ${it.product.subCategory}` : ''}
-                            {it.product?.weightGrams != null ? ` · ${it.product.weightGrams}g` : ''}
+                            {it.product?.weightGrams != null ? ` · ${it.product.weightGrams}gm` : ''}
                             {it.purity ? ` · ${it.purity}` : ''}
                           </p>
                         </div>

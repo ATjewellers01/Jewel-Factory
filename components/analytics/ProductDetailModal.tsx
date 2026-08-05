@@ -75,7 +75,7 @@ export function ProductDetailModal({ product, onClose }: { product: AnalyticsPro
             {product.weight != null ? (
               <div className="flex justify-between px-4 py-2.5">
                 <span className="text-muted-foreground">Weight</span>
-                <span className="font-medium">{product.weight}g</span>
+                <span className="font-medium">{product.weight}gm</span>
               </div>
             ) : null}
             <div className="flex justify-between gap-4 bg-muted/40 px-4 py-2.5">

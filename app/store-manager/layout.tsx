@@ -188,7 +188,7 @@ function Shell({ children }: { children: ReactNode }) {
                   title="Customer order cart"
                 >
                   <ShoppingBag className="h-4 w-4" />
-                  <span className="hidden text-xs font-semibold sm:inline">Cart</span>
+                  <span className="hidden text-xs font-semibold min-[420px]:inline">Cart</span>
                   {kioskCart.count > 0 ? <span className="absolute -right-1.5 -top-1.5 flex min-w-5 items-center justify-center rounded-full bg-[#211c17] px-1 text-[10px] font-bold leading-5 text-[#f2d37d] ring-2 ring-[#fbf8f1]">{kioskCart.count}</span> : null}
                 </Link>
                 <DropdownMenu>

@@ -44,7 +44,7 @@ export function formatOrderLevelStatus(status: string): string {
 
 /**
  * Format a weight (Prisma Decimal arrives as a string like "12.500") to a clean
- * "12.5 g". Returns null when there's no usable weight.
+ * "12.5 gm". Returns null when there's no usable weight.
  */
 export function formatWeight(weight: string | number | null | undefined): string | null {
   if (weight === null || weight === undefined || weight === '') return null;
@@ -52,7 +52,7 @@ export function formatWeight(weight: string | number | null | undefined): string
   if (!Number.isFinite(n) || n <= 0) return null;
   // Drop trailing zeros: 12.500 -> 12.5, 12.000 -> 12
   const clean = n.toFixed(3).replace(/\.?0+$/, '');
-  return `${clean} g`;
+  return `${clean} gm`;
 }
 
 /**

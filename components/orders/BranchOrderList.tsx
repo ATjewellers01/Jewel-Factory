@@ -114,7 +114,7 @@ export function BranchOrderList({ kind, endpoint }: { kind: BranchOrderKind; end
                           <span className="block text-xs text-muted-foreground">
                             {it.product.category ?? '—'}
                             {it.product.subCategory ? ` › ${it.product.subCategory}` : ''}
-                            {it.product.weightGrams != null ? ` · ${it.product.weightGrams}g` : ''}
+                            {it.product.weightGrams != null ? ` · ${it.product.weightGrams}gm` : ''}
                             {it.purity ? ` · ${it.purity}` : ''}
                           </span>
                         )}

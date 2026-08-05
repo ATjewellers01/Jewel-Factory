@@ -360,7 +360,7 @@ export default function ManufacturerOrdersPage() {
                                 <span className="block text-xs text-muted-foreground">
                                   {it.product?.category ?? it.categorySnapshot ?? '—'}
                                   {it.product?.subCategory ? ` › ${it.product.subCategory}` : ''}
-                                  {it.product?.weightGrams != null ? ` · ${it.product.weightGrams}g` : ''}
+                                  {it.product?.weightGrams != null ? ` · ${it.product.weightGrams}gm` : ''}
                                   {it.purity ? ` · ${it.purity}` : ''}
                                 </span>
                                 {it.product?.karigarCode && (
