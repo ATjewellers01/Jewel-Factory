@@ -9,7 +9,7 @@ import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/orders/OrderItemDetailModal';
 import { Button } from '@/components/ui/button';
-import { formatOrderLevelStatus } from '@/lib/format';
+import { formatOrderLevelStatus, formatOrderStatus } from '@/lib/format';
 import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
 /**
@@ -19,8 +19,10 @@ import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib
  * own stores/requests, so splitting them across separate pages made the
  * retailer check multiple places for the same job.
  *
- * `source` is tracked only to route the detail fields and keep React keys
- * unique across the three id spaces; it is never rendered as a badge.
+ * `source` routes the detail fields, keeps React keys unique across the
+ * three id spaces, AND drives a small "Restock/Kiosk/Customised" chip per
+ * row (SOURCE_LABEL/SOURCE_STYLE below) — the Retailer Admin needs to tell
+ * a store's own restock order apart from a walk-in customer's kiosk order.
  *
  * Customised orders have no line items — they're a single design spec, not a
  * product list — so a Row with source 'custom' carries `spec`/`images`
@@ -69,10 +71,27 @@ type Row = {
   custom?: CustomRequest;
 };
 
+// A null branch means the Retailer Admin placed this order directly (not
+// via a Retailer User/branch) — labelled explicitly so it's never a blank
+// spot in the list, and so it flows through the existing branch filter
+// dropdown as its own selectable option.
+const PLACED_BY_YOU = 'Placed by you';
+
 const STATUS: Record<string, string> = {
   PENDING: 'bg-yellow-100 text-yellow-800', IN_PROCESS: 'bg-blue-100 text-blue-800',
   GHAT_RECEIVED: 'bg-purple-100 text-purple-800', READY_FOR_DELIVERY: 'bg-indigo-100 text-indigo-800',
   DISPATCHED: 'bg-amber-100 text-amber-800', COMPLETED: 'bg-green-100 text-green-800', CANCELLED: 'bg-red-100 text-red-700',
+};
+
+// Restock (B2B) = the store ordering stock for itself; Kiosk = a walk-in
+// customer's order taken at the counter; Customised = a bespoke design
+// request. Retailer Admin needs to tell these apart at a glance in the
+// merged list, so each row gets a small source-kind chip.
+const SOURCE_LABEL: Record<Source, string> = {
+  b2b: 'Restock', kiosk: 'Kiosk', custom: 'Customised',
+};
+const SOURCE_STYLE: Record<Source, string> = {
+  b2b: 'bg-sky-100 text-sky-800', kiosk: 'bg-rose-100 text-rose-800', custom: 'bg-violet-100 text-violet-800',
 };
 
 function formatWeightRange(min: string | null, max: string | null): string {
@@ -120,14 +139,14 @@ export default function StoreCatalogueOrdersPage() {
         const b2bRows: Row[] = (b2bJson.data ?? []).map((o) => ({
           key: `b2b-${o.id}`, id: o.id, source: 'b2b',
           orderNumber: o.orderNumber, status: o.status, totalItems: o.totalItems,
-          branchNameSnapshot: o.branchNameSnapshot, needsApproval: o.pendingManagerApproval,
+          branchNameSnapshot: o.branchNameSnapshot ?? PLACED_BY_YOU, needsApproval: o.pendingManagerApproval,
           meta: `${o.totalItems} item(s)${o.trackingNumber ? ` · Tracking: ${o.trackingNumber}` : ''}`,
           createdAt: o.createdAt, items: o.items,
         }));
         const kioskRows: Row[] = (kioskJson.data ?? []).map((o) => ({
           key: `kiosk-${o.id}`, id: o.id, source: 'kiosk',
           orderNumber: o.orderNumber, status: o.status, totalItems: o.totalItems,
-          branchNameSnapshot: o.branchNameSnapshot, needsApproval: o.pendingStoreApproval,
+          branchNameSnapshot: o.branchNameSnapshot ?? PLACED_BY_YOU, needsApproval: o.pendingStoreApproval,
           // No customer name/phone here — kiosk orders carry no PII by design.
           meta: `${o.totalItems} item(s) · ${o.pickupStore ? 'Pickup' : 'Delivery'}`,
           createdAt: o.createdAt, items: o.items,
@@ -138,7 +157,7 @@ export default function StoreCatalogueOrdersPage() {
         const customRows: Row[] = (customJson.data ?? []).map((r) => ({
           key: `custom-${r.id}`, id: r.id, source: 'custom',
           orderNumber: r.order?.orderNumber ?? '—', status: r.order?.status ?? 'PENDING', totalItems: 0,
-          branchNameSnapshot: r.branch?.name ?? null, needsApproval: false,
+          branchNameSnapshot: r.branch?.name ?? PLACED_BY_YOU, needsApproval: false,
           meta: `${r.category}${r.subCategory ? ` › ${r.subCategory}` : ''}${formatWeightRange(r.weightGramsMin, r.weightGramsMax) ? ` · ${formatWeightRange(r.weightGramsMin, r.weightGramsMax)}` : ''}`,
           createdAt: r.createdAt, custom: r,
         }));
@@ -174,7 +193,7 @@ export default function StoreCatalogueOrdersPage() {
         <OrderFilters
           search={search} onSearch={setSearch}
           status={status} onStatus={setStatus} statusOptions={KIOSK_B2B_STATUS_OPTIONS}
-          group={branch} onGroup={setBranch} groupOptions={branchOptions} groupAllLabel="All stores" groupLabel="Store"
+          group={branch} onGroup={setBranch} groupOptions={branchOptions} groupAllLabel="All stores" groupLabel="Placed by"
           from={from} to={to} onFrom={setFrom} onTo={setTo}
         />
       )}
@@ -194,7 +213,13 @@ export default function StoreCatalogueOrdersPage() {
             <div key={o.key} className="rounded-xl border bg-card overflow-hidden">
               <button type="button" onClick={() => setOpen(open === o.key ? null : o.key)} className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium">{o.orderNumber}{o.branchNameSnapshot ? <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{o.branchNameSnapshot}</span> : null}</p>
+                  <p className="text-sm font-medium">
+                    {o.orderNumber}
+                    <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${SOURCE_STYLE[o.source]}`}>{SOURCE_LABEL[o.source]}</span>
+                    {o.branchNameSnapshot === PLACED_BY_YOU
+                      ? <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">{PLACED_BY_YOU}</span>
+                      : o.branchNameSnapshot ? <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{o.branchNameSnapshot}</span> : null}
+                  </p>
                   <p className="text-xs text-muted-foreground">{o.meta}</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -258,6 +283,7 @@ export default function StoreCatalogueOrdersPage() {
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-1">
                           <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[it.status] ?? ''}`}>{formatOrderStatus(it.status)}</span>
                         </div>
                       </button>
                     ))}
