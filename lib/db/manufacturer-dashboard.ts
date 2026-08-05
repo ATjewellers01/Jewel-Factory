@@ -19,6 +19,7 @@ export async function getManufacturerDashboard(manufacturerId: string) {
           status: true,
           totalItems: true,
           createdAt: true,
+          store: { select: { name: true } },
         },
       }),
     ]);
@@ -36,6 +37,7 @@ export async function getManufacturerDashboard(manufacturerId: string) {
       status: o.status,
       totalItems: o.totalItems,
       createdAt: o.createdAt,
+      storeName: o.store?.name ?? null,
     })),
   };
 }

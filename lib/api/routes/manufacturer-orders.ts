@@ -50,13 +50,14 @@ manufacturerOrderRoutes.patch('/orders/:id/items/:itemId', jsonValidator(ItemSta
   return sendData(c, { ok: true });
 });
 
-// ── Kiosk orders (customer PII + store identity stripped; ship to STORE address) ──
+// ── Kiosk orders (customer PII stripped; store BUSINESS NAME shown, city/branch
+// still hidden; ship to STORE address) ──
 
 async function sanitizeKiosk(order: Record<string, unknown>, cache: Map<string, string>) {
   /* eslint-disable @typescript-eslint/no-unused-vars */
   const {
     customerName, customerPhone, customerEmail, deliveryAddress, // drop customer PII + address
-    storeNameSnapshot, storeCitySnapshot, branchNameSnapshot, // drop retailer/branch identity — manufacturer ships to shipToStoreAddress, not a named customer
+    storeCitySnapshot, branchNameSnapshot, // drop retailer city/branch identity — storeNameSnapshot (business name) is shown, see 2026-08-05
     items,
     ...safe
   } = order as Record<string, unknown> & { items?: Array<Record<string, unknown>> };

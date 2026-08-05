@@ -360,20 +360,22 @@ export async function updateB2bRequirementNote(storeId: string, id: string, note
   return true;
 }
 
-// Manufacturer view (approved only). Store identity (business name/city) is
-// intentionally NOT exposed here — the manufacturer ships to the delivery
-// address on the order, not to a named customer (see CLAUDE.md "Manufacturer
-// never sees store identity on order views", 2026-08-05).
+// Manufacturer view (approved only). Only the store's business NAME is
+// exposed (client wants to identify who placed the order) — city/branch
+// name stay hidden, and the manufacturer still ships to the order's own
+// delivery address, not by looking up the store (2026-08-05).
 export async function getB2bOrdersByManufacturer(manufacturerId: string) {
   const rows = await prisma.b2bOrder.findMany({
     where: { manufacturerId, pendingManagerApproval: false },
     orderBy: { createdAt: 'desc' },
     include: {
+      store: { select: { name: true } },
       items: { select: { manufacturerProduct: { select: { karigarCode: true } } } },
     },
   });
-  return rows.map(({ items, ...o }) => ({
+  return rows.map(({ items, store, ...o }) => ({
     ...o,
+    storeName: store?.name ?? null,
     karigarCodes: [...new Set(items.map((i) => i.manufacturerProduct.karigarCode).filter((x): x is string => !!x))],
   }));
 }
@@ -394,9 +396,12 @@ export async function getB2bOrderForManufacturer(manufacturerId: string, id: str
         },
       },
       history: { orderBy: { createdAt: 'asc' } },
+      store: { select: { name: true } },
     },
   });
-  return o;
+  if (!o) return null;
+  const { store, ...safe } = o;
+  return { ...safe, storeName: store?.name ?? null };
 }
 
 export async function advanceB2bOrderStatus(manufacturerId: string, id: string, status: OrderStatus, trackingNumber?: string) {
