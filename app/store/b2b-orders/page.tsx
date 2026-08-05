@@ -167,10 +167,7 @@ export default function StoreCatalogueOrdersPage() {
           <h1 className="text-2xl font-medium tracking-tight">Order History</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">Restock, kiosk, and customised orders from across your stores.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Link href="/store/custom-designs/new"><Button variant="outline" className="font-semibold"><Plus className="mr-1.5 h-4 w-4" />Customised Order</Button></Link>
-          <Link href="/store/manufacturer-catalog"><Button className="metal-sheen text-[#17120b] font-semibold"><Plus className="mr-1.5 h-4 w-4" />New Order</Button></Link>
-        </div>
+        <Link href="/store/manufacturer-catalog"><Button className="metal-sheen text-[#17120b] font-semibold"><Plus className="mr-1.5 h-4 w-4" />New Order</Button></Link>
       </div>
 
       {rows && rows.length > 0 && (

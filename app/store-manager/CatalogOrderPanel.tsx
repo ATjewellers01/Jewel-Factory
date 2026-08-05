@@ -1,11 +1,12 @@
 'use client';
 
-import { Award, Check, ChevronDown, Gem, Heart, LayoutGrid, Loader2, Minus, Plus, Search, ShoppingCart, SlidersHorizontal, SortAsc, Trash2, X } from 'lucide-react';
+import { Award, Check, ChevronDown, Gem, Heart, Loader2, Minus, Plus, Search, ShoppingCart, SlidersHorizontal, SortAsc, Trash2, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { StoreManagerProductDetailModal, type StoreManagerProduct } from '@/components/kiosk/StoreManagerProductDetailModal';
 import { CartQtyControl } from '@/components/orders/CartQtyControl';
+import { ItemsPerRowControl } from '@/components/orders/ItemsPerRowControl';
 import { WeightRangeSlider } from '@/components/orders/WeightRangeSlider';
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
@@ -32,7 +33,6 @@ const WIDE_COLS = {
   2: 'md:grid-cols-2',
   3: 'md:grid-cols-3',
   4: 'md:grid-cols-4',
-  5: 'md:grid-cols-5',
 } as const;
 type MobileCols = keyof typeof MOBILE_COLS;
 type WideCols = keyof typeof WIDE_COLS;
@@ -235,37 +235,14 @@ export function CatalogOrderPanel({
             <span className="hidden text-sm text-[#746b62] sm:inline">{loading ? 'Loading…' : `${filtered.length} designs`}</span>
           </div>
           <div className="flex items-center gap-2">
-            {/* Items per row — 1 or 2 on phones, 2–5 from tablet up. Each set is
+            {/* Items per row — 1 or 2 on phones, 2–4 from tablet up. Each set is
                 only rendered at the size it applies to, so the choice is unambiguous. */}
-            <div className="flex items-center gap-1 rounded-lg border border-black/15 bg-white/50 px-1.5 py-1" role="group" aria-label="Items per row">
-              <LayoutGrid className="h-4 w-4 shrink-0 text-[#8d8174]" aria-hidden />
-              <span className="flex gap-0.5 md:hidden">
-                {(Object.keys(MOBILE_COLS) as unknown as MobileCols[]).map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setMobileCols(Number(value) as MobileCols)}
-                    aria-pressed={mobileCols === Number(value)}
-                    className={`h-7 w-7 rounded-md text-xs font-semibold transition-colors ${mobileCols === Number(value) ? 'bg-[#2b2119] text-white' : 'text-[#746b62] hover:bg-black/[0.05]'}`}
-                  >
-                    {value}
-                  </button>
-                ))}
-              </span>
-              <span className="hidden gap-0.5 md:flex">
-                {(Object.keys(WIDE_COLS) as unknown as WideCols[]).map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setWideCols(Number(value) as WideCols)}
-                    aria-pressed={wideCols === Number(value)}
-                    className={`h-7 w-7 rounded-md text-xs font-semibold transition-colors ${wideCols === Number(value) ? 'bg-[#2b2119] text-white' : 'text-[#746b62] hover:bg-black/[0.05]'}`}
-                  >
-                    {value}
-                  </button>
-                ))}
-              </span>
-            </div>
+            <span className="md:hidden">
+              <ItemsPerRowControl value={mobileCols} onChange={(v) => setMobileCols(v as MobileCols)} min={1} max={2} />
+            </span>
+            <span className="hidden md:inline-flex">
+              <ItemsPerRowControl value={wideCols} onChange={(v) => setWideCols(v as WideCols)} min={2} max={4} />
+            </span>
             <div className="relative"><SortAsc className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8174]" /><select value={sort} onChange={(event) => setSort(event.target.value as Sort)} className="h-9 rounded-lg border border-black/15 bg-white/50 pl-9 pr-8 text-sm">{showPopularity && <option value="popularity">Best sellers</option>}{SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
           </div>
         </div>

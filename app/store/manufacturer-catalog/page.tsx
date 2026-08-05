@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from 'react';
 
 import { StoreManagerProductDetailModal } from '@/components/kiosk/StoreManagerProductDetailModal';
 import { CartQtyControl } from '@/components/orders/CartQtyControl';
+import { ItemsPerRowControl } from '@/components/orders/ItemsPerRowControl';
 import { WeightRangeSlider } from '@/components/orders/WeightRangeSlider';
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
@@ -23,6 +24,16 @@ type Img = { secureUrl: string; isPrimary: boolean };
 type Product = { id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; size?: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
 // Sales info across ALL of this retailer's branches, keyed by manufacturerProductId.
 type SalesInfo = { stars: number; unitsLast30d: number };
+
+// Items per row (from sm up — this page has no separate mobile scale since it
+// always shows 2 on the smallest screens). Tailwind needs whole class names.
+const COLS = {
+  2: 'sm:grid-cols-2 lg:grid-cols-2',
+  3: 'sm:grid-cols-3 lg:grid-cols-3',
+  4: 'sm:grid-cols-3 lg:grid-cols-4',
+} as const;
+type Cols = keyof typeof COLS;
+const COLS_STORAGE_KEY = 'jf.retailer-catalog.cols';
 
 // useSearchParams needs a Suspense boundary in the App Router.
 export default function ManufacturerCatalogBrowsePage() {
@@ -54,6 +65,18 @@ function CatalogBrowse() {
   const [submitErr, setSubmitErr] = useState<unknown>(null);
   const [salesMap, setSalesMap] = useState<Record<string, SalesInfo>>({});
   const [detail, setDetail] = useState<Product | null>(null);
+  const [cols, setCols] = useState<Cols>(4);
+
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem(COLS_STORAGE_KEY));
+      if (saved && saved in COLS) setCols(saved as Cols);
+    } catch { /* ignore unreadable/corrupt preference */ }
+  }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem(COLS_STORAGE_KEY, String(cols)); } catch { /* private mode / quota */ }
+  }, [cols]);
 
   useEffect(() => {
     (async () => {
@@ -149,6 +172,7 @@ function CatalogBrowse() {
         {(category || subCategory || search || size || sort || weightRange) && (
           <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setSize(''); setWeightRange(null); setSort(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
         )}
+        <ItemsPerRowControl value={cols} onChange={(v) => setCols(v as Cols)} min={2} max={4} />
       </div>
 
       {weightBounds && (
@@ -308,7 +332,7 @@ function CatalogBrowse() {
       )}
 
       {data && filtered.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className={`grid grid-cols-2 gap-4 ${COLS[cols]}`}>
           {filtered.map((p) => {
             const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
             const inCartQty = cart.items.find((i) => i.productId === p.id)?.quantity ?? 0;

@@ -72,25 +72,29 @@ export function StoreManagerProductDetailModal({
         aria-modal="true"
         aria-label={`${product.designNumber} details`}
       >
-        <div className="relative max-h-[calc(100dvh-3rem)] w-full max-w-3xl overflow-y-auto overscroll-contain rounded-2xl bg-card shadow-2xl sm:max-h-[calc(100dvh-4rem)]" onClick={(event) => event.stopPropagation()}>
+        <div className="relative max-h-[calc(100dvh-3rem)] w-full max-w-3xl snap-y snap-mandatory overflow-y-auto overscroll-contain rounded-2xl bg-card shadow-2xl sm:max-h-[calc(100dvh-4rem)]" onClick={(event) => event.stopPropagation()}>
           <button type="button" onClick={onClose} aria-label="Close product details" className="absolute right-3 top-3 z-20 rounded-full bg-black/60 p-2 text-white transition-colors hover:bg-black/80"><X className="h-4 w-4" /></button>
 
-          <ProductBlock product={product} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
+          <div className="snap-start">
+            <ProductBlock product={product} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
+          </div>
 
           {/* Similar designs are rendered as FULL blocks — same size and content as
               the design that was opened — so the user can just keep scrolling and
-              add any of them to the order without selecting one first. */}
+              add any of them to the order without selecting one first. Each block
+              (plus its header) snaps as one unit so scrolling never leaves a
+              product half-visible/cropped at the top of the modal. */}
           {similar.length > 0 ? (
-            <>
+            <div className="snap-start">
               <div className="border-t bg-muted/30 px-5 py-3 sm:px-6">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Similar designs</p>
               </div>
-              {similar.map((candidate) => (
-                <div key={candidate.id} className="border-t">
+              {similar.map((candidate, index) => (
+                <div key={candidate.id} className={`border-t ${index > 0 ? 'snap-start' : ''}`}>
                   <ProductBlock product={candidate} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
                 </div>
               ))}
-            </>
+            </div>
           ) : null}
         </div>
       </div>

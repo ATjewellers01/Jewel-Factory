@@ -155,12 +155,10 @@ export default function StoreCustomDesignNewPage() {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_0.85fr] lg:gap-8">
         <form onSubmit={submit} className="space-y-5 rounded-2xl border border-black/10 bg-[#fffdf8] p-5 shadow-sm sm:p-7">
+          {/* Order number (orderRef, the shop's own reference) is hidden from
+              this form per client request — still captured as undefined, the
+              field simply isn't shown/collected here anymore. */}
           <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Order number</label>
-              <Input required className="mt-1 h-10" placeholder="Your shop's order no." value={form.orderRef} onChange={(e) => set('orderRef', e.target.value)} />
-              <FieldError errors={toFieldErrors(fieldError(submitErr, 'orderRef'))} />
-            </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Delivery date</label>
               <Input required type="date" className="mt-1 h-10" value={form.deliveryDate} onChange={(e) => set('deliveryDate', e.target.value)} />
