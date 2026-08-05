@@ -1,6 +1,6 @@
 'use client';
 
-import { Gem, Sparkles, X } from 'lucide-react';
+import { ChevronDown, Gem, Sparkles, X } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 
@@ -35,6 +35,7 @@ export function StoreManagerProductDetailModal({
   tryOnBack: string;
 }) {
   const [zoom, setZoom] = useState<string | null>(null);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -72,28 +73,56 @@ export function StoreManagerProductDetailModal({
         aria-modal="true"
         aria-label={`${product.designNumber} details`}
       >
-        <div className="relative max-h-[calc(100dvh-3rem)] w-full max-w-3xl snap-y snap-mandatory overflow-y-auto overscroll-contain rounded-2xl bg-card shadow-2xl sm:max-h-[calc(100dvh-4rem)]" onClick={(event) => event.stopPropagation()}>
+        {/*
+         * A fixed modal HEIGHT (not just max-height) is what makes each block
+         * fill the frame exactly, so scroll-snap lands with nothing else
+         * visible — no sliver of the next design peeking at the bottom. A
+         * max-height alone lets each block size to its own content, and a
+         * shorter block leaves the frame taller than it and exposes the
+         * next one.
+         */}
+        <div
+          className="relative h-[calc(100dvh-3rem)] w-full max-w-3xl overflow-hidden rounded-2xl bg-card shadow-2xl sm:h-[calc(100dvh-4rem)]"
+          onClick={(event) => event.stopPropagation()}
+        >
           <button type="button" onClick={onClose} aria-label="Close product details" className="absolute right-3 top-3 z-20 rounded-full bg-black/60 p-2 text-white transition-colors hover:bg-black/80"><X className="h-4 w-4" /></button>
 
-          <div className="snap-start">
-            <ProductBlock product={product} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
+          <div
+            className="h-full snap-y snap-mandatory overflow-y-auto overscroll-contain"
+            onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 24)}
+          >
+            {/* md:min-h-full (not min-h-full at every width): on a phone the
+                image and details stack vertically with no shared row height,
+                so forcing the block to fill the whole modal height there
+                just adds blank space below short content — it only needs to
+                match the modal's height once the two columns sit
+                side-by-side and share a row (md:grid-cols-2, in
+                ProductBlock). */}
+            <div className="md:min-h-full snap-start">
+              <ProductBlock product={product} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
+            </div>
+
+            {/* Similar designs render as FULL blocks — same size and content as
+                the design that was opened — so the user can keep scrolling and
+                add any of them to the order without selecting one first. No
+                section label: each one is presented as its own design, not as
+                a sub-list. */}
+            {similar.map((candidate) => (
+              <div key={candidate.id} className="md:min-h-full snap-start border-t">
+                <ProductBlock product={candidate} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
+              </div>
+            ))}
           </div>
 
-          {/* Similar designs are rendered as FULL blocks — same size and content as
-              the design that was opened — so the user can just keep scrolling and
-              add any of them to the order without selecting one first. Each block
-              (plus its header) snaps as one unit so scrolling never leaves a
-              product half-visible/cropped at the top of the modal. */}
-          {similar.length > 0 ? (
-            <div className="snap-start">
-              <div className="border-t bg-muted/30 px-5 py-3 sm:px-6">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Similar designs</p>
-              </div>
-              {similar.map((candidate, index) => (
-                <div key={candidate.id} className={`border-t ${index > 0 ? 'snap-start' : ''}`}>
-                  <ProductBlock product={candidate} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
-                </div>
-              ))}
+          {/* Scroll hint — only while still on the opened design (first
+              screenful) and only when there's actually another design below
+              to scroll to. Fades out as soon as the user scrolls, rather
+              than staying visible for the entire time the modal is open. */}
+          {similar.length > 0 && !scrolled ? (
+            <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center transition-opacity sm:bottom-4">
+              <span className="flex items-center gap-1 rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-white shadow-lg backdrop-blur-sm">
+                Scroll to see similar <ChevronDown className="h-3 w-3 animate-bounce" />
+              </span>
             </div>
           ) : null}
         </div>
@@ -127,18 +156,22 @@ function ProductBlock({
   const selectedImage = product.images[imageIndex] ?? product.images[0];
 
   return (
-    <div className="grid md:grid-cols-2">
-      <div className="bg-[#ece5da] p-3 sm:p-4">
-        <div className="aspect-square overflow-hidden rounded-xl bg-white">
+    <div className="grid md:h-full md:grid-cols-2">
+      <div className="flex flex-col bg-[#ece5da] p-3 sm:p-4">
+        {/* min-h-0 lets this shrink inside the md:h-full row instead of
+            forcing the row taller than the modal on a short/wide viewport;
+            aspect-square is the mobile-only fallback where there's no shared
+            row height to fill yet. */}
+        <div className="min-h-0 flex-1 overflow-hidden rounded-xl bg-white md:aspect-auto aspect-square">
           {selectedImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={selectedImage.secureUrl} alt={product.designNumber} onClick={() => onZoom(selectedImage.secureUrl)} className="h-full w-full cursor-zoom-in object-contain" title="Click to enlarge" />
           ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-10 w-10" /></div>}
         </div>
         {product.images.length > 1 ? (
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          <div className="mt-3 flex shrink-0 gap-2 overflow-x-auto pb-1">
             {product.images.map((image, index) => (
-              <button key={image.secureUrl} type="button" onClick={() => setImageIndex(index)} aria-label={`View image ${index + 1}`} className={`h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border-2 ${index === imageIndex ? 'border-primary' : 'border-transparent'}`}>
+              <button key={image.secureUrl} type="button" onClick={() => setImageIndex(index)} aria-label={`View image ${index + 1}`} className={`h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border-2 sm:h-14 sm:w-14 ${index === imageIndex ? 'border-primary' : 'border-transparent'}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={image.secureUrl} alt="" className="h-full w-full object-cover" />
               </button>
@@ -147,7 +180,15 @@ function ProductBlock({
         ) : null}
       </div>
 
-      <div className="space-y-4 p-4 sm:p-6">
+      {/* flex + justify-center: on md+ this column matches the image
+          column's full height, and a short product (no description, no
+          try-on button) otherwise leaves the content stacked at the top
+          with a bare gap below it. Centering keeps the block looking
+          composed regardless of how much content a given product has.
+          overflow-y-auto still lets a LONG description scroll within its
+          own panel instead of growing the row past the image and breaking
+          the fixed block height the snap-scroll relies on. */}
+      <div className="flex flex-col justify-center gap-4 overflow-y-auto p-4 sm:p-6">
         <div className="pr-8">
           <p className="text-xs font-semibold uppercase tracking-widest text-primary">{product.category ?? 'Jewellery'}{product.subCategory ? ` · ${product.subCategory}` : ''}</p>
           <h2 className="mt-1 font-display text-xl font-medium sm:text-2xl">Design {product.designNumber}</h2>
