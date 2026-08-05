@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { formatWeight, productMetaLine } from '@/lib/format';
+import { formatWeight } from '@/lib/format';
 
 export type StoreManagerProduct = {
   id: string;
@@ -67,60 +67,37 @@ export function StoreManagerProductDetailModal({
   return (
     <>
       <div
-        className="fixed inset-0 z-50 flex min-h-full items-start justify-center overflow-y-auto bg-black/50 p-3 py-6 backdrop-blur-[2px] sm:items-center sm:p-4 sm:py-8"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-[#17130f]/65 p-3 backdrop-blur-[3px] sm:p-5"
         onClick={onClose}
         role="dialog"
         aria-modal="true"
         aria-label={`${product.designNumber} details`}
       >
-        {/*
-         * A fixed modal HEIGHT (not just max-height) is what makes each block
-         * fill the frame exactly, so scroll-snap lands with nothing else
-         * visible — no sliver of the next design peeking at the bottom. A
-         * max-height alone lets each block size to its own content, and a
-         * shorter block leaves the frame taller than it and exposes the
-         * next one.
-         */}
-        <div
-          className="relative h-[calc(100dvh-3rem)] w-full max-w-3xl overflow-hidden rounded-2xl bg-card shadow-2xl sm:h-[calc(100dvh-4rem)]"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <button type="button" onClick={onClose} aria-label="Close product details" className="absolute right-3 top-3 z-20 rounded-full bg-black/60 p-2 text-white transition-colors hover:bg-black/80"><X className="h-4 w-4" /></button>
-
+        <div className="flex w-full max-w-[28rem] flex-col items-center gap-2.5 sm:max-w-[52rem]" onClick={(event) => event.stopPropagation()}>
           <div
-            className="h-full snap-y snap-mandatory overflow-y-auto overscroll-contain"
-            onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 24)}
+            className="relative h-[min(32rem,calc(100dvh-5rem))] w-full overflow-hidden rounded-[1.4rem] border border-white/60 bg-[#fdfcf9] shadow-[0_30px_100px_rgba(0,0,0,0.38)] sm:h-[min(32rem,calc(100dvh-5rem))] sm:rounded-[1.6rem]"
           >
-            {/* md:min-h-full (not min-h-full at every width): on a phone the
-                image and details stack vertically with no shared row height,
-                so forcing the block to fill the whole modal height there
-                just adds blank space below short content — it only needs to
-                match the modal's height once the two columns sit
-                side-by-side and share a row (md:grid-cols-2, in
-                ProductBlock). */}
-            <div className="md:min-h-full snap-start">
-              <ProductBlock product={product} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
-            </div>
+            <button type="button" onClick={onClose} aria-label="Close product details" className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-[#211b16]/75 text-white shadow-lg backdrop-blur-md transition hover:rotate-90 hover:bg-[#211b16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d2a84a] focus-visible:ring-offset-2 sm:right-5 sm:top-5"><X className="h-5 w-5" /></button>
 
-            {/* Similar designs render as FULL blocks — same size and content as
-                the design that was opened — so the user can keep scrolling and
-                add any of them to the order without selecting one first. No
-                section label: each one is presented as its own design, not as
-                a sub-list. */}
-            {similar.map((candidate) => (
-              <div key={candidate.id} className="md:min-h-full snap-start border-t">
-                <ProductBlock product={candidate} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
+            <div
+              className="h-full snap-y snap-mandatory overflow-y-auto overscroll-contain"
+              onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 24)}
+            >
+              <div className="h-full snap-start snap-always">
+                <ProductBlock product={product} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
               </div>
-            ))}
+
+              {similar.map((candidate) => (
+                <div key={candidate.id} className="h-full snap-start snap-always border-t border-[#d8c8aa]/55">
+                  <ProductBlock product={candidate} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Scroll hint — only while still on the opened design (first
-              screenful) and only when there's actually another design below
-              to scroll to. Fades out as soon as the user scrolls, rather
-              than staying visible for the entire time the modal is open. */}
-          {similar.length > 0 && !scrolled ? (
-            <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center transition-opacity sm:bottom-4">
-              <span className="flex items-center gap-1 rounded-full bg-black/60 px-3 py-1 text-[11px] font-medium text-white shadow-lg backdrop-blur-sm">
+          {similar.length > 0 ? (
+            <div aria-hidden className="pointer-events-none flex h-8 items-center justify-center">
+              <span className={`flex items-center gap-1.5 rounded-full border border-white/20 bg-[#211b16]/82 px-3.5 py-1.5 text-[11px] font-medium text-white shadow-lg backdrop-blur-md transition-all ${scrolled ? 'translate-y-1 opacity-0' : 'opacity-100'}`}>
                 Scroll to see similar <ChevronDown className="h-3 w-3 animate-bounce" />
               </span>
             </div>
@@ -154,25 +131,22 @@ function ProductBlock({
 }) {
   const [imageIndex, setImageIndex] = useState(0);
   const selectedImage = product.images[imageIndex] ?? product.images[0];
+  const formattedWeight = formatWeight(product.weightGrams);
 
   return (
-    <div className="grid md:h-full md:grid-cols-2">
-      <div className="flex flex-col items-center justify-center bg-[#ece5da] p-4 sm:p-6">
-        {/* min-h-0 lets this shrink inside the md:h-full row instead of
-            forcing the row taller than the modal on a short/wide viewport;
-            aspect-square is the mobile-only fallback where there's no shared
-            row height to fill yet. max-w-sm caps the image so it doesn't
-            stretch edge-to-edge on a very wide modal. */}
-        <div className="w-full max-w-sm min-h-0 flex-1 overflow-hidden rounded-xl bg-white shadow-sm md:aspect-auto aspect-square">
+    <article className="flex h-full min-h-0 flex-col bg-[#fdfcf9] sm:grid sm:grid-cols-[0.96fr_1.04fr]">
+      <div className="flex h-[40%] min-h-[12rem] shrink-0 flex-col bg-[#ede5d8] p-2.5 sm:h-full sm:min-h-0 sm:border-r sm:border-[#d8c8aa]/55 sm:p-3.5 lg:p-4">
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-[1.1rem] bg-white shadow-[inset_0_0_0_1px_rgba(122,91,39,0.08)]">
           {selectedImage ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={selectedImage.secureUrl} alt={product.designNumber} onClick={() => onZoom(selectedImage.secureUrl)} className="h-full w-full cursor-zoom-in object-contain" title="Click to enlarge" />
+            <img src={selectedImage.secureUrl} alt={product.designNumber} onClick={() => onZoom(selectedImage.secureUrl)} className="h-full w-full cursor-zoom-in object-contain transition duration-500 hover:scale-[1.015]" title="Click to enlarge" />
           ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-10 w-10" /></div>}
+          <span className="pointer-events-none absolute bottom-2.5 left-2.5 rounded-full border border-white/40 bg-white/80 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.15em] text-[#6f5731] shadow-sm backdrop-blur-md">Tap to enlarge</span>
         </div>
         {product.images.length > 1 ? (
-          <div className="mt-3 flex w-full max-w-sm shrink-0 justify-center gap-2 overflow-x-auto pb-1">
+          <div className="mt-2 flex shrink-0 justify-center gap-2 overflow-x-auto pb-0.5">
             {product.images.map((image, index) => (
-              <button key={image.secureUrl} type="button" onClick={() => setImageIndex(index)} aria-label={`View image ${index + 1}`} className={`h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-colors sm:h-14 sm:w-14 ${index === imageIndex ? 'border-primary' : 'border-transparent hover:border-primary/40'}`}>
+              <button key={image.secureUrl} type="button" onClick={() => setImageIndex(index)} aria-label={`View image ${index + 1}`} className={`h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-colors sm:h-12 sm:w-12 ${index === imageIndex ? 'border-primary' : 'border-transparent hover:border-primary/40'}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={image.secureUrl} alt="" className="h-full w-full object-cover" />
               </button>
@@ -181,36 +155,41 @@ function ProductBlock({
         ) : null}
       </div>
 
-      {/* flex + justify-center: on md+ this column matches the image
-          column's full height, and a short product (no description, no
-          try-on button) otherwise leaves the content stacked at the top
-          with a bare gap below it. Centering keeps the block looking
-          composed regardless of how much content a given product has.
-          overflow-y-auto still lets a LONG description scroll within its
-          own panel instead of growing the row past the image and breaking
-          the fixed block height the snap-scroll relies on. */}
-      <div className="flex flex-col justify-center gap-5 overflow-y-auto p-5 sm:p-8">
-        <div className="pr-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-primary">{product.category ?? 'Jewellery'}{product.subCategory ? ` · ${product.subCategory}` : ''}</p>
-          <h2 className="mt-1.5 font-display text-2xl font-medium sm:text-3xl">Design {product.designNumber}</h2>
+      <div className="flex min-h-0 flex-1 flex-col bg-[#fdfcf9] sm:h-full">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-6 md:px-6 lg:px-8 lg:pt-8">
+          <div className="pr-8">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#b48228] sm:text-xs">{product.category ?? 'Jewellery'}{product.subCategory ? ` · ${product.subCategory}` : ''}</p>
+            <h2 className="mt-1 font-display text-xl font-medium leading-tight text-[#211b16] sm:text-2xl md:text-3xl lg:text-4xl">Design {product.designNumber}</h2>
+          </div>
+          <div className="mt-2.5 grid grid-cols-2 overflow-hidden rounded-xl border border-[#ded3c3] bg-white text-xs shadow-[0_5px_22px_rgba(75,54,28,0.04)] sm:mt-4 sm:text-sm">
+            {product.purity ? <Spec label="Purity" value={product.purity} /> : null}
+            {formattedWeight ? <Spec label="Weight" value={formattedWeight} /> : null}
+            {product.size ? <Spec label="Size" value={product.size} /> : null}
+            <Spec label="Category" value={`${product.category ?? '—'}${product.subCategory ? ` › ${product.subCategory}` : ''}`} wide={!product.size} />
+          </div>
+          {product.description && product.description.trim().length >= 4 ? <p className="mt-2.5 text-xs leading-[1.15rem] text-[#6f665e] sm:mt-4 sm:text-sm md:leading-6 lg:text-base lg:leading-7">{product.description}</p> : null}
         </div>
-        <div className="overflow-hidden rounded-xl border text-sm">
-          {product.purity ? <div className="flex justify-between px-4 py-3"><span className="text-muted-foreground">Purity</span><span className="font-medium">{product.purity}</span></div> : null}
-          {formatWeight(product.weightGrams) ? <div className="flex justify-between border-t px-4 py-3"><span className="text-muted-foreground">Weight</span><span className="font-medium">{formatWeight(product.weightGrams)}</span></div> : null}
-          {product.size ? <div className="flex justify-between border-t px-4 py-3"><span className="text-muted-foreground">Size</span><span className="font-medium">{product.size}</span></div> : null}
-          <div className="flex justify-between gap-4 border-t bg-muted/40 px-4 py-3"><span className="text-muted-foreground">Category</span><span className="text-right font-medium">{product.category ?? '—'}{product.subCategory ? ` › ${product.subCategory}` : ''}</span></div>
-        </div>
-        {product.description && product.description.trim().length >= 4 ? <p className="text-sm leading-relaxed text-muted-foreground">{product.description}</p> : null}
-        <div className="flex flex-col gap-2 sm:flex-row">
-          {primaryAction(product)}
-          {product.hasTryon ? (
-            <Button asChild variant="outline" className="border-primary/40 text-primary">
-              <Link href={`/store-manager/try-on?product=${product.id}&back=${encodeURIComponent(tryOnBack)}`}><Sparkles className="mr-1.5 h-4 w-4" />Try On</Link>
-            </Button>
-          ) : null}
-        </div>
-        <p className="text-[11px] text-muted-foreground">{productMetaLine({ category: product.category, subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams, size: product.size })}</p>
+
+        <footer className="shrink-0 border-t border-[#e7dfd3] bg-[#fdfcf9]/95 px-2 py-1.5 shadow-[0_-10px_28px_rgba(73,52,26,0.06)] backdrop-blur sm:px-5 sm:py-3 md:px-6 lg:px-8">
+          <div className="flex flex-col gap-1.5 [&>*]:min-h-12 sm:flex-row sm:gap-2 sm:[&>*]:min-h-10">
+            {primaryAction(product)}
+            {product.hasTryon ? (
+              <Button asChild variant="outline" className="border-primary/40 text-primary">
+                <Link href={`/store-manager/try-on?product=${product.id}&back=${encodeURIComponent(tryOnBack)}`}><Sparkles className="mr-1.5 h-4 w-4" />Try On</Link>
+              </Button>
+            ) : null}
+          </div>
+        </footer>
       </div>
+    </article>
+  );
+}
+
+function Spec({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
+  return (
+    <div className={`min-w-0 border-b border-r border-[#e7dfd3] px-3 py-2.5 last:border-b-0 lg:px-4 lg:py-3 ${wide ? 'col-span-2' : ''}`}>
+      <span className="block text-[9px] font-semibold uppercase tracking-[0.15em] text-[#978b7f] sm:text-[10px]">{label}</span>
+      <span className="mt-1 block break-words font-medium leading-snug text-[#29231e]">{value}</span>
     </div>
   );
 }
