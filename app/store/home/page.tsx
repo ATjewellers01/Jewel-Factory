@@ -18,7 +18,9 @@ const primaryImage = (p: Product) => (p.images.find((i) => i.isPrimary) ?? p.ima
 
 /** Round-robins products across categories (one per category per pass) so the
  *  strip mixes the catalogue instead of running every design of one category
- *  before moving to the next. */
+ *  before moving to the next. Bounded by a single pass over each category's
+ *  queue (via a shared index), so it always terminates regardless of how the
+ *  categories are distributed — no while-loop that could spin forever. */
 function interleaveByCategory(products: Product[]): Product[] {
   const byCategory = new Map<string, Product[]>();
   for (const p of products) {
@@ -27,12 +29,12 @@ function interleaveByCategory(products: Product[]): Product[] {
     if (list) list.push(p); else byCategory.set(key, [p]);
   }
   const queues = [...byCategory.values()];
+  if (queues.length === 0) return [];
   const result: Product[] = [];
-  let remaining = products.length;
-  while (remaining > 0) {
+  const maxLen = Math.max(...queues.map((q) => q.length));
+  for (let round = 0; round < maxLen; round++) {
     for (const queue of queues) {
-      const next = queue.shift();
-      if (next) { result.push(next); remaining--; }
+      if (round < queue.length) result.push(queue[round]!);
     }
   }
   return result;
