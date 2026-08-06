@@ -26,11 +26,14 @@ type Product = { id: string; designNumber: string; name?: string | null; categor
 type SalesInfo = { stars: number; unitsLast30d: number };
 
 // Items per row. Tailwind needs whole class names, so both scales are lookups.
-// Mobile gets its own 1-2 scale (below `sm`) — previously the control offered
+// Mobile gets the full 1-4 range (below `sm`) — previously the control offered
 // 2-4 everywhere, but every option's class was `sm:`-prefixed, so picking 3 or
 // 4 on a phone silently did nothing below that breakpoint.
-const MOBILE_COLS = { 1: 'grid-cols-1', 2: 'grid-cols-2' } as const;
+const MOBILE_COLS = {
+  1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-4',
+} as const;
 const WIDE_COLS = {
+  1: 'sm:grid-cols-1 lg:grid-cols-1',
   2: 'sm:grid-cols-2 lg:grid-cols-2',
   3: 'sm:grid-cols-3 lg:grid-cols-3',
   4: 'sm:grid-cols-3 lg:grid-cols-4',
@@ -185,7 +188,7 @@ function CatalogBrowse() {
             {/* Items per row — 1 or 2 on phones, 2–4 from tablet up. Each set is
                 only rendered at the size it applies to, so the choice is unambiguous. */}
             <span className="sm:hidden">
-              <ItemsPerRowControl value={mobileCols} onChange={(v) => setMobileCols(v as MobileCols)} min={1} max={2} />
+              <ItemsPerRowControl value={mobileCols} onChange={(v) => setMobileCols(v as MobileCols)} min={1} max={4} />
             </span>
             <span className="hidden sm:inline-flex">
               <ItemsPerRowControl value={wideCols} onChange={(v) => setWideCols(v as WideCols)} min={2} max={4} />

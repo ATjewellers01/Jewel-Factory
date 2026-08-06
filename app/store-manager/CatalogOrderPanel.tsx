@@ -28,8 +28,11 @@ type Product = StoreManagerProduct & { images: Img[] };
 
 // Items per row. Tailwind needs whole class names, so both scales are lookups.
 // The mobile choice applies below `md`, the wide-screen choice from `md` up.
-const MOBILE_COLS = { 1: 'grid-cols-1', 2: 'grid-cols-2' } as const;
+const MOBILE_COLS = {
+  1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3', 4: 'grid-cols-4',
+} as const;
 const WIDE_COLS = {
+  1: 'md:grid-cols-1',
   2: 'md:grid-cols-2',
   3: 'md:grid-cols-3',
   4: 'md:grid-cols-4',
@@ -238,7 +241,7 @@ export function CatalogOrderPanel({
             {/* Items per row — 1 or 2 on phones, 2–4 from tablet up. Each set is
                 only rendered at the size it applies to, so the choice is unambiguous. */}
             <span className="md:hidden">
-              <ItemsPerRowControl value={mobileCols} onChange={(v) => setMobileCols(v as MobileCols)} min={1} max={2} />
+              <ItemsPerRowControl value={mobileCols} onChange={(v) => setMobileCols(v as MobileCols)} min={1} max={4} />
             </span>
             <span className="hidden md:inline-flex">
               <ItemsPerRowControl value={wideCols} onChange={(v) => setWideCols(v as WideCols)} min={2} max={4} />
