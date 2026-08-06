@@ -209,7 +209,7 @@
 }
 
 .jf-marquee-track {
-  animation: jf-marquee 60s linear infinite;
+  animation: jf-marquee 140s linear infinite;
   width: max-content;
 }
 
