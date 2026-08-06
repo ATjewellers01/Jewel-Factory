@@ -16,11 +16,26 @@ type Product = {
 
 const primaryImage = (p: Product) => (p.images.find((i) => i.isPrimary) ?? p.images[0])?.secureUrl ?? null;
 
+/** Fisher-Yates shuffle — used both to randomize each category's own queue
+ *  and the category order itself, so the strip looks different on every
+ *  page load instead of a fixed sequence. */
+function shuffled<T>(items: T[]): T[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j]!, arr[i]!];
+  }
+  return arr;
+}
+
 /** Round-robins products across categories (one per category per pass) so the
  *  strip mixes the catalogue instead of running every design of one category
- *  before moving to the next. Bounded by a single pass over each category's
- *  queue (via a shared index), so it always terminates regardless of how the
- *  categories are distributed — no while-loop that could spin forever. */
+ *  before moving to the next — both the category order and each category's
+ *  own queue are shuffled first, so the result varies on every page load
+ *  rather than always showing the same fixed sequence. Bounded by a single
+ *  pass over each category's queue (via a shared index), so it always
+ *  terminates regardless of how the categories are distributed — no
+ *  while-loop that could spin forever. */
 function interleaveByCategory(products: Product[]): Product[] {
   const byCategory = new Map<string, Product[]>();
   for (const p of products) {
@@ -28,7 +43,7 @@ function interleaveByCategory(products: Product[]): Product[] {
     const list = byCategory.get(key);
     if (list) list.push(p); else byCategory.set(key, [p]);
   }
-  const queues = [...byCategory.values()];
+  const queues = shuffled([...byCategory.values()].map((list) => shuffled(list)));
   if (queues.length === 0) return [];
   const result: Product[] = [];
   const maxLen = Math.max(...queues.map((q) => q.length));
