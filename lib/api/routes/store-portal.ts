@@ -13,7 +13,7 @@ import {
   resetBranchManagerPassword, deleteBranchManager,
 } from '@/lib/db/branches';
 import { signUpload, storeFolder } from '@/lib/storage';
-import { embedImageBase64, searchByVector } from '@/lib/search';
+import { embedImageBase64, searchSimilarProducts } from '@/lib/search';
 import { prisma } from '@/lib/prisma';
 import { sendData, sendError } from '../envelope';
 import { storeGuard, type AppEnv } from '../guards';
@@ -58,7 +58,7 @@ storePortalRoutes.post('/search/image', storeGuard, jsonValidator(z.object({ ima
   let ids: string[];
   try {
     const vector = await embedImageBase64(c.req.valid('json').image);
-    const hits = await searchByVector(vector, 24);
+    const hits = await searchSimilarProducts(vector, 24);
     ids = hits.map((h) => h.id);
   } catch (err) {
     return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Visual search is warming up. Please try again.', 503);

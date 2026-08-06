@@ -23,7 +23,7 @@ import { listOrderMessages, addOrderMessage } from '@/lib/db/messages';
 import { formatStoreAddress } from '@/lib/db/stores';
 import { listFavorites, addFavorite, removeFavorite } from '@/lib/db/favorites';
 import { listCart, addToCart, setCartQuantity, setCartItemPurity, clearCart, getCartNote, setCartNote } from '@/lib/db/cart';
-import { embedImageBase64, searchByVector } from '@/lib/search';
+import { embedImageBase64, searchSimilarProducts } from '@/lib/search';
 import { sendData, sendError } from '../envelope';
 import { branchManagerGuard, type AppEnv } from '../guards';
 
@@ -234,7 +234,7 @@ branchManagerRoutes.post('/search/image', branchManagerGuard, jsonValidator(z.ob
   let ids: string[];
   try {
     const vector = await embedImageBase64(c.req.valid('json').image);
-    const hits = await searchByVector(vector, 24);
+    const hits = await searchSimilarProducts(vector, 24);
     ids = hits.map((h) => h.id);
   } catch (err) {
     return sendError(c, 'upstream_failed', err instanceof Error ? err.message : 'Visual search is warming up. Please try again.', 503);

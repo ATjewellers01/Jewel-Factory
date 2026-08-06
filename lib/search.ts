@@ -68,3 +68,37 @@ export async function searchByVector(vector: number[], limit = 24): Promise<{ id
   );
   return rows.map((row) => ({ id: row.id, score: Number(row.score) }));
 }
+
+// Plain nearest-neighbour search has no similarity floor, so a small catalogue
+// always pads out to `limit` results no matter how distant they are — a
+// necklace photo could return bangles/earrings just to fill the list. This
+// wraps searchByVector with two extra passes:
+//  1. Pull a wider pool (limit * 3, capped) so there's enough signal to work with.
+//  2. Anchor on the #1 (highest-score) match's category and keep only same-
+//     category hits — that's the customer's real intent, without needing a
+//     separate image classifier.
+//  3. Apply a mild score floor within that category, so even same-category
+//     hits that are visually unrelated get dropped instead of padding the list.
+// Returns [] when nothing clears the bar — callers should show a "no close
+// matches" state rather than a misleadingly full grid.
+const SIMILARITY_SCORE_FLOOR = 0.65;
+
+export async function searchSimilarProducts(vector: number[], limit = 24): Promise<{ id: string; score: number }[]> {
+  const pool = await searchByVector(vector, Math.min(limit * 3, 100));
+  if (pool.length === 0) return [];
+
+  const categoryById = new Map(
+    (
+      await prisma.manufacturerProduct.findMany({
+        where: { id: { in: pool.map((p) => p.id) } },
+        select: { id: true, category: true },
+      })
+    ).map((p) => [p.id, p.category]),
+  );
+
+  const anchorCategory = categoryById.get(pool[0]!.id) ?? null;
+
+  return pool
+    .filter((hit) => categoryById.get(hit.id) === anchorCategory && hit.score >= SIMILARITY_SCORE_FLOOR)
+    .slice(0, limit);
+}
