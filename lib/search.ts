@@ -26,7 +26,16 @@ export async function embedImageBase64(base64: string): Promise<number[]> {
     headers: embedderHeaders(),
     body: form,
   });
-  if (!res.ok) throw new Error(`embedder image failed: ${res.status}`);
+  if (!res.ok) {
+    // Surface a message a customer/retailer can act on, not the raw HTTP
+    // status — "embedder image failed: 422" meant nothing to them. 422 is the
+    // embedder rejecting the file itself (corrupt/unreadable/wrong format);
+    // anything else is treated as the service being temporarily unavailable.
+    if (res.status === 422) {
+      throw new Error("We couldn't read that photo. Try a clearer image in JPG or PNG format.");
+    }
+    throw new Error('Visual search is temporarily unavailable. Please try again in a moment.');
+  }
   const json = (await res.json()) as { embedding: number[] };
   return json.embedding;
 }
