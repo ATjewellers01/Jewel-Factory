@@ -17,9 +17,13 @@ const FALLBACK_STORE_LOGO = '/storeRe-logo.avif';
 // Top navbar — the Retailer's day-to-day browsing/discovery actions, always
 // visible. The full label always shows, at every screen width (no shortLabel
 // abbreviation) — new users need the whole name to know what an icon does.
+// mobileBreakLines: below `sm`, the label renders as these lines stacked
+// (falls back to the single `label` string above `sm`) — an explicit break
+// point instead of a guessed max-width, so "Search Similar Design" always
+// wraps as "Search" / "Similar Design", never a 3rd line.
 const TOP_NAV = [
-  { label: 'Home', href: '/store/home', icon: Home },
-  { label: 'Search Similar Design', href: '/store/similar-search', icon: Search },
+  { label: 'Home', href: '/store/home', icon: Home, mobileBreakLines: undefined as string[] | undefined },
+  { label: 'Search Similar Design', href: '/store/similar-search', icon: Search, mobileBreakLines: ['Search', 'Similar Design'] },
 ];
 
 // Dashboard drawer — operations/admin/account pages, opened via the "Dashboard" button.
@@ -108,24 +112,26 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
               icon does; the bar scrolls horizontally on the narrowest phones
               rather than clipping or abbreviating a label. */}
           <nav className="ml-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto sm:ml-2 sm:flex-initial" aria-label="Primary navigation">
-            {TOP_NAV.map(({ label, href, icon: Icon }) => {
+            {TOP_NAV.map(({ label, href, icon: Icon, mobileBreakLines }) => {
               const active = isActive(href);
               return (
                 <Link
                   key={href}
                   href={href}
                   aria-current={active ? 'page' : undefined}
-                  className={`flex h-9 shrink items-center justify-center gap-1 rounded-full px-2 text-[12px] font-medium transition-colors sm:h-10 sm:shrink-0 sm:gap-2 sm:px-2.5 sm:text-[13px] lg:px-4 ${active ? 'bg-[#c99d37] text-white shadow-[0_5px_16px_rgba(174,127,30,0.18)]' : 'text-[#5f5750] hover:bg-[#f3efe8] hover:text-[#26221e]'}`}
+                  className={`flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 text-[12px] font-medium transition-colors sm:h-10 sm:gap-2 sm:px-2.5 sm:text-[13px] lg:px-4 ${active ? 'bg-[#c99d37] text-white shadow-[0_5px_16px_rgba(174,127,30,0.18)]' : 'text-[#5f5750] hover:bg-[#f3efe8] hover:text-[#26221e]'}`}
                 >
                   <Icon className="h-4 w-4 shrink-0 lg:h-4 lg:w-4" />
-                  {/* Below `sm`, a multi-word label wraps onto its own two
-                      lines ("Search" / "Similar Design") instead of forcing
-                      the pill wide enough to fit one line — that pushed the
-                      other nav items into a cramped horizontal scroll. The
-                      Link itself must be allowed to shrink (not shrink-0)
-                      below `sm`, or the flex box never gets narrow enough
-                      to force the wrap in the first place. */}
-                  <span className="min-w-0 max-w-18 text-center leading-tight sm:max-w-none sm:whitespace-nowrap">{label}</span>
+                  {mobileBreakLines ? (
+                    // Explicit break point (not a guessed max-width) so
+                    // "Search Similar Design" always wraps as exactly two
+                    // lines — "Search" / "Similar Design" — below `sm`,
+                    // and as one line above it.
+                    <span className="text-center leading-tight sm:hidden">
+                      {mobileBreakLines.map((line, i) => <span key={i} className="block">{line}</span>)}
+                    </span>
+                  ) : null}
+                  <span className={mobileBreakLines ? 'hidden sm:inline' : undefined}>{label}</span>
                 </Link>
               );
             })}
