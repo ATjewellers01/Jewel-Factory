@@ -251,8 +251,8 @@ export default function StoreRegisterPage() {
                       <FieldError errors={toFieldErrors(fieldErrors.mobileNumber)} />
                     </div>
                   </div>
-                  <label className={labelClass}>Business email
-                    <Input type="email" autoComplete="email" inputMode="email" placeholder="Used to sign in" value={form.email} onChange={set('email')} className={fieldClass} />
+                  <label className={labelClass}>Business email <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
+                    <Input type="email" autoComplete="email" inputMode="email" placeholder="Used to sign in (optional)" value={form.email} onChange={set('email')} className={fieldClass} />
                   </label>
                   <FieldError errors={toFieldErrors(fieldErrors.email)} />
                   {/* With an email the username is the email; without one the mobile

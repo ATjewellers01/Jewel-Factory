@@ -227,6 +227,7 @@ export default function StoreCatalogueOrdersPage() {
             <div key={o.key} className="rounded-xl border bg-card overflow-hidden">
               <button type="button" onClick={() => setOpen(open === o.key ? null : o.key)} className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30 sm:grid sm:grid-cols-[1fr_9rem_11rem]">
                 <div className="min-w-0">
+                  <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:hidden">Order ID</span>
                   <p className="text-sm font-medium">
                     {o.orderNumber}
                     {/* Type badge: hidden for a self-placed Restock order (redundant
@@ -242,11 +243,21 @@ export default function StoreCatalogueOrdersPage() {
                   </p>
                   <p className="text-xs text-muted-foreground">{o.meta}</p>
                 </div>
-                <p className="text-xs text-muted-foreground sm:text-sm">{new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                <div className="flex items-center gap-2 sm:justify-end">
-                  {o.needsApproval && <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-semibold text-yellow-800">Needs approval</span>}
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span>
-                  {open === o.key ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                <div>
+                  {/* Mobile has no column-heading row above (the row itself
+                      isn't a grid there — it wraps), so each value carries
+                      its own tiny label inline instead of relying on a
+                      heading that isn't visible at this width. */}
+                  <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:hidden">Order Date</span>
+                  <p className="text-xs text-muted-foreground sm:text-sm">{new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                </div>
+                <div className="flex flex-col items-start gap-1 sm:items-end">
+                  <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:hidden">Status</span>
+                  <div className="flex items-center gap-2">
+                    {o.needsApproval && <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-[10px] font-semibold text-yellow-800">Needs approval</span>}
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span>
+                    {open === o.key ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                  </div>
                 </div>
               </button>
               {open === o.key && o.source === 'custom' && o.custom && (

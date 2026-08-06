@@ -85,13 +85,24 @@ export function BranchOrderList({ kind, endpoint }: { kind: BranchOrderKind; end
           <div key={o.id} className="rounded-xl border bg-card overflow-hidden">
             <button onClick={() => setOpen(open === o.id ? null : o.id)} className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30 sm:grid sm:grid-cols-[1fr_9rem_11rem]">
               <div className="min-w-0">
+                {/* Mobile has no column-heading row visible above (it's
+                    sm:grid-only, and this row wraps rather than being a
+                    grid below sm), so each value carries its own tiny
+                    label inline instead. */}
+                <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:hidden">Order ID</span>
                 <p className="text-sm font-medium">{o.orderNumber}</p>
                 <p className="text-xs text-muted-foreground">{o.totalItems ?? 0} item(s)</p>
               </div>
-              <p className="text-xs text-muted-foreground sm:text-sm">{new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-              <div className="flex items-center gap-2 sm:justify-end">
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${st.cls}`}>{st.label}</span>
-                {open === o.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+              <div>
+                <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:hidden">Order Date</span>
+                <p className="text-xs text-muted-foreground sm:text-sm">{new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+              </div>
+              <div className="flex flex-col items-start gap-1 sm:items-end">
+                <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:hidden">Status</span>
+                <div className="flex items-center gap-2">
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${st.cls}`}>{st.label}</span>
+                  {open === o.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                </div>
               </div>
             </button>
             {open === o.id && (
