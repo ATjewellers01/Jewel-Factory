@@ -16,6 +16,28 @@ type Product = {
 
 const primaryImage = (p: Product) => (p.images.find((i) => i.isPrimary) ?? p.images[0])?.secureUrl ?? null;
 
+/** Round-robins products across categories (one per category per pass) so the
+ *  strip mixes the catalogue instead of running every design of one category
+ *  before moving to the next. */
+function interleaveByCategory(products: Product[]): Product[] {
+  const byCategory = new Map<string, Product[]>();
+  for (const p of products) {
+    const key = p.category ?? '';
+    const list = byCategory.get(key);
+    if (list) list.push(p); else byCategory.set(key, [p]);
+  }
+  const queues = [...byCategory.values()];
+  const result: Product[] = [];
+  let remaining = products.length;
+  while (remaining > 0) {
+    for (const queue of queues) {
+      const next = queue.shift();
+      if (next) { result.push(next); remaining--; }
+    }
+  }
+  return result;
+}
+
 /**
  * Retailer Admin home — a browsing entry point, distinct from /store/dashboard
  * (which is operations: approvals, order counts).
@@ -33,7 +55,10 @@ export default function StoreHomePage() {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const router = useRouter();
 
-  const products = useMemo(() => (data ?? []).filter((p) => primaryImage(p)), [data]);
+  const rawProducts = useMemo(() => (data ?? []).filter((p) => primaryImage(p)), [data]);
+  // Interleave categories round-robin so the strip doesn't run several designs
+  // from the same category back-to-back before moving to the next one.
+  const products = useMemo(() => interleaveByCategory(rawProducts), [rawProducts]);
 
   // One representative image per category, for the mosaic tiles.
   const coverByCategory = useMemo(() => {

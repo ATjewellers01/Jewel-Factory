@@ -312,6 +312,7 @@ model ManufacturerProduct {
   embedding   ManufacturerProductEmbedding?
   b2bItems    B2bOrderItem[]
   favorites   FavoriteProduct[]
+  cartItems   CartItem[]
 
   @@index([status])
   @@index([category])
@@ -768,6 +769,50 @@ model FavoriteProduct {
 }
 
 enum FavoriteKind {
+  KIOSK
+  RESTOCK
+}
+
+// Server-backed cart, so the same account sees the same cart on every
+// device/browser (previously localStorage-only — mobile and desktop showed
+// different carts for the same login). Scoped the same way as
+// FavoriteProduct: (storeId, branchId, kind). branchId is null for the
+// Retailer's own B2B cart; a Store Manager's kind is KIOSK or RESTOCK, mirroring
+// their separate favorite lists — the two carts must never merge.
+model CartItem {
+  id                    String              @id @default(uuid())
+  storeId               String              @map("store_id")
+  branchId              String?             @map("branch_id")
+  kind                  CartKind            @default(B2B)
+  manufacturerProductId String              @map("manufacturer_product_id")
+  manufacturerProduct   ManufacturerProduct @relation(fields: [manufacturerProductId], references: [id], onDelete: Cascade)
+  quantity              Int                 @default(1)
+  purity                String?
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+
+  @@unique([storeId, branchId, kind, manufacturerProductId])
+  @@index([storeId, branchId, kind])
+  @@map("cart_items")
+}
+
+// One free-text note per cart (not per item) — the "Notes for manufacturer" /
+// "Remark" field shown alongside the cart list, carried through to the order
+// on placement.
+model CartNote {
+  id        String   @id @default(uuid())
+  storeId   String   @map("store_id")
+  branchId  String?  @map("branch_id")
+  kind      CartKind @default(B2B)
+  note      String   @default("")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([storeId, branchId, kind])
+  @@map("cart_notes")
+}
+
+enum CartKind {
+  B2B
   KIOSK
   RESTOCK
 }

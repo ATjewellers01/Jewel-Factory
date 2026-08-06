@@ -2,44 +2,94 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-const KEY = 'jf_b2b_cart';
+import { apiPost, apiSend } from './use-api';
+
+const BASE = '/api/store/cart';
 
 export type B2bCartItem = { productId: string; name: string; designNumber: string; imageUrl?: string; quantity: number; purity?: string };
 
-function read(): B2bCartItem[] {
-  if (typeof window === 'undefined') return [];
-  try { return JSON.parse(localStorage.getItem(KEY) ?? '[]'); } catch { return []; }
-}
-function write(items: B2bCartItem[]) {
-  localStorage.setItem(KEY, JSON.stringify(items));
-  window.dispatchEvent(new Event('jf_b2b_cart_change'));
+type CartRow = {
+  manufacturerProductId: string;
+  quantity: number;
+  purity: string | null;
+  manufacturerProduct: {
+    designNumber: string;
+    images: { secureUrl: string; isPrimary: boolean }[];
+  };
+};
+
+function toItem(row: CartRow): B2bCartItem {
+  const img = row.manufacturerProduct.images.find((i) => i.isPrimary) ?? row.manufacturerProduct.images[0];
+  return {
+    productId: row.manufacturerProductId,
+    name: row.manufacturerProduct.designNumber,
+    designNumber: row.manufacturerProduct.designNumber,
+    imageUrl: img?.secureUrl,
+    quantity: row.quantity,
+    purity: row.purity ?? undefined,
+  };
 }
 
+/**
+ * Server-backed B2B (Retailer Admin) cart — so the same account sees the same
+ * cart on every device/browser (previously localStorage-only, which showed a
+ * different cart on mobile vs desktop for the same login).
+ */
 export function useB2bCart() {
   const [items, setItems] = useState<B2bCartItem[]>([]);
-  useEffect(() => {
-    setItems(read());
-    const h = () => setItems(read());
-    window.addEventListener('jf_b2b_cart_change', h);
-    return () => window.removeEventListener('jf_b2b_cart_change', h);
+  const [note, setNoteState] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(BASE, { cache: 'no-store', credentials: 'same-origin' });
+      const json = (await res.json()) as { data?: { items: CartRow[]; note: string } };
+      setItems((json.data?.items ?? []).map(toItem));
+      setNoteState(json.data?.note ?? '');
+    } catch { /* non-critical */ } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { void load(); }, [load]);
 
   const add = useCallback((item: Omit<B2bCartItem, 'quantity'>, qty = 1) => {
-    const cur = read();
-    const found = cur.find((i) => i.productId === item.productId);
-    if (found) found.quantity += qty; else cur.push({ ...item, quantity: qty });
-    write(cur);
-  }, []);
+    setItems((cur) => {
+      const found = cur.find((i) => i.productId === item.productId);
+      if (found) return cur.map((i) => (i.productId === item.productId ? { ...i, quantity: i.quantity + qty } : i));
+      return [...cur, { ...item, quantity: qty }];
+    });
+    void apiPost(`${BASE}/${item.productId}`, { quantity: qty }).catch(() => void load());
+  }, [load]);
+
   const setQty = useCallback((productId: string, qty: number) => {
-    const cur = read().map((i) => (i.productId === productId ? { ...i, quantity: Math.max(1, qty) } : i));
-    write(cur);
-  }, []);
+    const quantity = Math.max(1, qty);
+    setItems((cur) => cur.map((i) => (i.productId === productId ? { ...i, quantity } : i)));
+    void apiSend('PATCH', `${BASE}/${productId}`, { quantity }).catch(() => void load());
+  }, [load]);
+
   const setPurity = useCallback((productId: string, purity: string) => {
-    write(read().map((i) => (i.productId === productId ? { ...i, purity } : i)));
-  }, []);
-  const remove = useCallback((productId: string) => write(read().filter((i) => i.productId !== productId)), []);
-  const clear = useCallback(() => write([]), []);
+    setItems((cur) => cur.map((i) => (i.productId === productId ? { ...i, purity } : i)));
+    void apiSend('PATCH', `${BASE}/${productId}/purity`, { purity }).catch(() => void load());
+  }, [load]);
+
+  const remove = useCallback((productId: string) => {
+    setItems((cur) => cur.filter((i) => i.productId !== productId));
+    void apiSend('DELETE', `${BASE}/${productId}`).catch(() => void load());
+  }, [load]);
+
+  const clear = useCallback(() => {
+    setItems([]);
+    setNoteState('');
+    void apiSend('DELETE', BASE).catch(() => void load());
+  }, [load]);
+
+  const setNote = useCallback((value: string) => {
+    setNoteState(value);
+    void apiSend('PUT', `${BASE}/note`, { note: value }).catch(() => void load());
+  }, [load]);
 
   const count = items.reduce((s, i) => s + i.quantity, 0);
-  return { items, add, setQty, setPurity, remove, clear, count };
+  return { items, note, setNote, add, setQty, setPurity, remove, clear, count, loading };
 }

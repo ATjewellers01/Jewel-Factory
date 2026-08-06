@@ -219,10 +219,10 @@ export function CatalogOrderPanel({
           </div>
           <div className="flex items-center gap-2">
             {historyAction}
-            <button onClick={() => setShowFavorites(true)} className="inline-flex items-center gap-2 rounded-full border border-white/25 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10">
+            <button onClick={() => { setShowFavorites(true); setShowCart(false); }} className="inline-flex items-center gap-2 rounded-full border border-white/25 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10">
               <Heart className="h-4 w-4" /> Favorites ({favorites.count})
             </button>
-            {showPopularity ? <button onClick={() => setShowCart(true)} className="metal-sheen inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#17120b] shadow-lg shadow-black/20"><ShoppingCart className="h-4 w-4" /> Order ({count})</button> : null}
+            {showPopularity ? <button onClick={() => { setShowCart(true); setShowFavorites(false); }} className="metal-sheen inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-[#17120b] shadow-lg shadow-black/20"><ShoppingCart className="h-4 w-4" /> Order ({count})</button> : null}
           </div>
         </div>
       </section>

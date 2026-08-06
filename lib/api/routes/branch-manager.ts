@@ -22,6 +22,7 @@ import {
 import { listOrderMessages, addOrderMessage } from '@/lib/db/messages';
 import { formatStoreAddress } from '@/lib/db/stores';
 import { listFavorites, addFavorite, removeFavorite } from '@/lib/db/favorites';
+import { listCart, addToCart, setCartQuantity, setCartItemPurity, clearCart, getCartNote, setCartNote } from '@/lib/db/cart';
 import { embedImageBase64, searchByVector } from '@/lib/search';
 import { sendData, sendError } from '../envelope';
 import { branchManagerGuard, type AppEnv } from '../guards';
@@ -151,6 +152,64 @@ branchManagerRoutes.post('/favorites/:productId', branchManagerGuard, async (c) 
 
 branchManagerRoutes.delete('/favorites/:productId', branchManagerGuard, async (c) => {
   await removeFavorite(c.get('storeId'), c.get('branchId'), c.req.param('productId'), favoriteKind(c));
+  return sendData(c, { ok: true });
+});
+
+// ── Cart (this Store Manager's own — scoped by branchId + kind) ───────────────
+// ?kind=KIOSK|RESTOCK selects which cart; Kiosk (customer orders) and Restock
+// (the manager's own reordering) must never share a cart.
+function cartKind(c: Context<AppEnv>): 'KIOSK' | 'RESTOCK' {
+  return c.req.query('kind') === 'RESTOCK' ? 'RESTOCK' : 'KIOSK';
+}
+
+branchManagerRoutes.get('/cart', branchManagerGuard, async (c) => {
+  const kind = cartKind(c);
+  const [items, note] = await Promise.all([
+    listCart(c.get('storeId'), c.get('branchId'), kind),
+    getCartNote(c.get('storeId'), c.get('branchId'), kind),
+  ]);
+  return sendData(c, { items, note });
+});
+
+const BmCartAddBody = z.object({ quantity: z.number().int().positive().optional() });
+
+branchManagerRoutes.post('/cart/:productId', branchManagerGuard, jsonValidator(BmCartAddBody), async (c) => {
+  const { quantity } = c.req.valid('json');
+  await addToCart(c.get('storeId'), c.get('branchId'), cartKind(c), c.req.param('productId'), quantity ?? 1);
+  return sendData(c, { ok: true }, 201);
+});
+
+const BmCartQtyBody = z.object({ quantity: z.number().int().min(0) });
+
+branchManagerRoutes.patch('/cart/:productId', branchManagerGuard, jsonValidator(BmCartQtyBody), async (c) => {
+  const { quantity } = c.req.valid('json');
+  await setCartQuantity(c.get('storeId'), c.get('branchId'), cartKind(c), c.req.param('productId'), quantity);
+  return sendData(c, { ok: true });
+});
+
+const BmCartPurityBody = z.object({ purity: z.string().max(40) });
+
+branchManagerRoutes.patch('/cart/:productId/purity', branchManagerGuard, jsonValidator(BmCartPurityBody), async (c) => {
+  const { purity } = c.req.valid('json');
+  await setCartItemPurity(c.get('storeId'), c.get('branchId'), cartKind(c), c.req.param('productId'), purity);
+  return sendData(c, { ok: true });
+});
+
+branchManagerRoutes.delete('/cart/:productId', branchManagerGuard, async (c) => {
+  await setCartQuantity(c.get('storeId'), c.get('branchId'), cartKind(c), c.req.param('productId'), 0);
+  return sendData(c, { ok: true });
+});
+
+branchManagerRoutes.delete('/cart', branchManagerGuard, async (c) => {
+  await clearCart(c.get('storeId'), c.get('branchId'), cartKind(c));
+  return sendData(c, { ok: true });
+});
+
+const BmCartNoteBody = z.object({ note: z.string().max(2000) });
+
+branchManagerRoutes.put('/cart/note', branchManagerGuard, jsonValidator(BmCartNoteBody), async (c) => {
+  const { note } = c.req.valid('json');
+  await setCartNote(c.get('storeId'), c.get('branchId'), cartKind(c), note);
   return sendData(c, { ok: true });
 });
 

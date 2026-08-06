@@ -7,6 +7,7 @@ import { listActiveProducts, getActiveProductByDesignOrId } from '@/lib/db/manuf
 import { placeB2bOrder } from '@/lib/db/orders';
 import { formatStoreAddress } from '@/lib/db/stores';
 import { listFavorites, addFavorite, removeFavorite } from '@/lib/db/favorites';
+import { listCart, addToCart, setCartQuantity, setCartItemPurity, clearCart, getCartNote, setCartNote } from '@/lib/db/cart';
 import { sendData, sendError } from '../envelope';
 import { storeGuard, type AppEnv } from '../guards';
 
@@ -48,6 +49,57 @@ storeCatalogRoutes.post('/favorites/:productId', storeGuard, async (c) => {
 
 storeCatalogRoutes.delete('/favorites/:productId', storeGuard, async (c) => {
   await removeFavorite(c.get('storeId'), null, c.req.param('productId'));
+  return sendData(c, { ok: true });
+});
+
+// ── Cart (Retailer's own B2B/restock cart — branchId is always null here) ─────
+storeCatalogRoutes.get('/cart', storeGuard, async (c) => {
+  const [items, note] = await Promise.all([
+    listCart(c.get('storeId'), null, 'B2B'),
+    getCartNote(c.get('storeId'), null, 'B2B'),
+  ]);
+  return sendData(c, { items, note });
+});
+
+const CartAddBody = z.object({ quantity: z.number().int().positive().optional() });
+
+storeCatalogRoutes.post('/cart/:productId', storeGuard, jsonValidator(CartAddBody), async (c) => {
+  const { quantity } = c.req.valid('json');
+  await addToCart(c.get('storeId'), null, 'B2B', c.req.param('productId'), quantity ?? 1);
+  return sendData(c, { ok: true }, 201);
+});
+
+const CartQtyBody = z.object({ quantity: z.number().int().min(0) });
+
+storeCatalogRoutes.patch('/cart/:productId', storeGuard, jsonValidator(CartQtyBody), async (c) => {
+  const { quantity } = c.req.valid('json');
+  await setCartQuantity(c.get('storeId'), null, 'B2B', c.req.param('productId'), quantity);
+  return sendData(c, { ok: true });
+});
+
+const CartPurityBody = z.object({ purity: z.string().max(40) });
+
+storeCatalogRoutes.patch('/cart/:productId/purity', storeGuard, jsonValidator(CartPurityBody), async (c) => {
+  const { purity } = c.req.valid('json');
+  await setCartItemPurity(c.get('storeId'), null, 'B2B', c.req.param('productId'), purity);
+  return sendData(c, { ok: true });
+});
+
+storeCatalogRoutes.delete('/cart/:productId', storeGuard, async (c) => {
+  await setCartQuantity(c.get('storeId'), null, 'B2B', c.req.param('productId'), 0);
+  return sendData(c, { ok: true });
+});
+
+storeCatalogRoutes.delete('/cart', storeGuard, async (c) => {
+  await clearCart(c.get('storeId'), null, 'B2B');
+  return sendData(c, { ok: true });
+});
+
+const CartNoteBody = z.object({ note: z.string().max(2000) });
+
+storeCatalogRoutes.put('/cart/note', storeGuard, jsonValidator(CartNoteBody), async (c) => {
+  const { note } = c.req.valid('json');
+  await setCartNote(c.get('storeId'), null, 'B2B', note);
   return sendData(c, { ok: true });
 });
 

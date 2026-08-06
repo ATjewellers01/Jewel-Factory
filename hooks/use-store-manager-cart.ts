@@ -1,6 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+
+import { apiPost, apiSend } from './use-api';
 
 export type StoreManagerCartItem = {
   productId: string;
@@ -11,91 +13,99 @@ export type StoreManagerCartItem = {
   purity?: string;
 };
 
-type StoredCart = { items: StoreManagerCartItem[]; note: string };
+type CartRow = {
+  manufacturerProductId: string;
+  quantity: number;
+  purity: string | null;
+  manufacturerProduct: {
+    designNumber: string;
+    images: { secureUrl: string; isPrimary: boolean }[];
+  };
+};
 
-const EVENT = 'jf_store_manager_cart_change';
-
-function cartKey(kind: 'kiosk' | 'restock', branchId: string) {
-  return `jf_store_manager_${kind}_cart:${branchId}`;
-}
-
-function read(key: string): StoredCart {
-  if (typeof window === 'undefined') return { items: [], note: '' };
-  try {
-    const stored = JSON.parse(localStorage.getItem(key) ?? 'null') as Partial<StoredCart> | null;
-    return {
-      items: Array.isArray(stored?.items) ? stored.items : [],
-      note: typeof stored?.note === 'string' ? stored.note : '',
-    };
-  } catch {
-    return { items: [], note: '' };
-  }
-}
-
-function write(key: string, value: StoredCart) {
-  localStorage.setItem(key, JSON.stringify(value));
-  window.dispatchEvent(new CustomEvent(EVENT, { detail: key }));
+function toItem(row: CartRow): StoreManagerCartItem {
+  const img = row.manufacturerProduct.images.find((i) => i.isPrimary) ?? row.manufacturerProduct.images[0];
+  return {
+    productId: row.manufacturerProductId,
+    name: row.manufacturerProduct.designNumber,
+    designNumber: row.manufacturerProduct.designNumber,
+    imageUrl: img?.secureUrl,
+    quantity: row.quantity,
+    purity: row.purity ?? undefined,
+  };
 }
 
 /**
- * Browser-persisted, branch-scoped order cart for the Store Manager portal.
- * Kiosk/Search and Restock intentionally use different keys: customer orders
- * must never mix with PIN-protected stock orders.
+ * Server-backed, branch-scoped order cart for the Store Manager portal — so
+ * the same login sees the same cart on every device/browser (previously
+ * localStorage-only). Kiosk and Restock intentionally use separate carts
+ * (?kind=KIOSK|RESTOCK): customer orders must never mix with PIN-protected
+ * stock orders.
  */
 function useStoreManagerCart(kind: 'kiosk' | 'restock', branchId: string) {
-  const key = useMemo(() => cartKey(kind, branchId), [branchId, kind]);
-  const [cart, setCart] = useState<StoredCart>({ items: [], note: '' });
+  const kindParam = kind === 'restock' ? 'RESTOCK' : 'KIOSK';
+  const listUrl = `/api/branch-manager/cart?kind=${kindParam}`;
+  const itemUrl = (productId: string) => `/api/branch-manager/cart/${productId}?kind=${kindParam}`;
+  const purityUrl = (productId: string) => `/api/branch-manager/cart/${productId}/purity?kind=${kindParam}`;
+  const noteUrl = `/api/branch-manager/cart/note?kind=${kindParam}`;
 
-  useEffect(() => {
-    const sync = () => setCart(read(key));
-    sync();
-    const onChange = (event: Event) => {
-      if (!(event instanceof CustomEvent) || event.detail === key) sync();
-    };
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === key) sync();
-    };
-    window.addEventListener(EVENT, onChange);
-    window.addEventListener('storage', onStorage);
-    return () => {
-      window.removeEventListener(EVENT, onChange);
-      window.removeEventListener('storage', onStorage);
-    };
-  }, [key]);
+  const [items, setItems] = useState<StoreManagerCartItem[]>([]);
+  const [note, setNoteState] = useState('');
+
+  const load = useCallback(async () => {
+    if (!branchId) return;
+    try {
+      const res = await fetch(listUrl, { cache: 'no-store', credentials: 'same-origin' });
+      const json = (await res.json()) as { data?: { items: CartRow[]; note: string } };
+      setItems((json.data?.items ?? []).map(toItem));
+      setNoteState(json.data?.note ?? '');
+    } catch { /* non-critical */ }
+  }, [listUrl, branchId]);
+
+  useEffect(() => { void load(); }, [load]);
 
   const add = useCallback((item: Omit<StoreManagerCartItem, 'quantity'>, quantity = 1) => {
-    const current = read(key);
-    const existing = current.items.find((line) => line.productId === item.productId);
-    const items = existing
-      ? current.items.map((line) => line.productId === item.productId
-        ? { ...line, ...item, quantity: line.quantity + quantity }
-        : line)
-      : [...current.items, { ...item, quantity }];
-    write(key, { ...current, items });
-  }, [key]);
+    setItems((cur) => {
+      const found = cur.find((line) => line.productId === item.productId);
+      if (found) return cur.map((line) => (line.productId === item.productId ? { ...line, ...item, quantity: line.quantity + quantity } : line));
+      return [...cur, { ...item, quantity }];
+    });
+    void apiPost(itemUrl(item.productId), { quantity }).catch(() => void load());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load, kindParam]);
 
   const setQuantity = useCallback((productId: string, quantity: number) => {
-    const current = read(key);
-    const items = quantity <= 0
-      ? current.items.filter((line) => line.productId !== productId)
-      : current.items.map((line) => line.productId === productId ? { ...line, quantity } : line);
-    write(key, { ...current, items });
-  }, [key]);
+    if (quantity <= 0) {
+      setItems((cur) => cur.filter((line) => line.productId !== productId));
+      void apiSend('DELETE', itemUrl(productId)).catch(() => void load());
+      return;
+    }
+    setItems((cur) => cur.map((line) => (line.productId === productId ? { ...line, quantity } : line)));
+    void apiSend('PATCH', itemUrl(productId), { quantity }).catch(() => void load());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load, kindParam]);
 
   const setItemPurity = useCallback((productId: string, purity: string) => {
-    const current = read(key);
-    write(key, { ...current, items: current.items.map((line) => line.productId === productId ? { ...line, purity } : line) });
-  }, [key]);
+    setItems((cur) => cur.map((line) => (line.productId === productId ? { ...line, purity } : line)));
+    void apiSend('PATCH', purityUrl(productId), { purity }).catch(() => void load());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load, kindParam]);
 
-  const setNote = useCallback((note: string) => {
-    write(key, { ...read(key), note });
-  }, [key]);
+  const setNote = useCallback((value: string) => {
+    setNoteState(value);
+    void apiSend('PUT', noteUrl, { note: value }).catch(() => void load());
+  }, [noteUrl, load]);
 
-  const clear = useCallback(() => write(key, { items: [], note: '' }), [key]);
-  const count = cart.items.reduce((total, line) => total + line.quantity, 0);
+  const clear = useCallback(() => {
+    setItems([]);
+    setNoteState('');
+    void apiSend('DELETE', listUrl).catch(() => void load());
+  }, [listUrl, load]);
+
+  const count = items.reduce((total, line) => total + line.quantity, 0);
 
   return {
-    items: cart.items, note: cart.note,
+    items, note,
     count, add, setQuantity, setItemPurity, setNote, clear,
   };
 }

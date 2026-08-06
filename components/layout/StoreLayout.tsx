@@ -88,7 +88,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
       <link rel="icon" href={store.logoUrl || FALLBACK_STORE_LOGO} />
 
       <header className="sticky top-0 z-30 border-b border-[#e8e3da] bg-white/90 backdrop-blur-xl">
-        <div className="flex h-[66px] items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <div className="flex h-[66px] items-center gap-1.5 px-2.5 sm:gap-3 sm:px-6 lg:px-8">
           <Link href="/store/manufacturer-catalog" className="flex min-w-0 shrink-0 items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -107,7 +107,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
               visible at every screen width so new users can tell what each
               icon does; the bar scrolls horizontally on the narrowest phones
               rather than clipping or abbreviating a label. */}
-          <nav className="ml-1 flex min-w-0 items-center gap-1 overflow-x-auto sm:ml-2" aria-label="Primary navigation">
+          <nav className="ml-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto sm:ml-2 sm:flex-initial" aria-label="Primary navigation">
             {TOP_NAV.map(({ label, href, icon: Icon }) => {
               const active = isActive(href);
               return (
@@ -115,9 +115,9 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
                   key={href}
                   href={href}
                   aria-current={active ? 'page' : undefined}
-                  className={`flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[13px] font-medium transition-colors sm:gap-2 lg:px-4 ${active ? 'bg-[#c99d37] text-white shadow-[0_5px_16px_rgba(174,127,30,0.18)]' : 'text-[#5f5750] hover:bg-[#f3efe8] hover:text-[#26221e]'}`}
+                  className={`flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 text-[12px] font-medium transition-colors sm:h-10 sm:gap-2 sm:px-2.5 sm:text-[13px] lg:px-4 ${active ? 'bg-[#c99d37] text-white shadow-[0_5px_16px_rgba(174,127,30,0.18)]' : 'text-[#5f5750] hover:bg-[#f3efe8] hover:text-[#26221e]'}`}
                 >
-                  <Icon className="h-[18px] w-[18px] shrink-0 lg:h-4 lg:w-4" />
+                  <Icon className="h-4 w-4 shrink-0 lg:h-4 lg:w-4" />
                   <span>{label}</span>
                 </Link>
               );
@@ -132,9 +132,9 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
               onClick={() => setDrawerOpen(true)}
               aria-haspopup="dialog"
               aria-expanded={drawerOpen}
-              className="flex h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#e3ddd3] bg-white px-2.5 text-[13px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea] sm:gap-2 lg:px-4"
+              className="flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-[#e3ddd3] bg-white px-2 text-[12px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea] sm:h-10 sm:gap-2 sm:px-2.5 sm:text-[13px] lg:px-4"
             >
-              <LayoutDashboard className="h-[18px] w-[18px] shrink-0 lg:h-4 lg:w-4" />
+              <LayoutDashboard className="h-4 w-4 shrink-0 lg:h-4 lg:w-4" />
               <span>Dashboard</span>
             </button>
           </div>

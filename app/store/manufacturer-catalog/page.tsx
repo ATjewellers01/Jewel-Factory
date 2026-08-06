@@ -139,46 +139,50 @@ function CatalogBrowse() {
           <p className="mt-0.5 text-sm text-muted-foreground">Browse designs and place a restock order.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setShowFavorites((v) => !v)}>
+          <Button variant="outline" onClick={() => { setShowFavorites((v) => !v); setShowCart(false); }}>
             <Heart className="mr-1.5 h-4 w-4" />Favorites ({favorites.count})
           </Button>
-          <Button variant="outline" onClick={() => setShowCart((v) => !v)}>
+          <Button variant="outline" onClick={() => { setShowCart((v) => !v); setShowFavorites(false); }}>
             <ShoppingCart className="mr-1.5 h-4 w-4" />Cart ({cart.count})
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <Input placeholder="Search designs…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-        <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={category} onChange={(e) => { setCategory(e.target.value); setSubCategory(''); }}>
-          <option value="">All categories</option>
-          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        {subCategoriesFor(category).length > 0 && (
-          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={subCategory} onChange={(e) => setSubCategory(e.target.value)}>
-            <option value="">All sub-categories</option>
-            {subCategoriesFor(category).map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        )}
-        {sizeOptions.length > 0 && (
-          <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={size} onChange={(e) => setSize(e.target.value)} aria-label="Filter by size">
-            <option value="">All sizes</option>
-            {sizeOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        )}
-        <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={sort} onChange={(e) => setSort(e.target.value as SortOption)} aria-label="Sort by">
-          {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-        {(category || subCategory || search || size || sort || weightRange) && (
-          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setSize(''); setWeightRange(null); setSort(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
-        )}
-        <ItemsPerRowControl value={cols} onChange={(v) => setCols(v as Cols)} min={2} max={4} />
-      </div>
+      {!showCart && !showFavorites && (
+        <>
+          <div className="flex flex-wrap gap-2">
+            <Input placeholder="Search designs…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
+            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={category} onChange={(e) => { setCategory(e.target.value); setSubCategory(''); }}>
+              <option value="">All categories</option>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            {subCategoriesFor(category).length > 0 && (
+              <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={subCategory} onChange={(e) => setSubCategory(e.target.value)}>
+                <option value="">All sub-categories</option>
+                {subCategoriesFor(category).map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            )}
+            {sizeOptions.length > 0 && (
+              <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={size} onChange={(e) => setSize(e.target.value)} aria-label="Filter by size">
+                <option value="">All sizes</option>
+                {sizeOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            )}
+            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={sort} onChange={(e) => setSort(e.target.value as SortOption)} aria-label="Sort by">
+              {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            {(category || subCategory || search || size || sort || weightRange) && (
+              <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setSize(''); setWeightRange(null); setSort(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+            )}
+            <ItemsPerRowControl value={cols} onChange={(v) => setCols(v as Cols)} min={2} max={4} />
+          </div>
 
-      {weightBounds && (
-        <div className="max-w-xs rounded-lg border bg-card p-3">
-          <WeightRangeSlider extent={weightBounds} value={weightRange} onChange={setWeightRange} />
-        </div>
+          {weightBounds && (
+            <div className="max-w-xs rounded-lg border bg-card p-3">
+              <WeightRangeSlider extent={weightBounds} value={weightRange} onChange={setWeightRange} />
+            </div>
+          )}
+        </>
       )}
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}

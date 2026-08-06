@@ -136,7 +136,7 @@ function ProductBlock({
 
   return (
     <article className="flex h-full min-h-0 flex-col bg-[#fdfcf9] sm:grid sm:grid-cols-[0.96fr_1.04fr]">
-      <div className="flex h-[62%] min-h-68 shrink-0 flex-col bg-[#ede5d8] p-1.5 sm:h-full sm:min-h-0 sm:border-r sm:border-[#d8c8aa]/55 sm:p-3.5 lg:p-4">
+      <div className="flex h-[50%] min-h-56 shrink-0 flex-col bg-[#ede5d8] p-1.5 sm:h-full sm:min-h-0 sm:border-r sm:border-[#d8c8aa]/55 sm:p-3.5 lg:p-4">
         <div className="relative min-h-0 flex-1 overflow-hidden rounded-[1.1rem] bg-white shadow-[inset_0_0_0_1px_rgba(122,91,39,0.08)]">
           {selectedImage ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -157,18 +157,18 @@ function ProductBlock({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col bg-[#fdfcf9] sm:h-full">
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-4 sm:px-5 sm:pb-5 sm:pt-6 md:px-6 lg:px-8 lg:pt-8">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3 pt-3 sm:px-5 sm:pb-5 sm:pt-6 md:px-6 lg:px-8 lg:pt-8">
           <div className="pr-8">
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#b48228] sm:text-xs">{product.category ?? 'Jewellery'}{product.subCategory ? ` · ${product.subCategory}` : ''}</p>
-            <h2 className="mt-1 font-display text-xl font-medium leading-tight text-[#211b16] sm:text-2xl md:text-3xl lg:text-4xl">Design {product.designNumber}</h2>
+            <h2 className="mt-0.5 font-display text-lg font-medium leading-tight text-[#211b16] sm:mt-1 sm:text-2xl md:text-3xl lg:text-4xl">Design {product.designNumber}</h2>
           </div>
-          <div className="mt-2.5 grid grid-cols-2 overflow-hidden rounded-xl border border-[#ded3c3] bg-white text-xs shadow-[0_5px_22px_rgba(75,54,28,0.04)] sm:mt-4 sm:text-sm">
+          <div className="mt-2 grid grid-cols-2 overflow-hidden rounded-xl border border-[#ded3c3] bg-white text-xs shadow-[0_5px_22px_rgba(75,54,28,0.04)] sm:mt-4 sm:text-sm">
             {product.purity ? <Spec label="Purity" value={product.purity} /> : null}
             {formattedWeight ? <Spec label="Weight" value={formattedWeight} /> : null}
             {product.size ? <Spec label="Size" value={product.size} /> : null}
             <Spec label="Category" value={`${product.category ?? '—'}${product.subCategory ? ` › ${product.subCategory}` : ''}`} wide={!product.size} />
           </div>
-          {product.description && product.description.trim().length >= 4 ? <p className="mt-2.5 text-xs leading-[1.15rem] text-[#6f665e] sm:mt-4 sm:text-sm md:leading-6 lg:text-base lg:leading-7">{product.description}</p> : null}
+          {product.description && product.description.trim().length >= 4 ? <p className="mt-2 text-xs leading-[1.15rem] text-[#6f665e] sm:mt-4 sm:text-sm md:leading-6 lg:text-base lg:leading-7">{product.description}</p> : null}
         </div>
 
         <footer className="shrink-0 border-t border-[#e7dfd3] bg-[#fdfcf9]/95 px-2 py-1.5 shadow-[0_-10px_28px_rgba(73,52,26,0.06)] backdrop-blur sm:px-5 sm:py-3 md:px-6 lg:px-8">
@@ -188,7 +188,7 @@ function ProductBlock({
 
 function Spec({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
   return (
-    <div className={`min-w-0 border-b border-r border-[#e7dfd3] px-3 py-2.5 last:border-b-0 lg:px-4 lg:py-3 ${wide ? 'col-span-2' : ''}`}>
+    <div className={`min-w-0 border-b border-r border-[#e7dfd3] px-3 py-2 last:border-b-0 sm:py-2.5 lg:px-4 lg:py-3 ${wide ? 'col-span-2' : ''}`}>
       <span className="block text-[9px] font-semibold uppercase tracking-[0.15em] text-[#978b7f] sm:text-[10px]">{label}</span>
       <span className="mt-1 block break-words font-medium leading-snug text-[#29231e]">{value}</span>
     </div>
