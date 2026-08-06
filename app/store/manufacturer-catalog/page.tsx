@@ -25,14 +25,18 @@ type Product = { id: string; designNumber: string; name?: string | null; categor
 // Sales info across ALL of this retailer's branches, keyed by manufacturerProductId.
 type SalesInfo = { stars: number; unitsLast30d: number };
 
-// Items per row (from sm up — this page has no separate mobile scale since it
-// always shows 2 on the smallest screens). Tailwind needs whole class names.
-const COLS = {
+// Items per row. Tailwind needs whole class names, so both scales are lookups.
+// Mobile gets its own 1-2 scale (below `sm`) — previously the control offered
+// 2-4 everywhere, but every option's class was `sm:`-prefixed, so picking 3 or
+// 4 on a phone silently did nothing below that breakpoint.
+const MOBILE_COLS = { 1: 'grid-cols-1', 2: 'grid-cols-2' } as const;
+const WIDE_COLS = {
   2: 'sm:grid-cols-2 lg:grid-cols-2',
   3: 'sm:grid-cols-3 lg:grid-cols-3',
   4: 'sm:grid-cols-3 lg:grid-cols-4',
 } as const;
-type Cols = keyof typeof COLS;
+type MobileCols = keyof typeof MOBILE_COLS;
+type WideCols = keyof typeof WIDE_COLS;
 const COLS_STORAGE_KEY = 'jf.retailer-catalog.cols';
 
 // useSearchParams needs a Suspense boundary in the App Router.
@@ -65,18 +69,22 @@ function CatalogBrowse() {
   const [submitErr, setSubmitErr] = useState<unknown>(null);
   const [salesMap, setSalesMap] = useState<Record<string, SalesInfo>>({});
   const [detail, setDetail] = useState<Product | null>(null);
-  const [cols, setCols] = useState<Cols>(4);
+  const [mobileCols, setMobileCols] = useState<MobileCols>(2);
+  const [wideCols, setWideCols] = useState<WideCols>(4);
 
   useEffect(() => {
     try {
-      const saved = Number(localStorage.getItem(COLS_STORAGE_KEY));
-      if (saved && saved in COLS) setCols(saved as Cols);
+      const saved = JSON.parse(localStorage.getItem(COLS_STORAGE_KEY) ?? 'null') as { mobile?: number; wide?: number } | null;
+      if (saved?.mobile && saved.mobile in MOBILE_COLS) setMobileCols(saved.mobile as MobileCols);
+      if (saved?.wide && saved.wide in WIDE_COLS) setWideCols(saved.wide as WideCols);
     } catch { /* ignore unreadable/corrupt preference */ }
   }, []);
 
   useEffect(() => {
-    try { localStorage.setItem(COLS_STORAGE_KEY, String(cols)); } catch { /* private mode / quota */ }
-  }, [cols]);
+    try {
+      localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify({ mobile: mobileCols, wide: wideCols }));
+    } catch { /* private mode / quota — density just won't persist */ }
+  }, [mobileCols, wideCols]);
 
   useEffect(() => {
     (async () => {
@@ -174,7 +182,14 @@ function CatalogBrowse() {
             {(category || subCategory || search || size || sort || weightRange) && (
               <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setSize(''); setWeightRange(null); setSort(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
             )}
-            <ItemsPerRowControl value={cols} onChange={(v) => setCols(v as Cols)} min={2} max={4} />
+            {/* Items per row — 1 or 2 on phones, 2–4 from tablet up. Each set is
+                only rendered at the size it applies to, so the choice is unambiguous. */}
+            <span className="sm:hidden">
+              <ItemsPerRowControl value={mobileCols} onChange={(v) => setMobileCols(v as MobileCols)} min={1} max={2} />
+            </span>
+            <span className="hidden sm:inline-flex">
+              <ItemsPerRowControl value={wideCols} onChange={(v) => setWideCols(v as WideCols)} min={2} max={4} />
+            </span>
           </div>
 
           {weightBounds && (
@@ -336,7 +351,7 @@ function CatalogBrowse() {
       )}
 
       {data && filtered.length > 0 && (
-        <div className={`grid grid-cols-2 gap-4 ${COLS[cols]}`}>
+        <div className={`grid gap-4 ${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`}>
           {filtered.map((p) => {
             const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
             const inCartQty = cart.items.find((i) => i.productId === p.id)?.quantity ?? 0;
