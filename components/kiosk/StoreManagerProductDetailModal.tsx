@@ -80,7 +80,7 @@ export function StoreManagerProductDetailModal({
             <button type="button" onClick={onClose} aria-label="Close product details" className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-[#211b16]/75 text-white shadow-lg backdrop-blur-md transition hover:rotate-90 hover:bg-[#211b16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d2a84a] focus-visible:ring-offset-2 sm:right-5 sm:top-5"><X className="h-5 w-5" /></button>
 
             <div
-              className="h-full snap-y snap-mandatory overflow-y-auto overscroll-contain"
+              className="h-full snap-y snap-mandatory overflow-y-auto overscroll-contain scrollbar-auto [scrollbar-color:#c9a84c_#ece5d8] [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#c9a84c] [&::-webkit-scrollbar-track]:bg-[#ece5d8]"
               onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 24)}
             >
               <div className="h-full snap-start snap-always">
@@ -96,9 +96,10 @@ export function StoreManagerProductDetailModal({
           </div>
 
           {similar.length > 0 ? (
-            <div aria-hidden className="pointer-events-none flex h-8 items-center justify-center">
-              <span className={`flex items-center gap-1.5 rounded-full border border-white/20 bg-[#211b16]/82 px-3.5 py-1.5 text-[11px] font-medium text-white shadow-lg backdrop-blur-md transition-all ${scrolled ? 'translate-y-1 opacity-0' : 'opacity-100'}`}>
-                Scroll to see similar <ChevronDown className="h-3 w-3 animate-bounce" />
+            <div aria-hidden className="pointer-events-none flex h-11 items-center justify-center">
+              <span className={`flex items-center gap-2 rounded-full border border-[#f0d99a]/60 bg-[#211b16]/90 px-4 py-2 text-xs font-semibold text-white shadow-[0_8px_28px_rgba(0,0,0,0.35)] backdrop-blur-md transition-all sm:text-sm ${scrolled ? 'translate-y-1 opacity-0' : 'animate-pulse opacity-100'}`}>
+                Scroll down to see similar designs
+                <ChevronDown className="h-4 w-4 animate-bounce text-[#f0d99a] sm:h-5 sm:w-5" />
               </span>
             </div>
           ) : null}
@@ -135,7 +136,7 @@ function ProductBlock({
 
   return (
     <article className="flex h-full min-h-0 flex-col bg-[#fdfcf9] sm:grid sm:grid-cols-[0.96fr_1.04fr]">
-      <div className="flex h-[40%] min-h-[12rem] shrink-0 flex-col bg-[#ede5d8] p-2.5 sm:h-full sm:min-h-0 sm:border-r sm:border-[#d8c8aa]/55 sm:p-3.5 lg:p-4">
+      <div className="flex h-[62%] min-h-68 shrink-0 flex-col bg-[#ede5d8] p-1.5 sm:h-full sm:min-h-0 sm:border-r sm:border-[#d8c8aa]/55 sm:p-3.5 lg:p-4">
         <div className="relative min-h-0 flex-1 overflow-hidden rounded-[1.1rem] bg-white shadow-[inset_0_0_0_1px_rgba(122,91,39,0.08)]">
           {selectedImage ? (
             // eslint-disable-next-line @next/next/no-img-element
