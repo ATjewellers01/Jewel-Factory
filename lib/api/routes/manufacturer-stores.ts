@@ -43,6 +43,7 @@ manufacturerStoreRoutes.post('/store-registrations/:id/approve', async (c) => {
       storeName: result.name,
       storeSlug: result.slug,
       ownerEmail,
+      mobileNumber: result.ownerPhone ?? result.phone ?? null,
       managerEmails: result.managers.map((m) => m.email),
       appUrl: env.NEXT_PUBLIC_APP_URL,
       retailerLogoUrl: result.logoUrl,

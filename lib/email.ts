@@ -229,6 +229,7 @@ export function storeApprovedEmail(opts: {
   storeName: string;
   storeSlug: string;
   ownerEmail: string;
+  mobileNumber?: string | null;
   managerEmails: string[];
   appUrl: string;
   retailerLogoUrl?: string | null;
@@ -238,6 +239,7 @@ export function storeApprovedEmail(opts: {
   const { appUrl } = opts;
   const safeStoreName = escapeHtml(opts.storeName);
   const ownerEmail = escapeHtml(opts.ownerEmail);
+  const mobileNumber = opts.mobileNumber ? escapeHtml(opts.mobileNumber) : null;
   const retailerLoginUrl = escapeHtml(buildAppUrl(appUrl, '/store/login'));
   const branchesUrl = escapeHtml(buildAppUrl(appUrl, '/store/branches'));
   const forgotPasswordUrl = escapeHtml(buildAppUrl(appUrl, '/store/forgot-password'));
@@ -254,7 +256,13 @@ export function storeApprovedEmail(opts: {
         <td style="padding:16px 18px;">
           <p style="margin:0 0 4px;color:#9a927e;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Retailer Admin login</p>
           <p style="margin:0;color:${INK};font-size:14px;font-weight:600;">${ownerEmail}</p>
-          <p style="margin:8px 0 0;color:#9a927e;font-size:12px;">Your password is your registered mobile number. You can sign in with either this email or your mobile number as the username.</p>
+          ${mobileNumber ? `
+          <p style="margin:12px 0 0;color:#9a927e;font-size:12px;line-height:1.6;">
+            Username — Your registered mobile number (e.g. <strong style="color:${INK};">${mobileNumber}</strong>)<br/>
+            Password — Your registered mobile number (e.g. <strong style="color:${INK};">${mobileNumber}</strong>)
+          </p>
+          <p style="margin:8px 0 0;color:#9a927e;font-size:12px;">You can also use this email instead of your mobile number as the username.</p>` : `
+          <p style="margin:8px 0 0;color:#9a927e;font-size:12px;">Your password is your registered mobile number.</p>`}
         </td>
       </tr>
     </table>
