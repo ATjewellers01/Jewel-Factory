@@ -115,10 +115,14 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
                   key={href}
                   href={href}
                   aria-current={active ? 'page' : undefined}
-                  className={`flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 text-[12px] font-medium transition-colors sm:h-10 sm:gap-2 sm:px-2.5 sm:text-[13px] lg:px-4 ${active ? 'bg-[#c99d37] text-white shadow-[0_5px_16px_rgba(174,127,30,0.18)]' : 'text-[#5f5750] hover:bg-[#f3efe8] hover:text-[#26221e]'}`}
+                  className={`flex h-9 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-[12px] font-medium transition-colors sm:h-10 sm:gap-2 sm:px-2.5 sm:text-[13px] sm:whitespace-nowrap lg:px-4 ${active ? 'bg-[#c99d37] text-white shadow-[0_5px_16px_rgba(174,127,30,0.18)]' : 'text-[#5f5750] hover:bg-[#f3efe8] hover:text-[#26221e]'}`}
                 >
                   <Icon className="h-4 w-4 shrink-0 lg:h-4 lg:w-4" />
-                  <span>{label}</span>
+                  {/* Below `sm`, a multi-word label wraps onto its own two
+                      lines ("Search" / "Similar Design") instead of forcing
+                      the pill wide enough to fit one line — that pushed the
+                      other nav items into a cramped horizontal scroll. */}
+                  <span className="text-center leading-tight sm:whitespace-nowrap">{label}</span>
                 </Link>
               );
             })}

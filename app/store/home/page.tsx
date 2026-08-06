@@ -198,11 +198,15 @@ function CatalogueStrip({ products }: { products: Product[] }) {
               className="group/card relative block h-64 w-52 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-black/5 transition-shadow hover:shadow-[0_10px_30px_rgba(31,24,15,0.16)] sm:h-96 sm:w-80 lg:h-[30rem] lg:w-[24rem]"
               title={p.designNumber}
             >
+              {/* Eager, not lazy: this strip auto-scrolls via a CSS transform
+                  (not real scroll events), so the browser's lazy-load
+                  viewport heuristic doesn't reliably fire before an item
+                  slides into view — it was showing blank white cards mid-scroll. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={primaryImage(p)!}
                 alt={p.designNumber}
-                loading="lazy"
+                loading="eager"
                 className="h-full w-full object-cover transition-transform duration-500 group-hover/card:scale-105"
               />
               <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-4 pb-3 pt-9 text-sm font-semibold tabular-nums text-white sm:px-5 sm:text-base">

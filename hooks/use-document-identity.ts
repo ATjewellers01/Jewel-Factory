@@ -16,9 +16,19 @@ function setFavicon(href: string) {
     document.head.appendChild(link);
     return;
   }
-  const absoluteHref = new URL(href, window.location.href).href;
+  // A store-supplied logoUrl can be malformed (bad/relative/protocol-less
+  // string) — new URL() throws on those. Left uncaught, this fires inside the
+  // MutationObserver callback below on every DOM mutation it observes,
+  // effectively locking up the tab. Fall back to comparing the raw string so
+  // a bad URL still degrades to "always reassign" instead of crash-looping.
+  let absoluteHref: string | null = null;
+  try {
+    absoluteHref = new URL(href, window.location.href).href;
+  } catch { /* malformed logoUrl — compare raw strings below instead */ }
   links.forEach((l) => {
-    if (l.href !== absoluteHref) l.href = href;
+    const current = absoluteHref !== null ? l.href : l.getAttribute('href');
+    const target = absoluteHref ?? href;
+    if (current !== target) l.href = href;
   });
 }
 
@@ -46,18 +56,24 @@ export function useDocumentIdentity(
     const suffix = isStore ? (storeName || 'Store') : 'Jewel Factory';
     const title = page ? `${page} | ${suffix}` : suffix;
     const favicon = isStore ? (logoUrl || FALLBACK_STORE_FAVICON) : JF_FAVICON;
-    const applyIdentity = () => {
+    const observer = new MutationObserver(applyIdentity);
+    // Disconnect while we ourselves mutate the head — otherwise our own
+    // title/favicon writes re-trigger this same observer, which (if setFavicon
+    // ever fails to converge, e.g. a malformed logoUrl) becomes a self-driving
+    // loop that pegs the main thread with no thrown error to surface.
+    function applyIdentity() {
+      observer.disconnect();
       if (document.title !== title) document.title = title;
       setFavicon(favicon);
-    };
+      observer.observe(document.head, { childList: true, subtree: true, characterData: true });
+    }
 
     // Next's metadata boundary can reconcile immediately after hydration. Apply
     // once now and once after that pass so client-known store identity wins.
+    // (applyIdentity itself starts the observer — see above.)
     applyIdentity();
     const frame = window.requestAnimationFrame(applyIdentity);
     const timeout = window.setTimeout(applyIdentity, 250);
-    const observer = new MutationObserver(applyIdentity);
-    observer.observe(document.head, { childList: true, subtree: true, characterData: true });
 
     if (isStore) {
       // Restore the Jewel Factory favicon on unmount so leaving a store surface
