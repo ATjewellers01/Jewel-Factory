@@ -103,7 +103,7 @@ function emailHeader(opts: {
   kicker?: string;
 }): string {
   const hasRetailer = Boolean(opts.retailerName);
-  const retailerName = escapeHtml(opts.retailerName ?? 'Purchase manager');
+  const retailerName = escapeHtml(opts.retailerName ?? 'Retailer Admin');
   const kicker = opts.kicker ? escapeHtml(opts.kicker) : '';
   // PNG is deliberately used here: AVIF is ideal for the web UI but is not
   // consistently displayed by major email clients.
@@ -246,27 +246,27 @@ export function storeApprovedEmail(opts: {
     <h2 style="color:${INK};font-family:Georgia,serif;font-size:22px;margin:0 0 12px;">You're approved 🎉</h2>
     <p style="color:#5a5347;font-size:14px;line-height:1.6;margin:0 0 24px;">
       Good news — <strong style="color:${INK};">${safeStoreName}</strong> has been approved by the manufacturer.
-      You now have full access to your Purchase manager (Head Office) portal.
+      You now have full access to your Retailer Admin (Head Office) portal.
     </p>
 
     <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background:${CREAM};border-radius:10px;margin:0 0 24px;">
       <tr>
         <td style="padding:16px 18px;">
-          <p style="margin:0 0 4px;color:#9a927e;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Purchase manager login</p>
+          <p style="margin:0 0 4px;color:#9a927e;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Retailer Admin login</p>
           <p style="margin:0;color:${INK};font-size:14px;font-weight:600;">${ownerEmail}</p>
-          <p style="margin:8px 0 0;color:#9a927e;font-size:12px;">Sign in using this email and your registered mobile number as the password.</p>
+          <p style="margin:8px 0 0;color:#9a927e;font-size:12px;">Your password is your registered mobile number. You can sign in with either this email or your mobile number as the username.</p>
         </td>
       </tr>
     </table>
 
     <p style="margin:0 0 24px;text-align:center;">
       <a href="${retailerLoginUrl}" style="background:linear-gradient(135deg,${GOLD},${GOLD_DARK});color:#fff;padding:13px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block;">
-        Go to Purchase Manager Portal
+        Go to Retailer Admin Portal
       </a>
     </p>
 
     <p style="color:#5a5347;font-size:13px;line-height:1.6;margin:0 0 8px;">
-      Next, create your Stores and add their Store Managers from the Purchase manager portal.<br/>
+      Next, create your Stores and add their Store Managers from the Retailer Admin portal.<br/>
       <a href="${branchesUrl}" style="color:${GOLD_DARK};font-weight:600;text-decoration:none;">Set up your Stores</a>
     </p>
 
@@ -275,12 +275,12 @@ export function storeApprovedEmail(opts: {
     </p>`;
 
   return {
-    subject: `Your purchase manager account "${opts.storeName}" is approved — Jewel Factory`,
+    subject: `Your retailer admin account "${opts.storeName}" is approved — Jewel Factory`,
     html: emailShell({
       appUrl,
       retailerName: opts.storeName,
       retailerLogoUrl: opts.retailerLogoUrl,
-      kicker: 'Purchase manager approved',
+      kicker: 'Retailer Admin approved',
       body,
     }),
   };
