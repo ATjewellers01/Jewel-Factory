@@ -90,7 +90,17 @@ export async function searchByVector(vector: number[], limit = 24): Promise<{ id
 //     hits that are visually unrelated get dropped instead of padding the list.
 // Returns [] when nothing clears the bar — callers should show a "no close
 // matches" state rather than a misleadingly full grid.
-const SIMILARITY_SCORE_FLOOR = 0.65;
+//
+// Lowered from 0.65 (2026-08-07): a raw real-world query photo (cluttered
+// background, hand-held, no studio lighting) embeds much further from its
+// own catalogue studio-shot than two catalogue photos embed from each other
+// — the background/context dominates the vector more than the jewellery
+// does. 0.65 rejected genuine matches outright on real customer photos, not
+// just true negatives. This is a stopgap, not a fix: the real problem is
+// that the embedding captures the whole scene, not just the jewellery — see
+// the isolateSubject TODO below. Retune (probably upward again) once that
+// lands and re-embed the catalogue.
+const SIMILARITY_SCORE_FLOOR = 0.35;
 
 export async function searchSimilarProducts(vector: number[], limit = 24): Promise<{ id: string; score: number }[]> {
   const pool = await searchByVector(vector, Math.min(limit * 3, 100));
