@@ -145,23 +145,31 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
           </nav>
 
           {/* Dashboard lives on the far right at every width. Favorites/Cart
-              sit just before it — shortcuts to the catalogue's panels from
-              anywhere in the portal, not only from the catalogue page itself. */}
+              sit just before it, desktop-only (sm and up) — shortcuts to the
+              catalogue's panels from anywhere in the portal. Hidden below
+              `sm` everywhere (the Home page has its own mobile-width version
+              next to its intro copy; other pages just don't have room here)
+              and hidden entirely on the catalogue page itself, which already
+              renders its own (these would just duplicate them). */}
           <div className="ml-auto flex shrink-0 items-center gap-2">
-            <Link
-              href="/store/manufacturer-catalog?open=favorites"
-              className="flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-[#e3ddd3] bg-white px-2 text-[12px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea] sm:h-10 sm:gap-2 sm:px-2.5 sm:text-[13px] lg:px-4"
-            >
-              <Heart className="h-4 w-4 shrink-0 lg:h-4 lg:w-4" />
-              <span>Favorites ({favorites.count})</span>
-            </Link>
-            <Link
-              href="/store/manufacturer-catalog?open=cart"
-              className="flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-[#e3ddd3] bg-white px-2 text-[12px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea] sm:h-10 sm:gap-2 sm:px-2.5 sm:text-[13px] lg:px-4"
-            >
-              <ShoppingCart className="h-4 w-4 shrink-0 lg:h-4 lg:w-4" />
-              <span>Cart ({cart.count})</span>
-            </Link>
+            {!isActive('/store/manufacturer-catalog') && (
+              <div className="hidden shrink-0 items-center gap-2 sm:flex">
+                <Link
+                  href="/store/manufacturer-catalog?open=favorites"
+                  className="flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[#e3ddd3] bg-white px-2.5 text-[13px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea] lg:px-4"
+                >
+                  <Heart className="h-4 w-4 shrink-0" />
+                  <span>Favorites ({favorites.count})</span>
+                </Link>
+                <Link
+                  href="/store/manufacturer-catalog?open=cart"
+                  className="flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[#e3ddd3] bg-white px-2.5 text-[13px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea] lg:px-4"
+                >
+                  <ShoppingCart className="h-4 w-4 shrink-0" />
+                  <span>Cart ({cart.count})</span>
+                </Link>
+              </div>
+            )}
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
