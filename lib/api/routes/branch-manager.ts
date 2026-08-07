@@ -23,7 +23,7 @@ import { listOrderMessages, addOrderMessage } from '@/lib/db/messages';
 import { formatStoreAddress } from '@/lib/db/stores';
 import { listFavorites, addFavorite, removeFavorite } from '@/lib/db/favorites';
 import { listCart, addToCart, setCartQuantity, setCartItemPurity, clearCart, getCartNote, setCartNote } from '@/lib/db/cart';
-import { embedImageBase64, searchSimilarProducts } from '@/lib/search';
+import { embedImageBase64, prepareQueryImageForSearch, searchSimilarProducts } from '@/lib/search';
 import { sendData, sendError } from '../envelope';
 import { branchManagerGuard, type AppEnv } from '../guards';
 
@@ -233,7 +233,8 @@ branchManagerRoutes.get('/tryon-products', branchManagerGuard, async (c) => {
 branchManagerRoutes.post('/search/image', branchManagerGuard, jsonValidator(z.object({ image: z.string().min(1) })), async (c) => {
   let ids: string[];
   try {
-    const vector = await embedImageBase64(c.req.valid('json').image);
+    const cleanedImage = await prepareQueryImageForSearch(c.req.valid('json').image);
+    const vector = await embedImageBase64(cleanedImage);
     const hits = await searchSimilarProducts(vector, 24);
     ids = hits.map((h) => h.id);
   } catch (err) {

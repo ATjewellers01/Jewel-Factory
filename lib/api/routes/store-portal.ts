@@ -13,7 +13,7 @@ import {
   resetBranchManagerPassword, deleteBranchManager,
 } from '@/lib/db/branches';
 import { signUpload, storeFolder } from '@/lib/storage';
-import { embedImageBase64, searchSimilarProducts } from '@/lib/search';
+import { embedImageBase64, prepareQueryImageForSearch, searchSimilarProducts } from '@/lib/search';
 import { prisma } from '@/lib/prisma';
 import { sendData, sendError } from '../envelope';
 import { storeGuard, type AppEnv } from '../guards';
@@ -57,7 +57,8 @@ storePortalRoutes.post('/branding/logo/sign', storeGuard, async (c) => {
 storePortalRoutes.post('/search/image', storeGuard, jsonValidator(z.object({ image: z.string().min(1) })), async (c) => {
   let ids: string[];
   try {
-    const vector = await embedImageBase64(c.req.valid('json').image);
+    const cleanedImage = await prepareQueryImageForSearch(c.req.valid('json').image);
+    const vector = await embedImageBase64(cleanedImage);
     const hits = await searchSimilarProducts(vector, 24);
     ids = hits.map((h) => h.id);
   } catch (err) {

@@ -12,7 +12,7 @@ import { signUpload, storeFolder } from '@/lib/storage';
 import { listActiveProducts, getActiveProductByDesignOrId } from '@/lib/db/manufacturer-catalog';
 import { placeKioskOrder, getKioskOrderPublic } from '@/lib/db/orders';
 import { placeCustomRequest } from '@/lib/db/custom-design';
-import { embedImageBase64, searchSimilarProducts } from '@/lib/search';
+import { embedImageBase64, prepareQueryImageForSearch, searchSimilarProducts } from '@/lib/search';
 import { sendData, sendError } from '../envelope';
 import type { AppEnv } from '../guards';
 
@@ -197,7 +197,8 @@ const SearchBody = z.object({ image: z.string().min(10) }); // base64
 kioskRoutes.post('/search/image', jsonValidator(SearchBody), async (c) => {
   let ids: string[];
   try {
-    const vector = await embedImageBase64(c.req.valid('json').image);
+    const cleanedImage = await prepareQueryImageForSearch(c.req.valid('json').image);
+    const vector = await embedImageBase64(cleanedImage);
     const hits = await searchSimilarProducts(vector, 24);
     ids = hits.map((h) => h.id);
   } catch (err) {

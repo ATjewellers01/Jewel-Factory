@@ -17,6 +17,76 @@ function embedderHeaders(): Record<string, string> {
   return key ? { Authorization: `Bearer ${key}` } : {};
 }
 
+// AI-Features hostnames are lowercase; a capital-cased URL 307-redirects and
+// can drop the POST body on redirect (same fix as manufacturer-ai.ts).
+function aiFeaturesBase(): string | null {
+  const url = getServerEnv().AI_FEATURES_URL;
+  if (!url) return null;
+  return url.replace(/\/$/, '').replace(/^https?:\/\/[^/]+/i, (m) => m.toLowerCase());
+}
+function aiFeaturesHeaders(): Record<string, string> {
+  const key = getServerEnv().AI_FEATURES_API_KEY;
+  return key ? { 'x-api-key': key } : {};
+}
+
+function base64ToBlob(base64: string): Blob {
+  const bytes = Uint8Array.from(atob(base64.replace(/^data:image\/\w+;base64,/, '')), (c) => c.charCodeAt(0));
+  return new Blob([bytes]);
+}
+
+/**
+ * A raw customer/retailer query photo (hand-held, cluttered background) and
+ * a catalogue studio photo embed far apart even for the exact same piece —
+ * the background/context dominates the OpenCLIP vector more than the
+ * jewellery does. Running the query photo through the SAME "clean studio
+ * background" pipeline the manufacturer uses to build the catalogue in the
+ * first place (classify -> /catalog) puts both sides of the comparison in a
+ * visually consistent style, so the embedding distance reflects the
+ * jewellery design, not the photo's background.
+ *
+ * Two calls: /classify guesses a category from the raw photo alone (this
+ * page has no category picker), then /catalog uses that category for a
+ * better-fitted background/composition than the generic fallback it uses
+ * when category is blank.
+ *
+ * Falls back to the original image (never throws) if AI-Features isn't
+ * configured, or if either call fails — search still works, just without
+ * this consistency improvement, same as before this existed.
+ */
+export async function prepareQueryImageForSearch(base64: string): Promise<string> {
+  const base = aiFeaturesBase();
+  if (!base) return base64;
+
+  try {
+    const classifyForm = new FormData();
+    classifyForm.append('image', base64ToBlob(base64), 'query.jpg');
+    const classifyRes = await fetch(`${base}/classify`, {
+      method: 'POST',
+      headers: aiFeaturesHeaders(),
+      body: classifyForm,
+    });
+    if (!classifyRes.ok) return base64;
+    const classified = (await classifyRes.json()) as { category?: string | null; subCategory?: string | null; confident?: boolean };
+
+    const catalogForm = new FormData();
+    catalogForm.append('image', base64ToBlob(base64), 'query.jpg');
+    if (classified.confident && classified.category) {
+      catalogForm.append('category', classified.category);
+      if (classified.subCategory) catalogForm.append('subCategory', classified.subCategory);
+    }
+    const catalogRes = await fetch(`${base}/catalog`, {
+      method: 'POST',
+      headers: aiFeaturesHeaders(),
+      body: catalogForm,
+    });
+    if (!catalogRes.ok) return base64;
+    const cleaned = (await catalogRes.json()) as { imageBase64?: string };
+    return cleaned.imageBase64 ? `data:image/png;base64,${cleaned.imageBase64}` : base64;
+  } catch {
+    return base64;
+  }
+}
+
 export async function embedImageBase64(base64: string): Promise<number[]> {
   const bytes = Uint8Array.from(atob(base64.replace(/^data:image\/\w+;base64,/, '')), (c) => c.charCodeAt(0));
   const form = new FormData();
