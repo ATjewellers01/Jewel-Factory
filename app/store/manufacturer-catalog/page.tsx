@@ -360,43 +360,6 @@ function CatalogBrowse() {
                 })}
               </div>
 
-              {/* One "You may also like" group per cart line, ranked by
-                  sub-category > purity > weight-closeness rather than an
-                  exact-match filter — a strict AND went empty far too often
-                  on a real catalogue. */}
-              {cart.items.map((i) => {
-                const fullProduct = (data ?? []).find((p) => p.id === i.productId);
-                if (!fullProduct) return null;
-                const similar = rankSimilar(fullProduct, data ?? [], 4).filter((p) => !cart.items.some((line) => line.productId === p.id));
-                if (similar.length === 0) return null;
-                return (
-                  <div key={`similar-${i.productId}`} className="border-t pt-3">
-                    <p className="text-xs font-semibold text-muted-foreground">You may also like — like {fullProduct.designNumber}</p>
-                    <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      {similar.map((p) => {
-                        const img = p.images.find((im) => im.isPrimary) ?? p.images[0];
-                        return (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => setDetail(p)}
-                            className="overflow-hidden rounded-lg border bg-white text-left transition-shadow hover:shadow-md"
-                          >
-                            <div className="aspect-square bg-[#ece5da]">
-                              {img ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={img.secureUrl} alt={p.designNumber} className="h-full w-full object-cover" />
-                              ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-6 w-6" /></div>}
-                            </div>
-                            <p className="truncate px-2 py-1.5 text-xs font-medium">{p.designNumber}</p>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-
               <textarea placeholder="Notes for manufacturer (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[60px]" />
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'notes'))} />
               <p className="text-xs text-muted-foreground">Ships to your fixed store address.</p>
@@ -408,58 +371,45 @@ function CatalogBrowse() {
         </div>
       )}
 
-      {data && filtered.length > 0 && (
-        <div className={`grid gap-4 ${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`}>
-          {filtered.map((p) => {
-            const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
-            const inCartQty = cart.items.find((i) => i.productId === p.id)?.quantity ?? 0;
-            return (
-              <div key={p.id} className="overflow-hidden rounded-xl border bg-card">
-                <button type="button" onClick={() => setDetail(p)} className="relative block aspect-[3/4] w-full bg-[#ece5da]" title="View details">
-                  {img ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={img.secureUrl} alt={p.designNumber} className="h-full w-full object-cover" />
-                  ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-8 w-8" /></div>}
-                  {p.hasTryon && <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]"><Sparkles className="mr-0.5 inline h-2.5 w-2.5" />AR</span>}
-                  <span
-                    role="button"
-                    tabIndex={-1}
-                    onClick={(e) => { e.stopPropagation(); void favorites.toggle(p.id); }}
-                    className="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-colors hover:bg-black/60"
-                    aria-label={favorites.isFavorite(p.id) ? 'Remove from favorites' : 'Add to favorites'}
-                  >
-                    <Heart className={`h-3.5 w-3.5 ${favorites.isFavorite(p.id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-                  </span>
-                </button>
-                <div className="p-3 space-y-2">
-                  <button type="button" onClick={() => setDetail(p)} className="block w-full text-left">
-                    <p className="truncate text-sm font-medium hover:text-primary">{p.designNumber}</p>
-                    {/* Weight on its own non-truncating line so narrow phone
-                        cards can't clip it (it was last on one truncated line). */}
-                    <p className="truncate text-xs text-muted-foreground">
-                      {p.category ? `${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}
-                    </p>
-                    {formatWeight(p.weightGrams) && <p className="text-xs font-medium text-muted-foreground">{formatWeight(p.weightGrams)}{p.size ? ` · Size ${p.size}` : ''}</p>}
-                    {salesMap[p.id] ? (
-                      <div className="mt-1 flex items-center gap-1.5">
-                        <StarRating count={salesMap[p.id].stars} size="sm" />
-                        <span className="text-[10px] text-muted-foreground">{salesMap[p.id].unitsLast30d} sold · 30d</span>
-                      </div>
-                    ) : null}
-                  </button>
-                  <CartQtyControl
-                    size="sm"
-                    designNumber={p.designNumber}
-                    quantity={inCartQty}
-                    onAdd={() => cart.add({ productId: p.id, name: p.designNumber, designNumber: p.designNumber, imageUrl: img?.secureUrl, purity: p.purity ?? undefined })}
-                    onSetQuantity={(quantity) => (quantity <= 0 ? cart.remove(p.id) : cart.setQty(p.id, quantity))}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Normal catalogue grid — hidden while Cart or Favorites is open, since
+          that's not what's on screen there (the "You may also like" grid
+          below takes this exact spot instead when the cart is open). */}
+      {!showCart && !showFavorites && data && filtered.length > 0 && (
+        <ProductGrid products={filtered} cart={cart} favorites={favorites} salesMap={salesMap} cols={`${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`} onOpen={setDetail} />
       )}
+
+      {/* "You may also like" — one group per unique cart line, ranked by
+          sub-category > purity > weight-closeness rather than an exact-match
+          filter (a strict AND went empty far too often on a real catalogue).
+          Sits where the catalogue grid normally does, using the same card
+          style, rather than a small strip inside the cart card. */}
+      {showCart && cart.items.length > 0 && (() => {
+        const seen = new Set<string>();
+        const groups = cart.items
+          .map((i) => (data ?? []).find((p) => p.id === i.productId))
+          .filter((p): p is Product => !!p)
+          .map((fullProduct) => ({
+            fullProduct,
+            similar: rankSimilar(fullProduct, data ?? [], 4).filter((p) => {
+              if (cart.items.some((line) => line.productId === p.id)) return false;
+              if (seen.has(p.id)) return false;
+              seen.add(p.id);
+              return true;
+            }),
+          }))
+          .filter((g) => g.similar.length > 0);
+        if (groups.length === 0) return null;
+        return (
+          <div className="space-y-6">
+            {groups.map(({ fullProduct, similar }) => (
+              <div key={`similar-${fullProduct.id}`} className="space-y-3">
+                <h2 className="text-sm font-semibold">You may also like — like {fullProduct.designNumber}</h2>
+                <ProductGrid products={similar} cart={cart} favorites={favorites} salesMap={salesMap} cols={`${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`} onOpen={setDetail} />
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {detail ? (
         <StoreManagerProductDetailModal
@@ -485,6 +435,73 @@ function CatalogBrowse() {
           }}
         />
       ) : null}
+    </div>
+  );
+}
+
+/** Shared card grid — used for the normal catalogue browse AND for "You may
+ *  also like" (which takes this exact spot when the cart is open), so both
+ *  look identical: same card, same Add-to-cart control, same info shown. */
+function ProductGrid({
+  products, cart, favorites, salesMap, cols, onOpen,
+}: {
+  products: Product[];
+  cart: ReturnType<typeof useB2bCart>;
+  favorites: ReturnType<typeof useFavorites>;
+  salesMap: Record<string, SalesInfo>;
+  cols: string;
+  onOpen: (product: Product) => void;
+}) {
+  return (
+    <div className={`grid gap-4 ${cols}`}>
+      {products.map((p) => {
+        const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
+        const inCartQty = cart.items.find((i) => i.productId === p.id)?.quantity ?? 0;
+        return (
+          <div key={p.id} className="overflow-hidden rounded-xl border bg-card">
+            <button type="button" onClick={() => onOpen(p)} className="relative block aspect-[3/4] w-full bg-[#ece5da]" title="View details">
+              {img ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={img.secureUrl} alt={p.designNumber} className="h-full w-full object-cover" />
+              ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-8 w-8" /></div>}
+              {p.hasTryon && <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]"><Sparkles className="mr-0.5 inline h-2.5 w-2.5" />AR</span>}
+              <span
+                role="button"
+                tabIndex={-1}
+                onClick={(e) => { e.stopPropagation(); void favorites.toggle(p.id); }}
+                className="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-colors hover:bg-black/60"
+                aria-label={favorites.isFavorite(p.id) ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <Heart className={`h-3.5 w-3.5 ${favorites.isFavorite(p.id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+              </span>
+            </button>
+            <div className="p-3 space-y-2">
+              <button type="button" onClick={() => onOpen(p)} className="block w-full text-left">
+                <p className="truncate text-sm font-medium hover:text-primary">{p.designNumber}</p>
+                {/* Weight on its own non-truncating line so narrow phone
+                    cards can't clip it (it was last on one truncated line). */}
+                <p className="truncate text-xs text-muted-foreground">
+                  {p.category ? `${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}
+                </p>
+                {formatWeight(p.weightGrams) && <p className="text-xs font-medium text-muted-foreground">{formatWeight(p.weightGrams)}{p.size ? ` · Size ${p.size}` : ''}</p>}
+                {salesMap[p.id] ? (
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <StarRating count={salesMap[p.id].stars} size="sm" />
+                    <span className="text-[10px] text-muted-foreground">{salesMap[p.id].unitsLast30d} sold · 30d</span>
+                  </div>
+                ) : null}
+              </button>
+              <CartQtyControl
+                size="sm"
+                designNumber={p.designNumber}
+                quantity={inCartQty}
+                onAdd={() => cart.add({ productId: p.id, name: p.designNumber, designNumber: p.designNumber, imageUrl: img?.secureUrl, purity: p.purity ?? undefined })}
+                onSetQuantity={(quantity) => (quantity <= 0 ? cart.remove(p.id) : cart.setQty(p.id, quantity))}
+              />
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
