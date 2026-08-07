@@ -18,6 +18,7 @@ import { useStoreManagerKioskCart, useStoreManagerRestockCart } from '@/hooks/us
 import { PURITIES, subCategoriesFor } from '@/lib/categories';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { formatWeight } from '@/lib/format';
+import { matchesDescriptionQuery, rankSimilar } from '@/lib/product-similarity';
 import { SORT_OPTIONS, weightExtent, matchWeightRange, sortByWeight, type SortOption } from '@/lib/weight-filter';
 import { useStoreManager } from './store-manager-context';
 
@@ -77,6 +78,7 @@ export function CatalogOrderPanel({
   const { data, loading, error } = useApi<Product[]>('/api/branch-manager/catalog', '/store-manager/login');
   const favorites = useFavorites('/api/branch-manager/favorites', showPopularity ? 'RESTOCK' : 'KIOSK');
   const [search, setSearch] = useState('');
+  const [descQuery, setDescQuery] = useState('');
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
   const [size, setSize] = useState('');
@@ -148,11 +150,12 @@ export function CatalogOrderPanel({
   const preWeight = useMemo(
     () => (data ?? []).filter((p) =>
       (!search || p.designNumber.toLowerCase().includes(search.toLowerCase())) &&
+      matchesDescriptionQuery(p, descQuery) &&
       (!category || p.category === category) &&
       (!subCategory || p.subCategory === subCategory) &&
       (!size || p.size === size),
     ),
-    [category, data, search, size, subCategory],
+    [category, data, descQuery, search, size, subCategory],
   );
 
   const weightBounds = useMemo(
@@ -231,6 +234,14 @@ export function CatalogOrderPanel({
       </section>
 
       <div className="mx-auto max-w-[1400px] px-4 py-8 md:px-6 lg:px-12">
+        {/* Description search — a looser match than the design-number box
+            below (category/sub-category/description text) so "gold necklace"
+            or "antique" surfaces pieces that box can't. Its own row, above
+            the design-number search, at every width. */}
+        <div className="relative mb-3 w-full max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8174]" />
+          <Input placeholder="Search by description, category…" value={descQuery} onChange={(event) => setDescQuery(event.target.value)} className="rounded-lg border-black/15 bg-white/50 pl-9" />
+        </div>
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-black/10 pb-4">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <button onClick={() => setMobileFilters((value) => !value)} className="flex items-center gap-2 rounded-lg border border-black/15 bg-white/50 px-3 py-2 text-sm lg:hidden"><SlidersHorizontal className="h-4 w-4" /> Filters</button>
@@ -330,6 +341,44 @@ export function CatalogOrderPanel({
                   );
                 })}
               </div>
+
+              {/* One "You may also like" group per cart line, ranked by
+                  sub-category > purity > weight-closeness rather than an
+                  exact-match filter — a strict AND went empty far too often
+                  on a real catalogue. */}
+              {cart.map((l) => {
+                const fullProduct = (data ?? []).find((p) => p.id === l.productId);
+                if (!fullProduct) return null;
+                const similar = rankSimilar(fullProduct, data ?? [], 4).filter((p) => !cart.some((line) => line.productId === p.id));
+                if (similar.length === 0) return null;
+                return (
+                  <div key={`similar-${l.productId}`} className="border-t border-black/10 pt-3">
+                    <p className="text-xs font-semibold text-muted-foreground">You may also like — like {fullProduct.designNumber}</p>
+                    <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      {similar.map((p) => {
+                        const img = p.images.find((im) => im.isPrimary) ?? p.images[0];
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setDetail(p)}
+                            className="overflow-hidden rounded-lg border border-black/10 bg-white text-left transition-shadow hover:shadow-md"
+                          >
+                            <div className="aspect-square bg-[#ece5da]">
+                              {img ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={img.secureUrl} alt={p.designNumber} className="h-full w-full object-cover" />
+                              ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-6 w-6" /></div>}
+                            </div>
+                            <p className="truncate px-2 py-1.5 text-xs font-medium">{p.designNumber}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Remark (goes to Head Office)</label>
                 <textarea value={orderCart.note} onChange={(e) => orderCart.setNote(e.target.value)} placeholder={notePlaceholder} className="mt-1 min-h-[90px] w-full rounded-lg border border-black/15 bg-white/60 px-3 py-2 text-sm" />

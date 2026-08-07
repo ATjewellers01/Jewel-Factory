@@ -3,13 +3,15 @@
 import {
   LayoutDashboard, Package, PencilLine, ClipboardCheck,
   Lightbulb, Store as StoreIcon, Settings, Building2, Search,
-  Home, X, LogOut,
+  Home, X, LogOut, Heart, ShoppingCart,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
+import { useB2bCart } from '@/hooks/use-b2b-cart';
+import { useFavorites } from '@/hooks/use-favorites';
 import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
 
 const FALLBACK_STORE_LOGO = '/storeRe-logo.avif';
@@ -52,6 +54,11 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [store, setStore] = useState<StoreMe>({ name: 'Your Store' });
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Header-level shortcuts to the catalogue's cart/favorites, visible on
+  // every /store/* page (not just the catalogue itself) — clicking jumps to
+  // the catalogue with the matching panel open (?open=cart|favorites).
+  const cart = useB2bCart();
+  const favorites = useFavorites('/api/store/favorites');
 
   useEffect(() => {
     (async () => {
@@ -137,9 +144,24 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
             })}
           </nav>
 
-          {/* Dashboard lives on the far right at every width and is the only thing
-              that opens a panel. */}
+          {/* Dashboard lives on the far right at every width. Favorites/Cart
+              sit just before it — shortcuts to the catalogue's panels from
+              anywhere in the portal, not only from the catalogue page itself. */}
           <div className="ml-auto flex shrink-0 items-center gap-2">
+            <Link
+              href="/store/manufacturer-catalog?open=favorites"
+              className="flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-[#e3ddd3] bg-white px-2 text-[12px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea] sm:h-10 sm:gap-2 sm:px-2.5 sm:text-[13px] lg:px-4"
+            >
+              <Heart className="h-4 w-4 shrink-0 lg:h-4 lg:w-4" />
+              <span>Favorites ({favorites.count})</span>
+            </Link>
+            <Link
+              href="/store/manufacturer-catalog?open=cart"
+              className="flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-[#e3ddd3] bg-white px-2 text-[12px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea] sm:h-10 sm:gap-2 sm:px-2.5 sm:text-[13px] lg:px-4"
+            >
+              <ShoppingCart className="h-4 w-4 shrink-0 lg:h-4 lg:w-4" />
+              <span>Cart ({cart.count})</span>
+            </Link>
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}

@@ -18,6 +18,7 @@ import { useFavorites } from '@/hooks/use-favorites';
 import { CATEGORIES, PURITIES, subCategoriesFor } from '@/lib/categories';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { formatWeight } from '@/lib/format';
+import { matchesDescriptionQuery, rankSimilar } from '@/lib/product-similarity';
 import { SORT_OPTIONS, weightExtent, matchWeightRange, sortProducts, type SortOption } from '@/lib/weight-filter';
 
 type Img = { secureUrl: string; isPrimary: boolean };
@@ -60,13 +61,16 @@ function CatalogBrowse() {
   // pre-filtered catalog (?category=Bangles&subCategory=Fusion%20Bangle).
   const params = useSearchParams();
   const [search, setSearch] = useState('');
+  const [descQuery, setDescQuery] = useState('');
   const [category, setCategory] = useState(params.get('category') ?? '');
   const [subCategory, setSubCategory] = useState(params.get('subCategory') ?? '');
   const [size, setSize] = useState('');
   const [weightRange, setWeightRange] = useState<[number, number] | null>(null);
   const [sort, setSort] = useState<SortOption>('');
-  const [showCart, setShowCart] = useState(false);
-  const [showFavorites, setShowFavorites] = useState(false);
+  // ?open=cart|favorites lets the layout's header buttons (visible on every
+  // /store/* page, not just this one) jump straight here with the right panel open.
+  const [showCart, setShowCart] = useState(params.get('open') === 'cart');
+  const [showFavorites, setShowFavorites] = useState(params.get('open') === 'favorites');
   const [notes, setNotes] = useState('');
   const [placing, setPlacing] = useState(false);
   const [submitErr, setSubmitErr] = useState<unknown>(null);
@@ -107,10 +111,11 @@ function CatalogBrowse() {
   // fixed range would leave most options empty).
   const preWeight = (data ?? []).filter((p) => {
     const matchSearch = !search || p.designNumber.toLowerCase().includes(search.toLowerCase());
+    const matchDesc = matchesDescriptionQuery(p, descQuery);
     const matchCat = !category || p.category === category;
     const matchSub = !subCategory || p.subCategory === subCategory;
     const matchSize = !size || p.size === size;
-    return matchSearch && matchCat && matchSub && matchSize;
+    return matchSearch && matchDesc && matchCat && matchSub && matchSize;
   });
 
   const weightBounds = weightExtent(preWeight.map((p) => p.weightGrams));
@@ -144,10 +149,22 @@ function CatalogBrowse() {
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-medium tracking-tight">Product Catalogue</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">Browse designs and place a restock order.</p>
+        </div>
+        {/* Description search — a looser match than the design-number box below
+            (category/sub-category/description text, not just the exact design
+            number) so "gold necklace" or "antique" surfaces pieces that box
+            can't. Sits above the design-number search on mobile (its own row,
+            full width) and between the heading and Favorites/Cart on desktop. */}
+        <div className="order-first w-full sm:order-none sm:w-auto sm:max-w-xs sm:flex-1">
+          <Input
+            placeholder="Search by description, category…"
+            value={descQuery}
+            onChange={(e) => setDescQuery(e.target.value)}
+          />
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => { setShowFavorites((v) => !v); setShowCart(false); }}>
@@ -182,8 +199,8 @@ function CatalogBrowse() {
             <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={sort} onChange={(e) => setSort(e.target.value as SortOption)} aria-label="Sort by">
               {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            {(category || subCategory || search || size || sort || weightRange) && (
-              <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setSize(''); setWeightRange(null); setSort(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+            {(category || subCategory || search || descQuery || size || sort || weightRange) && (
+              <button type="button" onClick={() => { setSearch(''); setDescQuery(''); setCategory(''); setSubCategory(''); setSize(''); setWeightRange(null); setSort(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
             )}
             {/* Items per row — 1 or 2 on phones, 2–4 from tablet up. Each set is
                 only rendered at the size it applies to, so the choice is unambiguous. */}
@@ -342,6 +359,44 @@ function CatalogBrowse() {
                   );
                 })}
               </div>
+
+              {/* One "You may also like" group per cart line, ranked by
+                  sub-category > purity > weight-closeness rather than an
+                  exact-match filter — a strict AND went empty far too often
+                  on a real catalogue. */}
+              {cart.items.map((i) => {
+                const fullProduct = (data ?? []).find((p) => p.id === i.productId);
+                if (!fullProduct) return null;
+                const similar = rankSimilar(fullProduct, data ?? [], 4).filter((p) => !cart.items.some((line) => line.productId === p.id));
+                if (similar.length === 0) return null;
+                return (
+                  <div key={`similar-${i.productId}`} className="border-t pt-3">
+                    <p className="text-xs font-semibold text-muted-foreground">You may also like — like {fullProduct.designNumber}</p>
+                    <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      {similar.map((p) => {
+                        const img = p.images.find((im) => im.isPrimary) ?? p.images[0];
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setDetail(p)}
+                            className="overflow-hidden rounded-lg border bg-white text-left transition-shadow hover:shadow-md"
+                          >
+                            <div className="aspect-square bg-[#ece5da]">
+                              {img ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={img.secureUrl} alt={p.designNumber} className="h-full w-full object-cover" />
+                              ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-6 w-6" /></div>}
+                            </div>
+                            <p className="truncate px-2 py-1.5 text-xs font-medium">{p.designNumber}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
               <textarea placeholder="Notes for manufacturer (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[60px]" />
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'notes'))} />
               <p className="text-xs text-muted-foreground">Ships to your fixed store address.</p>

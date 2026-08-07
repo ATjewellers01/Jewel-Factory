@@ -1,11 +1,13 @@
 'use client';
 
-import { ArrowRight, ArrowUpRight, Loader2, Sparkles, X } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Heart, Loader2, ShoppingCart, Sparkles, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useApi } from '@/hooks/use-api';
+import { useB2bCart } from '@/hooks/use-b2b-cart';
+import { useFavorites } from '@/hooks/use-favorites';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 
 type Img = { secureUrl: string; isPrimary: boolean };
@@ -71,6 +73,12 @@ export default function StoreHomePage() {
   const { data, error, loading } = useApi<Product[]>('/api/store/catalog', '/store/login');
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const router = useRouter();
+  // StoreLayout's header already shows Favorites/Cart, but its labels get
+  // cramped on the narrowest phones — mobile-only shortcuts here sit right
+  // next to the intro copy instead, in the space that would otherwise be
+  // empty at that width.
+  const cart = useB2bCart();
+  const favorites = useFavorites('/api/store/favorites');
 
   const rawProducts = useMemo(() => (data ?? []).filter((p) => primaryImage(p)), [data]);
   // Interleave categories round-robin so the strip doesn't run several designs
@@ -145,9 +153,22 @@ export default function StoreHomePage() {
           <Sparkles className="h-3.5 w-3.5" /> The collection
         </p>
         <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.025em] sm:text-4xl">Browse by category</h1>
-        <p className="mt-1.5 max-w-xl text-sm leading-6 text-muted-foreground">
-          Explore the full product catalogue, then build a restock order.
-        </p>
+        <div className="mt-1.5 flex items-start justify-between gap-3">
+          <p className="max-w-xl text-sm leading-6 text-muted-foreground">
+            Explore the full product catalogue, then build a restock order.
+          </p>
+          {/* Mobile-only — the header's own Favorites/Cart shortcuts get
+              cramped on the narrowest phones, so they sit here instead,
+              in the space that would otherwise be empty at that width. */}
+          <div className="flex shrink-0 items-center gap-2 sm:hidden">
+            <Link href="/store/manufacturer-catalog?open=favorites" aria-label={`Favorites (${favorites.count})`} className="flex h-8 items-center gap-1 rounded-full border border-[#e3ddd3] bg-white px-2 text-[11px] font-semibold text-[#554e47] shadow-sm">
+              <Heart className="h-3.5 w-3.5" /> {favorites.count}
+            </Link>
+            <Link href="/store/manufacturer-catalog?open=cart" aria-label={`Cart (${cart.count})`} className="flex h-8 items-center gap-1 rounded-full border border-[#e3ddd3] bg-white px-2 text-[11px] font-semibold text-[#554e47] shadow-sm">
+              <ShoppingCart className="h-3.5 w-3.5" /> {cart.count}
+            </Link>
+          </div>
+        </div>
       </header>
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
