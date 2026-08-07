@@ -379,10 +379,10 @@ function CatalogBrowse() {
       )}
 
       {/* "You may also like" — one group per unique cart line, ranked by
-          sub-category > purity > weight-closeness rather than an exact-match
-          filter (a strict AND went empty far too often on a real catalogue).
-          Sits where the catalogue grid normally does, using the same card
-          style, rather than a small strip inside the cart card. */}
+          category > purity rather than an exact-match filter (a strict AND
+          went empty far too often on a real catalogue). Sits where the
+          catalogue grid normally does, using the same card style, rather
+          than a small strip inside the cart card. */}
       {showCart && cart.items.length > 0 && (() => {
         const seen = new Set<string>();
         const groups = cart.items
@@ -398,15 +398,43 @@ function CatalogBrowse() {
             }),
           }))
           .filter((g) => g.similar.length > 0);
-        if (groups.length === 0) return null;
+
+        // Below that: the FULL, unfiltered catalogue for every category
+        // represented in the cart — one section per unique category, not
+        // capped to a handful of "similar" picks.
+        const cartCategories = Array.from(new Set(
+          cart.items
+            .map((i) => (data ?? []).find((p) => p.id === i.productId)?.category)
+            .filter((c): c is string => !!c),
+        ));
+        const categoryGroups = cartCategories.map((category) => ({
+          category,
+          items: (data ?? []).filter((p) => p.category === category),
+        })).filter((g) => g.items.length > 0);
+
+        if (groups.length === 0 && categoryGroups.length === 0) return null;
         return (
-          <div className="space-y-6">
-            {groups.map(({ fullProduct, similar }) => (
-              <div key={`similar-${fullProduct.id}`} className="space-y-3">
-                <h2 className="text-sm font-semibold">You may also like — like {fullProduct.designNumber}</h2>
-                <ProductGrid products={similar} cart={cart} favorites={favorites} salesMap={salesMap} cols={`${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`} onOpen={setDetail} />
+          <div className="space-y-8">
+            {groups.length > 0 && (
+              <div className="space-y-6">
+                {groups.map(({ fullProduct, similar }) => (
+                  <div key={`similar-${fullProduct.id}`} className="space-y-3">
+                    <h2 className="text-sm font-semibold">You may also like — like {fullProduct.designNumber}</h2>
+                    <ProductGrid products={similar} cart={cart} favorites={favorites} salesMap={salesMap} cols={`${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`} onOpen={setDetail} />
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
+            {categoryGroups.length > 0 && (
+              <div className="space-y-6">
+                {categoryGroups.map(({ category, items }) => (
+                  <div key={`category-${category}`} className="space-y-3">
+                    <h2 className="text-sm font-semibold">More from {category}</h2>
+                    <ProductGrid products={items} cart={cart} favorites={favorites} salesMap={salesMap} cols={`${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`} onOpen={setDetail} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       })()}

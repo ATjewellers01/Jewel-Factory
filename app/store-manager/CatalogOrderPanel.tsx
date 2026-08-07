@@ -343,9 +343,8 @@ export function CatalogOrderPanel({
               </div>
 
               {/* One "You may also like" group per cart line, ranked by
-                  sub-category > purity > weight-closeness rather than an
-                  exact-match filter — a strict AND went empty far too often
-                  on a real catalogue. */}
+                  category > purity rather than an exact-match filter — a
+                  strict AND went empty far too often on a real catalogue. */}
               {cart.map((l) => {
                 const fullProduct = (data ?? []).find((p) => p.id === l.productId);
                 if (!fullProduct) return null;
