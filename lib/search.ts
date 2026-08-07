@@ -49,6 +49,17 @@ function base64ToBlob(base64: string): Blob {
  * better-fitted background/composition than the generic fallback it uses
  * when category is blank.
  *
+ * Deliberately category-ONLY — subCategory is never sent here, even when
+ * /classify returns one. /catalog's prompt has per-sub-category styling
+ * (lighting mood, props) on top of the per-category one, so the same raw
+ * photo run through Add Design (manufacturer's manually-chosen sub-category)
+ * and through this search path (an AI-guessed sub-category, which won't
+ * always match) would otherwise get two visibly different cleanups — even
+ * though it's the exact same source photo — and drift the embeddings apart
+ * enough to miss the real match. Category alone gives a much more stable,
+ * consistent cleanup across both paths; the manufacturer's Add Design flow
+ * is untouched by this (still gets the full category+subCategory prompt).
+ *
  * Falls back to the original image (never throws) if AI-Features isn't
  * configured, or if either call fails — search still works, just without
  * this consistency improvement, same as before this existed.
@@ -66,13 +77,12 @@ export async function prepareQueryImageForSearch(base64: string): Promise<string
       body: classifyForm,
     });
     if (!classifyRes.ok) return base64;
-    const classified = (await classifyRes.json()) as { category?: string | null; subCategory?: string | null; confident?: boolean };
+    const classified = (await classifyRes.json()) as { category?: string | null; confident?: boolean };
 
     const catalogForm = new FormData();
     catalogForm.append('image', base64ToBlob(base64), 'query.jpg');
     if (classified.confident && classified.category) {
       catalogForm.append('category', classified.category);
-      if (classified.subCategory) catalogForm.append('subCategory', classified.subCategory);
     }
     const catalogRes = await fetch(`${base}/catalog`, {
       method: 'POST',
