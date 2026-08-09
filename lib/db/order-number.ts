@@ -11,7 +11,7 @@ import { prisma } from '@/lib/prisma';
  * Uses an atomic UPDATE ... RETURNING (not read-then-write) so two orders
  * placed in the same instant never collide on the same number.
  */
-async function nextManufacturerSeq(manufacturerId: string, column: 'next_catalog_order_seq'): Promise<number> {
+async function nextManufacturerSeq(manufacturerId: string, column: 'next_catalog_order_seq' | 'next_custom_order_seq'): Promise<number> {
   const rows = await prisma.$queryRawUnsafe<{ seq: number }[]>(
     `UPDATE "manufacturers" SET "${column}" = "${column}" + 1 WHERE "id" = $1 RETURNING "${column}" - 1 AS seq`,
     manufacturerId,
@@ -22,4 +22,16 @@ async function nextManufacturerSeq(manufacturerId: string, column: 'next_catalog
 export async function nextCatalogOrderNumber(manufacturerId: string): Promise<string> {
   const n = await nextManufacturerSeq(manufacturerId, 'next_catalog_order_seq');
   return `JFA-${String(n).padStart(4, '0')}`;
+}
+
+/**
+ * JFC-#### — used ONLY by the Karigar-assignment CustomDesignOrders created
+ * from Catalog/Kiosk order items (2026-08-09). Bespoke CustomDesignRequest-
+ * originated orders still draw from nextCatalogOrderNumber (JFA-####, unified
+ * 2026-08-04) — this counter is specifically for the new Karigar-assignment
+ * flow, which the client wants visibly distinct as "JFC-" numbers.
+ */
+export async function nextKarigarOrderNumber(manufacturerId: string): Promise<string> {
+  const n = await nextManufacturerSeq(manufacturerId, 'next_custom_order_seq');
+  return `JFC-${String(n).padStart(4, '0')}`;
 }

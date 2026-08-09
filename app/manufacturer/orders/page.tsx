@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { CustomSpecList } from '@/components/orders/CustomSpecList';
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
+import { KarigarAssignPanel } from '@/components/orders/KarigarAssignPanel';
+import { KarigarOrderForm } from '@/components/orders/KarigarOrderForm';
 import { ManufacturerOrderItemModal, type OrderItemProduct } from '@/components/orders/ManufacturerOrderItemModal';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
@@ -54,6 +56,15 @@ type CustomOrder = {
   meena: string | null; length: string | null; size: string | null;
   broadness: string | null; screw: string | null; sampleWeightGrams: string | null;
   karigarCode: string | null;
+  // Karigar-assignment fields (2026-08-09) — present when this Customised
+  // Order originated from assigning items on a Catalog/Kiosk order, or once
+  // the manufacturer fills the Phase 2 form.
+  sourceB2bOrderId?: string | null; sourceKioskOrderId?: string | null;
+  karigarId?: string | null; karigar?: { id: string; code: string } | null;
+  karigarDeliveryDate?: string | null;
+  narration1?: string | null; narration2?: string | null; qc?: string | null;
+  orderType?: string | null; orderStage?: string | null; urgent?: boolean;
+  referenceOrderNumber?: string | null; // JFA-#### of the source order, resolved client-side
 };
 
 type Row = {
@@ -68,6 +79,8 @@ type Item = {
   status: string;
   purity: string | null;
   product: OrderItemProduct | null;
+  customisedOrderId?: string | null;
+  customisedOrderNumber?: string | null;
 };
 type Detail = {
   requirementNote: string | null; shipToStoreAddress: string; items: Item[];
@@ -132,10 +145,22 @@ export default function ManufacturerOrdersPage() {
         id: o.id, source: 'kiosk', orderNumber: o.orderNumber, status: o.status, totalItems: o.totalItems,
         createdAt: o.createdAt, deliveryDate: o.deliveryDate, storeName: o.storeNameSnapshot, karigarCodes: o.karigarCodes ?? [],
       }));
-      const customRows: Row[] = (customJson.data ?? []).map((o) => ({
-        id: o.id, source: 'custom', orderNumber: o.orderNumber, status: o.status, totalItems: 0,
-        createdAt: o.createdAt, deliveryDate: o.deliveryDate, storeName: o.storeNameSnapshot, karigarCodes: o.karigarCode ? [o.karigarCode] : [], custom: o,
-      }));
+      // Resolve each Customised Order's "Reference Order No." (the source
+      // Catalog/Kiosk order's JFA-####) client-side from the already-loaded
+      // b2b/kiosk lists — avoids a second round-trip.
+      const orderNumberById = new Map<string, string>();
+      for (const o of b2bJson.data ?? []) orderNumberById.set(o.id, o.orderNumber);
+      for (const o of kioskJson.data ?? []) orderNumberById.set(o.id, o.orderNumber);
+      const customRows: Row[] = (customJson.data ?? []).map((o) => {
+        const referenceOrderNumber = (o.sourceB2bOrderId && orderNumberById.get(o.sourceB2bOrderId))
+          || (o.sourceKioskOrderId && orderNumberById.get(o.sourceKioskOrderId))
+          || null;
+        return {
+          id: o.id, source: 'custom', orderNumber: o.orderNumber, status: o.status, totalItems: 0,
+          createdAt: o.createdAt, deliveryDate: o.deliveryDate, storeName: o.storeNameSnapshot,
+          karigarCodes: o.karigarCode ? [o.karigarCode] : [], custom: { ...o, referenceOrderNumber },
+        };
+      });
       setRows([...b2bRows, ...kioskRows, ...customRows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
       setError(null);
     } catch {
@@ -149,6 +174,13 @@ export default function ManufacturerOrdersPage() {
 
   const retailerOptions = useMemo(() => uniqueBranchOptions((rows ?? []).map((o) => o.storeName)), [rows]);
   const karigarOptions = useMemo(() => [...new Set((rows ?? []).flatMap((o) => o.karigarCodes))].sort(), [rows]);
+  // customised-order id -> JFC-#### order number, used to label an assigned
+  // item and to hand KarigarOrderForm its up-to-date row after a save.
+  const customOrderById = useMemo(() => {
+    const map = new Map<string, CustomOrder>();
+    for (const o of rows ?? []) if (o.source === 'custom' && o.custom) map.set(o.id, o.custom);
+    return map;
+  }, [rows]);
   const filtered = useMemo(
     () => (rows ?? []).filter((o) =>
       matchOrder(o, { search, status, branch: retailer, branchName: o.storeName, from, to }) &&
@@ -171,7 +203,17 @@ export default function ManufacturerOrdersPage() {
       setDetail({
         requirementNote: (json.data.requirementNote as string | null) ?? null,
         shipToStoreAddress: (json.data.shipToStoreAddress as string) ?? '',
-        items: (json.data.items as Item[]) ?? [],
+        items: ((json.data.items as Array<Record<string, unknown>>) ?? []).map((i) => ({
+          id: i.id as string,
+          productNameSnapshot: (i.productNameSnapshot as string) ?? '',
+          productImageSnapshot: (i.productImageSnapshot as string | null) ?? null,
+          categorySnapshot: (i.categorySnapshot as string | null) ?? null,
+          quantity: i.quantity as number,
+          status: (i.status as string) ?? 'PENDING',
+          purity: (i.purity as string | null) ?? null,
+          product: (i.manufacturerProduct as OrderItemProduct | null) ?? null,
+          customisedOrderId: (i.customisedOrderId as string | null) ?? null,
+        })),
       });
     } else {
       setDetail({
@@ -186,9 +228,15 @@ export default function ManufacturerOrdersPage() {
           status: (i.status as string) ?? 'PENDING',
           purity: (i.purity as string | null) ?? null,
           product: (i.manufacturerProduct as OrderItemProduct | null) ?? null,
+          customisedOrderId: (i.customisedOrderId as string | null) ?? null,
         })),
       });
     }
+  }
+
+  function customisedOrderNumberFor(customisedOrderId: string | null | undefined): string | null {
+    if (!customisedOrderId) return null;
+    return customOrderById.get(customisedOrderId)?.orderNumber ?? null;
   }
 
   // Order-level status is manual, not derived from items — two explicit
@@ -306,6 +354,12 @@ export default function ManufacturerOrdersPage() {
                     <p className="text-xs text-muted-foreground uppercase tracking-wider">Design</p>
                     <p className="text-sm">{o.custom.category}{o.custom.subCategory ? ` › ${o.custom.subCategory}` : ''}</p>
                   </div>
+                  {o.custom.referenceOrderNumber && (
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Reference Order No.</p>
+                      <p className="text-sm">{o.custom.referenceOrderNumber}</p>
+                    </div>
+                  )}
                   <CustomSpecList spec={o.custom} />
                   {o.custom.designNotes && <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Remarks</p><p className="whitespace-pre-wrap text-sm">{o.custom.designNotes}</p></div>}
                   {(() => {
@@ -325,6 +379,40 @@ export default function ManufacturerOrdersPage() {
                       </div>
                     ) : null;
                   })()}
+                  <KarigarOrderForm
+                    order={{
+                      id: o.custom.id,
+                      orderNumber: o.custom.orderNumber,
+                      referenceOrderNumber: o.custom.referenceOrderNumber ?? null,
+                      karigarId: o.custom.karigarId ?? null,
+                      storeName: o.custom.storeNameSnapshot,
+                      storeAddress: o.custom.storeAddressSnapshot,
+                      category: o.custom.category,
+                      subCategory: o.custom.subCategory,
+                      weightGramsMin: o.custom.weightGramsMin,
+                      weightGramsMax: o.custom.weightGramsMax,
+                      purity: o.custom.purity,
+                      quantity: o.custom.quantity,
+                      deliveryDate: o.custom.deliveryDate,
+                      karigarDeliveryDate: o.custom.karigarDeliveryDate ?? null,
+                      meena: o.custom.meena,
+                      length: o.custom.length,
+                      size: o.custom.size,
+                      broadness: o.custom.broadness,
+                      screw: o.custom.screw,
+                      sampleWeightGrams: o.custom.sampleWeightGrams,
+                      narration1: o.custom.narration1 ?? null,
+                      narration2: o.custom.narration2 ?? null,
+                      qc: o.custom.qc ?? null,
+                      orderType: o.custom.orderType ?? null,
+                      orderStage: o.custom.orderStage ?? null,
+                      urgent: o.custom.urgent ?? false,
+                      karigarCode: o.custom.karigar?.code ?? o.custom.karigarCode,
+                      designNotes: o.custom.designNotes,
+                      imageUrl: o.custom.referenceImageUrls[0] ?? o.custom.referenceImageUrl,
+                    }}
+                    onSaved={() => void loadList()}
+                  />
                   <div className="flex flex-wrap gap-2">
                     {o.status === 'PENDING' && (
                       <Button size="sm" disabled={busy === o.id} onClick={() => advance(o, 'IN_PROCESS')} className="metal-sheen text-[#17120b] font-semibold">
@@ -386,6 +474,11 @@ export default function ManufacturerOrdersPage() {
                                 {it.product?.karigarCode && (
                                   <span className="mt-0.5 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Karigar: {it.product.karigarCode}</span>
                                 )}
+                                {it.customisedOrderId && (
+                                  <span className="mt-0.5 ml-1 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800">
+                                    Customised Order: {customisedOrderNumberFor(it.customisedOrderId) ?? '…'}
+                                  </span>
+                                )}
                               </span>
                               <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
                             </button>
@@ -405,6 +498,20 @@ export default function ManufacturerOrdersPage() {
                         ))}
                       </div>
                     </div>
+                  )}
+                  {detail?.items && (
+                    <KarigarAssignPanel
+                      orderId={o.id}
+                      source={o.source === 'kiosk' ? 'kiosk' : 'b2b'}
+                      items={detail.items.map((it) => ({
+                        id: it.id,
+                        label: `${it.product?.designNumber ?? it.productNameSnapshot} × ${it.quantity}`,
+                        karigarCode: it.product?.karigarCode ?? null,
+                        customisedOrderId: it.customisedOrderId ?? null,
+                        customisedOrderNumber: customisedOrderNumberFor(it.customisedOrderId),
+                      }))}
+                      onAssigned={() => void loadList()}
+                    />
                   )}
                   <div className="flex flex-wrap gap-2">
                     {o.status === 'PENDING' && (

@@ -149,7 +149,52 @@ export async function listCustomOrdersByManufacturer(manufacturerId: string) {
       orderRef: true, deliveryDate: true, quantity: true, meena: true,
       length: true, size: true, broadness: true, screw: true, sampleWeightGrams: true,
       status: true, trackingNumber: true, karigarCode: true, createdAt: true,
+      // Karigar-assignment fields (2026-08-09) — present on both origins
+      // (bespoke request OR assigned from a Catalog/Kiosk order); null when unset.
+      sourceB2bOrderId: true, sourceKioskOrderId: true,
+      karigarId: true, karigar: { select: { id: true, code: true } },
+      karigarDeliveryDate: true, narration1: true, narration2: true, qc: true,
+      orderType: true, orderStage: true, urgent: true,
     },
+  });
+}
+
+/**
+ * Phase 2 assignment form — the manually + auto-filled fields the manufacturer
+ * sets once a Karigar-assignment CustomDesignOrder exists (both origins: from
+ * assigning items on a Catalog/Kiosk order, or from a bespoke request).
+ * All fields optional/partial — the caller sends only what changed.
+ */
+export async function updateCustomOrderKarigarForm(manufacturerId: string, id: string, input: {
+  category?: string;
+  weightGramsMin?: number | null;
+  weightGramsMax?: number | null;
+  purity?: string | null;
+  quantity?: string | null;
+  deliveryDate?: Date | null;
+  meena?: string | null;
+  length?: string | null;
+  broadness?: string | null;
+  screw?: string | null;
+  narration1?: string | null;
+  narration2?: string | null;
+  qc?: string | null;
+  orderType?: string | null;
+  orderStage?: string | null;
+  urgent?: boolean;
+  karigarId?: string | null;
+  karigarCode?: string | null;
+}) {
+  const o = await prisma.customDesignOrder.findFirst({ where: { id, manufacturerId }, select: { id: true } });
+  if (!o) return false;
+  await prisma.customDesignOrder.update({ where: { id }, data: input });
+  return true;
+}
+
+export async function getCustomOrderForManufacturer(manufacturerId: string, id: string) {
+  return prisma.customDesignOrder.findFirst({
+    where: { id, manufacturerId },
+    include: { karigar: { select: { id: true, code: true } } },
   });
 }
 

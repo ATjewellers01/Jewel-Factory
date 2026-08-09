@@ -9,6 +9,7 @@ import { manufacturerCatalogRoutes } from './routes/manufacturer-catalog';
 import { manufacturerStoreRoutes } from './routes/manufacturer-stores';
 import { manufacturerOrderRoutes } from './routes/manufacturer-orders';
 import { manufacturerAiRoutes } from './routes/manufacturer-ai';
+import { manufacturerKarigarRoutes } from './routes/manufacturer-karigar';
 import { storeAuthRoutes } from './routes/store-auth';
 import { storePortalRoutes } from './routes/store-portal';
 import { storeCatalogRoutes } from './routes/store-catalog';
@@ -42,6 +43,7 @@ app.route('/manufacturer', manufacturerCatalogRoutes);
 app.route('/manufacturer', manufacturerStoreRoutes);
 app.route('/manufacturer', manufacturerOrderRoutes);
 app.route('/manufacturer', manufacturerAiRoutes);
+app.route('/manufacturer', manufacturerKarigarRoutes);
 
 // Store / Retailer: auth (public) + portal + catalog/B2B + ops (all owner-only)
 app.route('/store', storeAuthRoutes);

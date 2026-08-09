@@ -109,6 +109,7 @@ model Manufacturer {
   b2bOrders    B2bOrder[]
   kioskOrders  KioskOrder[]
   customOrders CustomDesignOrder[]
+  karigars     Karigar[]
 
   @@map("manufacturers")
 }
@@ -469,6 +470,9 @@ model B2bOrder {
 
   items   B2bOrderItem[]
   history B2bOrderStatusHistory[]
+  // Customised Orders spawned by assigning a Karigar to a subset of this
+  // order's items — see CustomDesignOrder.sourceB2bOrderId.
+  customisedOrders CustomDesignOrder[] @relation("SourceB2bOrder")
 
   @@index([storeId])
   @@index([manufacturerId])
@@ -482,6 +486,11 @@ model B2bOrderItem {
   orderId               String              @map("order_id")
   order                 B2bOrder            @relation(fields: [orderId], references: [id], onDelete: Cascade)
   manufacturerProductId String              @map("manufacturer_product_id")
+  // Set once the manufacturer assigns a Karigar to this item — links to the
+  // CustomDesignOrder (JFC-####) that covers it. Multiple items can share the
+  // same customisedOrderId (one Karigar-group = one CustomDesignOrder).
+  customisedOrderId     String?             @map("customised_order_id")
+  customisedOrder       CustomDesignOrder?  @relation(fields: [customisedOrderId], references: [id])
   manufacturerProduct   ManufacturerProduct @relation(fields: [manufacturerProductId], references: [id])
   quantity              Int
   productNameSnapshot   String?             @map("product_name_snapshot")
@@ -498,6 +507,7 @@ model B2bOrderItem {
   createdAt             DateTime            @default(now()) @map("created_at")
 
   @@index([orderId])
+  @@index([customisedOrderId])
   @@map("b2b_order_items")
 }
 
@@ -569,6 +579,9 @@ model KioskOrder {
 
   items   KioskOrderItem[]
   history KioskOrderStatusHistory[]
+  // Customised Orders spawned by assigning a Karigar to a subset of this
+  // order's items — see CustomDesignOrder.sourceKioskOrderId.
+  customisedOrders CustomDesignOrder[] @relation("SourceKioskOrder")
 
   @@index([storeId])
   @@index([manufacturerId])
@@ -583,6 +596,10 @@ model KioskOrderItem {
   orderId               String     @map("order_id")
   order                 KioskOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
   manufacturerProductId String?    @map("manufacturer_product_id")
+  // Set once the manufacturer assigns a Karigar to this item — see the
+  // matching note on B2bOrderItem.customisedOrderId.
+  customisedOrderId     String?            @map("customised_order_id")
+  customisedOrder       CustomDesignOrder? @relation(fields: [customisedOrderId], references: [id])
   productNameSnapshot   String     @map("product_name_snapshot")
   productImageSnapshot  String?    @map("product_image_snapshot")
   categorySnapshot      String?    @map("category_snapshot")
@@ -598,6 +615,7 @@ model KioskOrderItem {
   createdAt             DateTime   @default(now()) @map("created_at")
 
   @@index([orderId])
+  @@index([customisedOrderId])
   @@map("kiosk_order_items")
 }
 
@@ -667,14 +685,32 @@ model CustomDesignRequest {
   @@map("custom_design_requests")
 }
 
+// Two distinct origins now create a CustomDesignOrder (JFC-####):
+//   1. A CustomDesignRequest (bespoke design, no existing catalog product) —
+//      the original flow, requestId set, sourceB2bOrderId/sourceKioskOrderId null.
+//   2. The manufacturer assigning a Karigar to a subset of an EXISTING Catalog
+//      (B2B) or Store Customer (Kiosk) order's items — requestId null,
+//      sourceB2bOrderId/sourceKioskOrderId set instead (see
+//      B2bOrderItem.customisedOrderId / KioskOrderItem.customisedOrderId for
+//      the reverse per-item link). A single source order can spawn MULTIPLE
+//      CustomDesignOrders, one per Karigar-group.
 model CustomDesignOrder {
-  id             String              @id @default(uuid())
-  requestId      String              @unique @map("request_id")
-  request        CustomDesignRequest @relation(fields: [requestId], references: [id])
-  manufacturerId String              @map("manufacturer_id")
-  manufacturer   Manufacturer        @relation(fields: [manufacturerId], references: [id])
-  storeId        String              @map("store_id")
-  store          Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  id             String               @id @default(uuid())
+  requestId      String?              @unique @map("request_id")
+  request        CustomDesignRequest? @relation(fields: [requestId], references: [id])
+  manufacturerId String               @map("manufacturer_id")
+  manufacturer   Manufacturer         @relation(fields: [manufacturerId], references: [id])
+  storeId        String               @map("store_id")
+  store          Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  // Origin 2 — set when this order was spawned by assigning a Karigar to a
+  // subset of an existing Catalog/Kiosk order's items, instead of coming from
+  // a bespoke CustomDesignRequest. Exactly one of requestId /
+  // sourceB2bOrderId / sourceKioskOrderId is set (never more than one).
+  sourceB2bOrderId   String?  @map("source_b2b_order_id")
+  sourceB2bOrder     B2bOrder? @relation("SourceB2bOrder", fields: [sourceB2bOrderId], references: [id])
+  sourceKioskOrderId String?  @map("source_kiosk_order_id")
+  sourceKioskOrder   KioskOrder? @relation("SourceKioskOrder", fields: [sourceKioskOrderId], references: [id])
 
   // store identity snapshot (no customer PII)
   storeNameSnapshot    String  @map("store_name_snapshot")
@@ -693,6 +729,11 @@ model CustomDesignOrder {
   // distinct from `orderNumber` below, which this system generates.
   orderRef          String?   @map("order_ref")
   deliveryDate      DateTime? @map("delivery_date") @db.Date
+  // Karigar delivery date = client deliveryDate minus 3 days (a manufacturer-
+  // side production buffer), computed at assignment time — stored rather than
+  // derived so it survives deliveryDate being edited later without silently
+  // shifting the Karigar PDF's already-communicated date.
+  karigarDeliveryDate DateTime? @map("karigar_delivery_date") @db.Date
   quantity          String? // free text — pieces, e.g. "2 pcs" (not a strict count)
   meena             String?
   length            String?
@@ -700,6 +741,15 @@ model CustomDesignOrder {
   broadness         String?
   screw             String?
   sampleWeightGrams Decimal?  @map("sample_weight_grams") @db.Decimal(8, 3)
+  narration1        String?   @map("narration_1")
+  narration2        String?   @map("narration_2")
+  qc                String?   @map("qc")
+  orderType         String?   @map("order_type")
+  // Deferred by the client — exact meaning/options unknown yet; free text
+  // until they decide, do not invent a fixed option list.
+  orderStage        String?   @map("order_stage")
+  // Highlights the generated PDF in red — set on the assignment form.
+  urgent            Boolean   @default(false)
 
   status         CustomOrderStatus @default(PENDING)
   orderNumber    String            @unique @map("order_number") // JFC-####
@@ -708,12 +758,35 @@ model CustomDesignOrder {
   // no existing catalog product for a custom design, so this can't be looked up
   // like ManufacturerProduct.karigarCode; the manufacturer sets it directly.
   karigarCode    String?           @map("karigar_code")
+  karigarId      String?           @map("karigar_id")
+  karigar        Karigar?          @relation(fields: [karigarId], references: [id])
   createdAt      DateTime          @default(now()) @map("created_at")
   updatedAt      DateTime          @updatedAt @map("updated_at")
 
+  b2bItems   B2bOrderItem[]
+  kioskItems KioskOrderItem[]
+
   @@index([manufacturerId])
   @@index([storeId])
+  @@index([sourceB2bOrderId])
+  @@index([sourceKioskOrderId])
   @@map("custom_design_orders")
+}
+
+// Shared, manufacturer-scoped Karigar master-list — lets a Karigar-code
+// dropdown be edited/removed in one place and have that change reflected
+// everywhere it's used (rather than a free-text string repeated per row).
+model Karigar {
+  id             String       @id @default(uuid())
+  manufacturerId String       @map("manufacturer_id")
+  manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
+  code           String
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  orders CustomDesignOrder[]
+
+  @@unique([manufacturerId, code])
+  @@map("karigars")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
