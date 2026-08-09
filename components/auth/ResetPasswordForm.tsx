@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Wordmark } from '@/components/landing/Wordmark';
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
+import { Required } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { toFieldErrors } from '@/lib/field-error';
 
@@ -91,32 +92,38 @@ export function ResetPasswordForm({
 
           {done ? null : (
             <form onSubmit={submit} className="space-y-4">
-              <div className="relative">
+              <label className="block space-y-1.5">
+                <span className="text-xs font-semibold text-[#4f473f]">New password<Required /></span>
+                <div className="relative">
+                  <Input
+                    type={show ? 'text' : 'password'}
+                    placeholder="New password (min 6)"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShow((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    tabIndex={-1}
+                  >
+                    {show ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </label>
+              <FieldError errors={toFieldErrors(fieldErrors.password)} />
+              <label className="block space-y-1.5">
+                <span className="text-xs font-semibold text-[#4f473f]">Confirm password<Required /></span>
                 <Input
                   type={show ? 'text' : 'password'}
-                  placeholder="New password (min 6)"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Confirm password"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
                   required
-                  className="pr-10"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShow((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  tabIndex={-1}
-                >
-                  {show ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              <FieldError errors={toFieldErrors(fieldErrors.password)} />
-              <Input
-                type={show ? 'text' : 'password'}
-                placeholder="Confirm password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                required
-              />
+              </label>
               <FieldError errors={toFieldErrors(fieldErrors.token)} />
               {error && <p className="text-center text-sm text-red-600">{error}</p>}
               <Button type="submit" className="h-11 w-full metal-sheen text-[#17120b] font-semibold" disabled={loading}>

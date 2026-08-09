@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { BranchOrderList } from '@/components/orders/BranchOrderList';
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
+import { Required } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { apiPost } from '@/hooks/use-api';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
@@ -56,6 +57,7 @@ export default function StoreManagerRestockPage() {
             <p className="mt-1 text-sm text-muted-foreground">Enter the restock PIN. This keeps customers out of restock.</p>
           </div>
           <div>
+            <label className="mb-1 block text-center text-xs font-medium text-muted-foreground">Restock PIN<Required /></label>
             <Input type="password" inputMode="numeric" autoFocus placeholder="Restock PIN" value={pin} onChange={(e) => setPin(e.target.value)} className="text-center tracking-widest" />
             <FieldError errors={toFieldErrors(fieldError(submitErr, 'pin'))} />
           </div>

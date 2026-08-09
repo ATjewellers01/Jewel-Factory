@@ -8,6 +8,7 @@ import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/or
 import { CustomSpecList } from '@/components/orders/CustomSpecList';
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
+import { Optional } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { useApi, apiPost, apiSend } from '@/hooks/use-api';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
@@ -176,7 +177,7 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
       {/* Requirement note — editable by HO before approving */}
       <div className="mt-3 rounded-lg border bg-muted/20 p-2.5">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Remark (sent to manufacturer)</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Remark (sent to manufacturer)<Optional /></p>
           {!editing && (
             <button onClick={() => { setDraft(note ?? ''); setEditing(true); }} className="inline-flex items-center gap-1 text-xs text-primary hover:underline"><Pencil className="h-3 w-3" />Edit</button>
           )}

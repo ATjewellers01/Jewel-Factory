@@ -6,6 +6,7 @@ import { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
+import { Optional, Required } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { apiPost } from '@/hooks/use-api';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
@@ -165,7 +166,7 @@ export default function StoreCustomDesignNewPage() {
               field simply isn't shown/collected here anymore. */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Delivery date</label>
+              <label className="text-xs font-medium text-muted-foreground">Delivery date<Required /></label>
               <Input required type="date" min={todayIso()} className="mt-1 h-10" value={form.deliveryDate} onChange={(e) => set('deliveryDate', e.target.value)} />
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'deliveryDate'))} />
             </div>
@@ -179,7 +180,7 @@ export default function StoreCustomDesignNewPage() {
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'category'))} />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Sub-category</label>
+              <label className="text-xs font-medium text-muted-foreground">Sub-category<Required /></label>
               {subOptions.length > 0 && !subCustom ? (
                 <select required className="mt-1 h-10 w-full rounded-lg border border-black/15 bg-white/60 px-3 text-sm" value={form.subCategory} onChange={(e) => { if (e.target.value === '__other__') { setSubCustom(true); set('subCategory', ''); } else set('subCategory', e.target.value); }}>
                   <option value="">—</option>
@@ -197,7 +198,7 @@ export default function StoreCustomDesignNewPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Quantity</label>
+              <label className="text-xs font-medium text-muted-foreground">Quantity<Required /></label>
               <div className="mt-1 flex items-center gap-2">
                 <Input required placeholder="e.g. 2 pcs" value={form.quantity} onChange={(e) => set('quantity', e.target.value)} className="h-10" />
               </div>
@@ -206,7 +207,7 @@ export default function StoreCustomDesignNewPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Weight range (gm)</label>
+              <label className="text-xs font-medium text-muted-foreground">Weight range (gm)<Required /></label>
               <div className="mt-1 flex items-center gap-2">
                 <Input
                   required
@@ -237,7 +238,7 @@ export default function StoreCustomDesignNewPage() {
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'weightGramsMin') ?? fieldError(submitErr, 'weightGramsMax'))} />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Melting / purity</label>
+              <label className="text-xs font-medium text-muted-foreground">Melting / purity<Optional /></label>
               <select className="mt-1 h-10 w-full rounded-lg border border-black/15 bg-white/60 px-3 text-sm" value={form.purity} onChange={(e) => set('purity', e.target.value)}>
                 <option value="">—</option>
                 {PURITIES.map((p) => <option key={p} value={p}>{p}</option>)}
@@ -248,7 +249,7 @@ export default function StoreCustomDesignNewPage() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Meena / colouring</label>
+              <label className="text-xs font-medium text-muted-foreground">Meena / colouring<Required /></label>
               <select required className="mt-1 h-10 w-full rounded-lg border border-black/15 bg-white/60 px-3 text-sm" value={form.meena} onChange={(e) => set('meena', e.target.value)}>
                 <option value="">—</option>
                 {MEENA_OPTIONS.map((m) => <option key={m} value={m}>{m}</option>)}
@@ -256,7 +257,7 @@ export default function StoreCustomDesignNewPage() {
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'meena'))} />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Screw</label>
+              <label className="text-xs font-medium text-muted-foreground">Screw<Required /></label>
               <select required className="mt-1 h-10 w-full rounded-lg border border-black/15 bg-white/60 px-3 text-sm" value={form.screw} onChange={(e) => set('screw', e.target.value)}>
                 <option value="">—</option>
                 {SCREW_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -266,17 +267,17 @@ export default function StoreCustomDesignNewPage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Length <span className="normal-case text-muted-foreground/70">(optional)</span></label>
+              <label className="text-xs font-medium text-muted-foreground">Length<Optional /></label>
               <Input className="mt-1 h-10" placeholder="e.g. 18 inch" value={form.length} onChange={(e) => set('length', e.target.value)} />
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'length'))} />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Size <span className="normal-case text-muted-foreground/70">(optional)</span></label>
+              <label className="text-xs font-medium text-muted-foreground">Size<Optional /></label>
               <Input className="mt-1 h-10" placeholder="e.g. 2.6 or 2.6.5" value={form.size} onChange={(e) => set('size', e.target.value)} />
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'size'))} />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Broadness <span className="normal-case text-muted-foreground/70">(optional)</span></label>
+              <label className="text-xs font-medium text-muted-foreground">Broadness<Optional /></label>
               <Input className="mt-1 h-10" placeholder="e.g. 8 mm" value={form.broadness} onChange={(e) => set('broadness', e.target.value)} />
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'broadness'))} />
             </div>
@@ -284,7 +285,7 @@ export default function StoreCustomDesignNewPage() {
 
           <div>
             <div className="mb-1.5 flex items-center justify-between">
-              <label className="text-xs font-medium text-muted-foreground">Reference images</label>
+              <label className="text-xs font-medium text-muted-foreground">Reference images<Required /></label>
               <span className="text-[11px] text-muted-foreground">{images.length}/{MAX_IMAGES}</span>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -312,7 +313,7 @@ export default function StoreCustomDesignNewPage() {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Remarks</label>
+            <label className="text-xs font-medium text-muted-foreground">Remarks<Optional /></label>
             <textarea className="mt-1 min-h-[130px] w-full rounded-lg border border-black/15 bg-white/60 px-3 py-2 text-sm" placeholder="Describe the design — style, size, engraving, timeline…" value={form.notes} onChange={(e) => set('notes', e.target.value)} />
             <FieldError errors={toFieldErrors(fieldError(submitErr, 'designNotes'))} />
           </div>

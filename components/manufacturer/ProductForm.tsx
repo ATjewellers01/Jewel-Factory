@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
+import { Optional } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { uploadToObjectStorage } from '@/lib/upload-client';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
@@ -489,7 +490,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
             <FieldError errors={toFieldErrors(fieldErrors.category)} />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Sub-category <span className="font-normal">(optional)</span></label>
+            <label className="text-xs font-medium text-muted-foreground">Sub-category<Optional /></label>
             {subOptions.length > 0 && !subCustom ? (
               <select
                 className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
@@ -521,12 +522,12 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Weight (gm)</label>
+            <label className="text-xs font-medium text-muted-foreground">Weight (gm)<Optional /></label>
             <Input className="mt-1" type="number" step="0.001" placeholder="12.5" value={form.weightGrams} onChange={set('weightGrams')} />
             <FieldError errors={toFieldErrors(fieldErrors.weightGrams)} />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Purity</label>
+            <label className="text-xs font-medium text-muted-foreground">Purity<Optional /></label>
             <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.purity} onChange={set('purity')}>
               <option value="">—</option>
               {PURITIES.map((p) => <option key={p} value={p}>{p}</option>)}
@@ -534,7 +535,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
             <FieldError errors={toFieldErrors(fieldErrors.purity)} />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Pieces</label>
+            <label className="text-xs font-medium text-muted-foreground">Pieces<Optional /></label>
             <Input className="mt-1" type="number" min="1" step="1" placeholder="1" value={form.pieces} onChange={set('pieces')} title="How many physical pieces make up the weight above (e.g. a bangle pair = 2)" />
             <FieldError errors={toFieldErrors(fieldErrors.pieces)} />
           </div>
@@ -544,7 +545,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         {showSize && (
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Size <span className="font-normal">(optional)</span></label>
+              <label className="text-xs font-medium text-muted-foreground">Size<Optional /></label>
               <Input className="mt-1" placeholder="e.g. 2.4" value={form.size} onChange={set('size')} title="Bangle size — free text, e.g. 2.4 or 2.6" />
               <FieldError errors={toFieldErrors(fieldErrors.size)} />
             </div>
@@ -556,7 +557,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
       <section className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Min Order Qty</label>
+            <label className="text-xs font-medium text-muted-foreground">Min Order Qty<Optional /></label>
             <Input className="mt-1" type="number" min="1" value={form.minOrderQty} onChange={set('minOrderQty')} />
             <FieldError errors={toFieldErrors(fieldErrors.minOrderQty)} />
           </div>
@@ -700,7 +701,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
       {/* Description — moved to the bottom, after photos + AR try-on. */}
       <section>
-        <label className="text-xs font-medium text-muted-foreground">Description</label>
+        <label className="text-xs font-medium text-muted-foreground">Description<Optional /></label>
         <textarea className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[80px]" placeholder="Design details, motif, occasion." value={form.description} onChange={set('description')} />
       </section>
 

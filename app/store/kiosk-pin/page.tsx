@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
+import { Required } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { apiSend } from '@/hooks/use-api';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
@@ -71,7 +72,7 @@ export default function KioskPinPage() {
             </p>
             <div className="flex flex-wrap items-end gap-2">
               <div>
-                <label className="text-xs font-medium text-muted-foreground">{isSet ? 'New PIN' : 'Set PIN'} (min 4)</label>
+                <label className="text-xs font-medium text-muted-foreground">{isSet ? 'New PIN' : 'Set PIN'} (min 4)<Required /></label>
                 <Input className="mt-1 max-w-[180px]" type="password" inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="••••" />
                 <FieldError errors={toFieldErrors(fieldError(submitErr, 'pin'))} />
               </div>

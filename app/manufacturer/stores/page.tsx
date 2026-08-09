@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
+import { Optional, Required } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { useApi, apiPost, apiSend } from '@/hooks/use-api';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
@@ -286,13 +287,25 @@ function EditModal({
         {/* Editable contact section */}
         <div className="space-y-2 border-b pb-3">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Contact Info (Editable)</h3>
-          <Input placeholder="Business Name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">Business Name<Optional /></span>
+            <Input placeholder="Business Name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+          </label>
           <FieldError errors={toFieldErrors(fieldError(submitErr, 'name'))} />
-          <Input placeholder="Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">Email<Optional /></span>
+            <Input placeholder="Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+          </label>
           <FieldError errors={toFieldErrors(fieldError(submitErr, 'email'))} />
-          <Input placeholder="Mobile Number" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">Mobile Number<Optional /></span>
+            <Input placeholder="Mobile Number" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+          </label>
           <FieldError errors={toFieldErrors(fieldError(submitErr, 'phone'))} />
-          <Input placeholder="City" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">City<Optional /></span>
+            <Input placeholder="City" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
+          </label>
           <FieldError errors={toFieldErrors(fieldError(submitErr, 'city'))} />
         </div>
 
@@ -367,7 +380,7 @@ function EditModal({
         {/* Editable store limits */}
         <div className="space-y-2">
           <label className="text-xs font-medium text-muted-foreground">
-            Extra stores granted (free limit is {FREE_BRANCH_LIMIT})
+            Extra stores granted (free limit is {FREE_BRANCH_LIMIT})<Optional />
           </label>
           <Input
             type="number"
@@ -432,7 +445,10 @@ function PasswordModal({ store, onClose }: { store: Store; onClose: () => void }
     <Modal onClose={onClose} title={`Reset password — ${store.name}`}>
       {done ? <p className="text-sm text-green-700">Password reset.</p> : (
         <>
-          <Input type="password" placeholder="New password (min 6)" value={pw} onChange={(e) => setPw(e.target.value)} />
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">New password (min 6)<Required /></span>
+            <Input type="password" placeholder="New password (min 6)" value={pw} onChange={(e) => setPw(e.target.value)} />
+          </label>
           <FieldError errors={toFieldErrors(fieldError(submitErr, 'password'))} />
           {err && <p className="text-sm text-red-600">{err}</p>}
           <div className="flex gap-2"><Button onClick={save} disabled={busy} className="metal-sheen text-[#17120b] font-semibold flex-1">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reset'}</Button><Button variant="outline" onClick={onClose}>Cancel</Button></div>

@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Optional } from '@/components/ui/field-mark';
 import { apiPost, apiSend } from '@/hooks/use-api';
 import { downloadKarigarOrderPdf, type KarigarPdfOrder } from '@/lib/karigar-pdf';
 
@@ -179,7 +180,7 @@ export function KarigarOrderForm({ order, onSaved }: { order: KarigarOrderFormDa
       </div>
 
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Karigar</p>
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Karigar<Optional /></p>
         <div className="flex flex-wrap items-center gap-2">
           <select
             className="h-8 rounded-md border border-input bg-transparent px-2 text-xs"
@@ -209,41 +210,41 @@ export function KarigarOrderForm({ order, onSaved }: { order: KarigarOrderFormDa
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <label className="space-y-1">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Meena</span>
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Meena<Optional /></span>
           <input value={meena} onChange={(e) => setMeena(e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
         </label>
         <label className="space-y-1">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length</span>
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Length<Optional /></span>
           <input value={length} onChange={(e) => setLength(e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
         </label>
         <label className="space-y-1">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Broadness</span>
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Broadness<Optional /></span>
           <input value={broadness} onChange={(e) => setBroadness(e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
         </label>
         <label className="space-y-1">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Screw</span>
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Screw<Optional /></span>
           <input value={screw} onChange={(e) => setScrew(e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
         </label>
         <label className="space-y-1">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">QC</span>
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">QC<Optional /></span>
           <input value={qc} onChange={(e) => setQc(e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
         </label>
         <label className="space-y-1">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Order Type</span>
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Order Type<Optional /></span>
           <input value={orderType} onChange={(e) => setOrderType(e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
         </label>
         <label className="space-y-1 col-span-2 sm:col-span-1">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Order Stage (Optional)</span>
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Order Stage<Optional /></span>
           <input value={orderStage} onChange={(e) => setOrderStage(e.target.value)} placeholder="To be decided" className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
         </label>
       </div>
 
       <label className="space-y-1 block">
-        <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Narration 1</span>
+        <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Narration 1<Optional /></span>
         <textarea value={narration1} onChange={(e) => setNarration1(e.target.value)} rows={2} className="w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-sm" />
       </label>
       <label className="space-y-1 block">
-        <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Narration 2</span>
+        <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Narration 2<Optional /></span>
         <textarea value={narration2} onChange={(e) => setNarration2(e.target.value)} rows={2} className="w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-sm" />
       </label>
 

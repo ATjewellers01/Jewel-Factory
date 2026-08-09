@@ -16,6 +16,7 @@ import { PortalLoginScreen } from '@/components/auth/PortalLoginScreen';
 import { Wordmark } from '@/components/landing/Wordmark';
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
+import { Optional, Required } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { toFieldErrors } from '@/lib/field-error';
 import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
@@ -239,19 +240,19 @@ export default function StoreRegisterPage() {
             <section className="space-y-8 border-y border-[#e0d8ce] py-6 sm:py-7">
                 <fieldset className="space-y-5">
                   <legend className="font-display text-[1.35rem] tracking-tight">Tell us about your business</legend>
-                  <label className={labelClass}>Business name <Input autoFocus autoComplete="organization" placeholder="e.g. Mehta Jewellers" value={form.name} onChange={set('name')} className={fieldClass} /></label>
+                  <label className={labelClass}>Business name<Required /> <Input autoFocus autoComplete="organization" placeholder="e.g. Mehta Jewellers" value={form.name} onChange={set('name')} className={fieldClass} /></label>
                   <FieldError errors={toFieldErrors(fieldErrors.name)} />
                   <div className="grid gap-5 lg:grid-cols-2">
                     <div>
-                      <label className={labelClass}>Person name <Input autoComplete="name" placeholder="Full name" value={form.personName} onChange={set('personName')} className={fieldClass} /></label>
+                      <label className={labelClass}>Person name<Required /> <Input autoComplete="name" placeholder="Full name" value={form.personName} onChange={set('personName')} className={fieldClass} /></label>
                       <FieldError errors={toFieldErrors(fieldErrors.personName)} />
                     </div>
                     <div>
-                      <label className={labelClass}>Mobile number <Input type="tel" autoComplete="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number" value={form.mobileNumber} onChange={set('mobileNumber')} className={fieldClass} /></label>
+                      <label className={labelClass}>Mobile number<Required /> <Input type="tel" autoComplete="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number" value={form.mobileNumber} onChange={set('mobileNumber')} className={fieldClass} /></label>
                       <FieldError errors={toFieldErrors(fieldErrors.mobileNumber)} />
                     </div>
                   </div>
-                  <label className={labelClass}>Business email <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
+                  <label className={labelClass}>Business email<Optional />
                     <Input type="email" autoComplete="email" inputMode="email" placeholder="Used to sign in (optional)" value={form.email} onChange={set('email')} className={fieldClass} />
                   </label>
                   <FieldError errors={toFieldErrors(fieldErrors.email)} />
@@ -275,7 +276,7 @@ export default function StoreRegisterPage() {
                   <p className="-mt-3 text-sm leading-6 text-[#7b7269]">Approved orders are shipped to this fixed Head Office address.</p>
                   <label className={labelClass}>
                     <span className="flex items-center justify-between">
-                      Pincode
+                      <span>Pincode<Required /></span>
                       {pincodeLookup === 'loading' && <span className="inline-flex items-center gap-1 font-normal normal-case tracking-normal text-[#a39a91]"><Loader2 className="h-3 w-3 animate-spin" />Looking up…</span>}
                       {pincodeLookup === 'not-found' && <span className="font-normal normal-case tracking-normal text-red-600">PIN not found — enter city/state manually</span>}
                     </span>
@@ -284,11 +285,11 @@ export default function StoreRegisterPage() {
                   <FieldError errors={toFieldErrors(fieldErrors.addressPincode)} />
                   <div className="grid gap-5 lg:grid-cols-2">
                     <div>
-                      <label className={labelClass}>City <Input autoComplete="address-level2" placeholder="City" value={form.addressCity} onChange={set('addressCity')} className={fieldClass} /></label>
+                      <label className={labelClass}>City<Required /> <Input autoComplete="address-level2" placeholder="City" value={form.addressCity} onChange={set('addressCity')} className={fieldClass} /></label>
                       <FieldError errors={toFieldErrors(fieldErrors.addressCity)} />
                     </div>
                     <div>
-                      <label className={labelClass}>State <Input autoComplete="address-level1" placeholder="State" value={form.addressState} onChange={set('addressState')} className={fieldClass} /></label>
+                      <label className={labelClass}>State<Required /> <Input autoComplete="address-level1" placeholder="State" value={form.addressState} onChange={set('addressState')} className={fieldClass} /></label>
                       <FieldError errors={toFieldErrors(fieldErrors.addressState)} />
                     </div>
                   </div>
@@ -296,14 +297,14 @@ export default function StoreRegisterPage() {
                       edited later from the purchase manager's profile page. */}
                   <label className={labelClass}>
                     <span className="flex flex-wrap items-center gap-x-2">
-                      Street address <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
+                      Street address<Optional />
                     </span>
                     <Input autoComplete="street-address" placeholder="Building, street and area" value={form.addressStreet} onChange={set('addressStreet')} className={fieldClass} />
                   </label>
                   <FieldError errors={toFieldErrors(fieldErrors.addressStreet)} />
                   <label className={labelClass}>
                     <span className="flex flex-wrap items-center gap-x-2">
-                      Landmark <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
+                      Landmark<Optional />
                     </span>
                     <Input placeholder="Nearby landmark" value={form.addressLandmark} onChange={set('addressLandmark')} className={fieldClass} />
                   </label>
@@ -312,7 +313,7 @@ export default function StoreRegisterPage() {
 
                   <div className={labelClass}>
                     <span className="flex flex-wrap items-center gap-x-2">
-                      Store logo <span className="font-normal normal-case tracking-normal text-[#a39a91]">Optional</span>
+                      Store logo<Optional />
                     </span>
 
                     <div className="flex gap-1 text-[11px] font-semibold normal-case tracking-normal">

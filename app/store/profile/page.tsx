@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
+import { Optional } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { apiSend } from '@/hooks/use-api';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
@@ -119,7 +120,7 @@ export default function StoreProfilePage() {
 function Field({ label, value, onChange, hint, error }: { label: string; value: string; onChange: (v: string) => void; hint?: string; error?: string }) {
   return (
     <div>
-      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <label className="text-xs font-medium text-muted-foreground">{label}<Optional /></label>
       <Input className="mt-1" value={value} onChange={(e) => onChange(e.target.value)} />
       {hint && <p className="mt-1 text-[11px] leading-4 text-muted-foreground">{hint}</p>}
       <FieldError errors={toFieldErrors(error)} />

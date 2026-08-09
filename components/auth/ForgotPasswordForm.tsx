@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Wordmark } from '@/components/landing/Wordmark';
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
+import { Required } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { toFieldErrors } from '@/lib/field-error';
 import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
@@ -141,15 +142,18 @@ export function ForgotPasswordForm({
 
           {!sent && !blocked && !mobileOnly && (
             <form onSubmit={submit} className="space-y-4">
-              <Input
-                type="tel"
-                inputMode="numeric"
-                maxLength={10}
-                placeholder="10-digit mobile number"
-                value={mobileNumber}
-                onChange={(e) => setMobileNumber(e.target.value)}
-                required
-              />
+              <label className="block space-y-1.5">
+                <span className="text-xs font-semibold text-[#4f473f]">Mobile number<Required /></span>
+                <Input
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder="10-digit mobile number"
+                  value={mobileNumber}
+                  onChange={(e) => setMobileNumber(e.target.value)}
+                  required
+                />
+              </label>
               <FieldError errors={toFieldErrors(fieldErrors.mobileNumber)} />
               <Button type="submit" className="h-11 w-full metal-sheen text-[#17120b] font-semibold" disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send reset link'}

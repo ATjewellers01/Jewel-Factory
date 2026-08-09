@@ -6,6 +6,7 @@ import { useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
+import { Optional, Required } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { useKioskStore } from '@/components/kiosk/StoreContext';
 import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
@@ -111,8 +112,8 @@ export default function CustomDesignPage() {
 
       <form onSubmit={submit} className="mt-6 space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div><label className="text-xs font-medium text-muted-foreground">Your Name *</label><Input className="mt-1" value={form.name} onChange={(e) => set('name', e.target.value)} required /><FieldError errors={toFieldErrors(fieldErrors.customerName)} /></div>
-          <div><label className="text-xs font-medium text-muted-foreground">Phone *</label><Input className="mt-1" type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} required /><FieldError errors={toFieldErrors(fieldErrors.customerPhone)} /></div>
+          <div><label className="text-xs font-medium text-muted-foreground">Your Name<Required /></label><Input className="mt-1" value={form.name} onChange={(e) => set('name', e.target.value)} required /><FieldError errors={toFieldErrors(fieldErrors.customerName)} /></div>
+          <div><label className="text-xs font-medium text-muted-foreground">Phone<Required /></label><Input className="mt-1" type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} required /><FieldError errors={toFieldErrors(fieldErrors.customerPhone)} /></div>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
@@ -123,7 +124,7 @@ export default function CustomDesignPage() {
             <FieldError errors={toFieldErrors(fieldErrors.category)} />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Sub-category <span className="font-normal">(optional)</span></label>
+            <label className="text-xs font-medium text-muted-foreground">Sub-category<Optional /></label>
             {subOptions.length > 0 && !subCustom ? (
               <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.subCategory} onChange={(e) => onSubSelectChange(e.target.value)}>
                 <option value="">—</option>
@@ -141,9 +142,9 @@ export default function CustomDesignPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div><label className="text-xs font-medium text-muted-foreground">Weight (gm)</label><Input className="mt-1" type="number" step="0.1" value={form.weight} onChange={(e) => set('weight', e.target.value)} /><FieldError errors={toFieldErrors(fieldErrors.weightGrams)} /></div>
+          <div><label className="text-xs font-medium text-muted-foreground">Weight (gm)<Optional /></label><Input className="mt-1" type="number" step="0.1" value={form.weight} onChange={(e) => set('weight', e.target.value)} /><FieldError errors={toFieldErrors(fieldErrors.weightGrams)} /></div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Purity</label>
+            <label className="text-xs font-medium text-muted-foreground">Purity<Optional /></label>
             <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.purity} onChange={(e) => set('purity', e.target.value)}>
               <option value="">—</option>
               {PURITIES.map((p) => <option key={p} value={p}>{p}</option>)}
@@ -154,7 +155,7 @@ export default function CustomDesignPage() {
         {/* Reference image — upload OR URL */}
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <label className="text-xs font-medium text-muted-foreground">Reference image (optional)</label>
+            <label className="text-xs font-medium text-muted-foreground">Reference image<Optional /></label>
             <div className="flex gap-1 text-xs">
               <button type="button" onClick={() => setImageMode('upload')} className={`rounded px-2 py-0.5 ${imageMode === 'upload' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>Upload</button>
               <button type="button" onClick={() => setImageMode('url')} className={`rounded px-2 py-0.5 ${imageMode === 'url' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>URL</button>
@@ -183,7 +184,7 @@ export default function CustomDesignPage() {
           )}
           <FieldError errors={toFieldErrors(fieldErrors.referenceImageUrl)} />
         </div>
-        <div><label className="text-xs font-medium text-muted-foreground">Notes / description</label><textarea className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[100px]" placeholder="Describe your ideal design…" value={form.notes} onChange={(e) => set('notes', e.target.value)} /><FieldError errors={toFieldErrors(fieldErrors.notes)} /></div>
+        <div><label className="text-xs font-medium text-muted-foreground">Notes / description<Optional /></label><textarea className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[100px]" placeholder="Describe your ideal design…" value={form.notes} onChange={(e) => set('notes', e.target.value)} /><FieldError errors={toFieldErrors(fieldErrors.notes)} /></div>
 
         {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
         <Button type="submit" disabled={loading} className="metal-sheen h-11 w-full text-sm font-semibold text-[#17120b]">

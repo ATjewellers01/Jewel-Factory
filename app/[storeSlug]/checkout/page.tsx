@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
+import { Optional, Required } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { useKioskStore } from '@/components/kiosk/StoreContext';
 import { useGuestCart } from '@/hooks/use-guest-cart';
@@ -120,9 +121,9 @@ export default function KioskCheckoutPage() {
 
         {/* Details */}
         <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div><label className="text-xs font-medium text-muted-foreground">Name *</label><Input className="mt-1" value={form.name} onChange={(e) => set('name', e.target.value)} required /><FieldError errors={toFieldErrors(fieldErrors.customerName)} /></div>
-          <div><label className="text-xs font-medium text-muted-foreground">Phone *</label><Input className="mt-1" type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} required /><FieldError errors={toFieldErrors(fieldErrors.customerPhone)} /></div>
-          <div className="sm:col-span-2"><label className="text-xs font-medium text-muted-foreground">Email (optional)</label><Input className="mt-1" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} /><FieldError errors={toFieldErrors(fieldErrors.customerEmail)} /></div>
+          <div><label className="text-xs font-medium text-muted-foreground">Name<Required /></label><Input className="mt-1" value={form.name} onChange={(e) => set('name', e.target.value)} required /><FieldError errors={toFieldErrors(fieldErrors.customerName)} /></div>
+          <div><label className="text-xs font-medium text-muted-foreground">Phone<Required /></label><Input className="mt-1" type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} required /><FieldError errors={toFieldErrors(fieldErrors.customerPhone)} /></div>
+          <div className="sm:col-span-2"><label className="text-xs font-medium text-muted-foreground">Email<Optional /></label><Input className="mt-1" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} /><FieldError errors={toFieldErrors(fieldErrors.customerEmail)} /></div>
         </section>
 
         {/* Delivery mode */}
@@ -133,7 +134,10 @@ export default function KioskCheckoutPage() {
           </div>
           {mode === 'delivery' && (
             <>
-              <textarea className="w-full rounded-xl border bg-background px-3 py-2 text-sm min-h-[80px]" placeholder="House / flat, street, city, PIN code" value={form.address} onChange={(e) => set('address', e.target.value)} required />
+              <label className="block space-y-1">
+                <span className="text-xs font-medium text-muted-foreground">Delivery address<Required /></span>
+                <textarea className="w-full rounded-xl border bg-background px-3 py-2 text-sm min-h-[80px]" placeholder="House / flat, street, city, PIN code" value={form.address} onChange={(e) => set('address', e.target.value)} required />
+              </label>
               <FieldError errors={toFieldErrors(fieldErrors.deliveryAddress)} />
             </>
           )}
@@ -141,7 +145,10 @@ export default function KioskCheckoutPage() {
         </section>
 
         <div>
-          <textarea className="w-full rounded-xl border bg-background px-3 py-2 text-sm min-h-[60px]" placeholder="Notes (optional)" value={form.notes} onChange={(e) => set('notes', e.target.value)} />
+          <label className="block space-y-1">
+            <span className="text-xs font-medium text-muted-foreground">Notes<Optional /></span>
+            <textarea className="w-full rounded-xl border bg-background px-3 py-2 text-sm min-h-[60px]" placeholder="Any special instructions" value={form.notes} onChange={(e) => set('notes', e.target.value)} />
+          </label>
           <FieldError errors={toFieldErrors(fieldErrors.notes)} />
         </div>
 

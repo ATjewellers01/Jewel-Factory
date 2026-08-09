@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
+import { Optional, Required } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { useApi, apiPost, apiSend } from '@/hooks/use-api';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
@@ -114,23 +115,23 @@ export default function BranchesPage() {
       <form onSubmit={add} className="space-y-4 rounded-xl border bg-card p-4">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Add a Retailer User</h2>
 
-        <label className={labelClass}>Store Name *
+        <label className={labelClass}>Store Name<Required />
           <Input placeholder="e.g. Kanpur Main" value={form.name} onChange={set('name')} required />
           <FieldError errors={toFieldErrors(fieldError(submitErr, 'name'))} />
         </label>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className={labelClass}>User Mobile Number *
+          <label className={labelClass}>User Mobile Number<Required />
             <Input type="tel" inputMode="numeric" maxLength={10} placeholder="10-digit mobile number" value={form.phone} onChange={set('phone')} required autoComplete="off" />
             <FieldError errors={toFieldErrors(fieldError(submitErr, 'phone'))} />
           </label>
-          <label className={labelClass}>Retail User Email
+          <label className={labelClass}>Retail User Email<Optional />
             <Input type="email" inputMode="email" placeholder="e.g. name@example.com" value={form.email} onChange={set('email')} autoComplete="off" />
             <FieldError errors={toFieldErrors(fieldError(submitErr, 'email'))} />
           </label>
         </div>
 
-        <label className={labelClass}>Restock Pin
+        <label className={labelClass}>Restock Pin<Optional />
           <Input type="password" inputMode="numeric" maxLength={12} placeholder="4–12 digits (optional)" value={form.pin} onChange={set('pin')} className="sm:max-w-[220px]" autoComplete="new-password" />
           <FieldError errors={toFieldErrors(fieldError(submitErr, 'pin'))} />
         </label>
