@@ -447,6 +447,9 @@ model B2bOrder {
   requirementNote String?     @map("requirement_note") // editable (Store Mgr + HO)
   branchNameSnapshot String?  @map("branch_name_snapshot")
   trackingNumber  String?     @map("tracking_number")
+  // Optional — set by the Retailer Admin when placing their own order, or
+  // when approving a branch's order. Forwarded to the manufacturer.
+  deliveryDate    DateTime?   @map("delivery_date") @db.Date
 
   // manager approval gate
   pendingManagerApproval Boolean   @default(true) @map("pending_manager_approval")
@@ -547,6 +550,9 @@ model KioskOrder {
   orderSource    String      @default("kiosk") @map("order_source")
   status         OrderStatus @default(PENDING)
   trackingNumber String?     @map("tracking_number")
+  // Optional — set by the Retailer Admin when approving this order. Forwarded
+  // to the manufacturer (no personal data — this is order-level, not customer PII).
+  deliveryDate   DateTime?   @map("delivery_date") @db.Date
 
   // store approval gate
   pendingStoreApproval    Boolean   @default(true) @map("pending_store_approval")

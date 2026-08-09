@@ -23,6 +23,22 @@ import { managerGuard, approverIdOrNull, type AppEnv } from '../guards';
 export const storeOpsRoutes = new Hono<AppEnv>();
 storeOpsRoutes.use('*', managerGuard);
 
+// Approve routes accept an OPTIONAL { deliveryDate } body — existing clients
+// that send no body at all (or an empty one) must keep working unchanged, so
+// this parses best-effort rather than using jsonValidator (which would 400 on
+// a missing/empty body). undefined means "not provided" (leave the column
+// untouched); null/invalid collapses to null (explicitly cleared).
+async function optionalDeliveryDate(c: { req: { json: () => Promise<unknown> } }): Promise<Date | null | undefined> {
+  let body: unknown;
+  try { body = await c.req.json(); } catch { return undefined; }
+  if (!body || typeof body !== 'object' || !('deliveryDate' in body)) return undefined;
+  const raw = (body as { deliveryDate: unknown }).deliveryDate;
+  if (raw === null || raw === '') return null;
+  if (typeof raw !== 'string') return undefined;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
 // ── Dashboard + Intelligence ──────────────────────────────────────────────────
 storeOpsRoutes.get('/dashboard', async (c) => {
   return sendData(c, await getStoreDashboard(c.get('storeId')));
@@ -68,7 +84,8 @@ storeOpsRoutes.get('/kiosk-orders/:id', async (c) => {
   return sendData(c, o);
 });
 storeOpsRoutes.post('/kiosk-orders/:id/approve', async (c) => {
-  const ok = await approveKioskOrder(c.get('storeId'), c.req.param('id'), approverIdOrNull(c));
+  const deliveryDate = await optionalDeliveryDate(c);
+  const ok = await approveKioskOrder(c.get('storeId'), c.req.param('id'), approverIdOrNull(c), deliveryDate);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, { ok: true });
 });
@@ -97,7 +114,8 @@ storeOpsRoutes.get('/b2b-orders/:id', async (c) => {
   return sendData(c, o);
 });
 storeOpsRoutes.post('/b2b-orders/:id/approve', async (c) => {
-  const ok = await approveB2bOrder(c.get('storeId'), c.req.param('id'), approverIdOrNull(c));
+  const deliveryDate = await optionalDeliveryDate(c);
+  const ok = await approveB2bOrder(c.get('storeId'), c.req.param('id'), approverIdOrNull(c), deliveryDate);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, { ok: true });
 });

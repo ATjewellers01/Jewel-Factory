@@ -72,6 +72,7 @@ function CatalogBrowse() {
   const [showCart, setShowCart] = useState(params.get('open') === 'cart');
   const [showFavorites, setShowFavorites] = useState(params.get('open') === 'favorites');
   const [notes, setNotes] = useState('');
+  const [deliveryDate, setDeliveryDate] = useState('');
   const [placing, setPlacing] = useState(false);
   const [submitErr, setSubmitErr] = useState<unknown>(null);
   const [salesMap, setSalesMap] = useState<Record<string, SalesInfo>>({});
@@ -136,9 +137,11 @@ function CatalogBrowse() {
     try {
       const order = (await apiPost('/api/store/orders', {
         notes: notes || undefined,
+        deliveryDate: deliveryDate || undefined,
         items: cart.items.map((i) => ({ manufacturerProductId: i.productId, quantity: i.quantity, purity: i.purity || undefined })),
       })) as { id: string };
       cart.clear();
+      setDeliveryDate('');
       router.push(`/store/b2b-orders`);
       void order;
     } catch (e) {

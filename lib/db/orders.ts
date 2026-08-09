@@ -101,7 +101,7 @@ export async function getKioskOrderForStore(storeId: string, id: string) {
   return { ...order, items: await hydrateItemsForStoreManager(order.items) };
 }
 
-export async function approveKioskOrder(storeId: string, id: string, approvedById: string | null) {
+export async function approveKioskOrder(storeId: string, id: string, approvedById: string | null, deliveryDate?: Date | null) {
   const o = await prisma.kioskOrder.findFirst({ where: { id, storeId }, select: { id: true } });
   if (!o) return false;
   await prisma.kioskOrder.update({
@@ -111,6 +111,7 @@ export async function approveKioskOrder(storeId: string, id: string, approvedByI
       forwardedToManufacturer: true,
       storeApprovedById: approvedById,
       storeApprovedAt: new Date(),
+      ...(deliveryDate !== undefined ? { deliveryDate } : {}),
     },
   });
   return true;
@@ -279,6 +280,8 @@ export async function placeB2bOrder(input: {
   deliveryAddress: string;
   notes?: string;
   requirementNote?: string | null;
+  // Optional — set when the Retailer Admin places this order directly.
+  deliveryDate?: Date | null;
   // Store-Manager-originated orders need the Retailer (Head Office) to approve
   // (defaults true). The Retailer's own direct catalog order has no one above
   // it to approve, so its route passes false — pre-approved, goes straight to
@@ -299,6 +302,7 @@ export async function placeB2bOrder(input: {
       deliveryAddress: input.deliveryAddress,
       notes: input.notes ?? null,
       requirementNote: input.requirementNote ?? null,
+      deliveryDate: input.deliveryDate ?? null,
       totalItems,
       ...(preApproved ? { pendingManagerApproval: false, managerApprovedAt: new Date() } : {}),
       items: {
@@ -335,12 +339,17 @@ export async function getB2bOrderForStore(storeId: string, id: string) {
   return { ...order, items: await hydrateItemsForStoreManager(order.items) };
 }
 
-export async function approveB2bOrder(storeId: string, id: string, approvedById: string | null) {
+export async function approveB2bOrder(storeId: string, id: string, approvedById: string | null, deliveryDate?: Date | null) {
   const o = await prisma.b2bOrder.findFirst({ where: { id, storeId }, select: { id: true } });
   if (!o) return false;
   await prisma.b2bOrder.update({
     where: { id },
-    data: { pendingManagerApproval: false, managerApprovedById: approvedById, managerApprovedAt: new Date() },
+    data: {
+      pendingManagerApproval: false,
+      managerApprovedById: approvedById,
+      managerApprovedAt: new Date(),
+      ...(deliveryDate !== undefined ? { deliveryDate } : {}),
+    },
   });
   return true;
 }

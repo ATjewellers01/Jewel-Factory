@@ -109,6 +109,7 @@ storeCatalogRoutes.put('/cart/note', storeGuard, jsonValidator(CartNoteBody), as
 // orders, via /api/branch-manager, still need the Retailer's approval.)
 const OrderBody = z.object({
   notes: z.string().optional(),
+  deliveryDate: z.string().optional(),
   items: z
     .array(z.object({ manufacturerProductId: z.string().uuid(), quantity: z.number().int().positive(), purity: z.string().max(40).optional() }))
     .min(1),
@@ -144,11 +145,13 @@ storeCatalogRoutes.post('/orders', storeGuard, jsonValidator(OrderBody), async (
     }
   }
 
+  const deliveryDate = body.deliveryDate ? new Date(body.deliveryDate) : null;
   const order = await placeB2bOrder({
     storeId,
     manufacturerId: store.manufacturerId,
     deliveryAddress: formatStoreAddress(store),
     notes: body.notes,
+    deliveryDate: deliveryDate && !Number.isNaN(deliveryDate.getTime()) ? deliveryDate : null,
     pendingManagerApproval: false,
     items: body.items.map((i) => {
       const p = byId.get(i.manufacturerProductId)!;
