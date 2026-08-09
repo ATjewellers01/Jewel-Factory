@@ -363,6 +363,16 @@ function CatalogBrowse() {
                 })}
               </div>
 
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Delivery date (optional)</label>
+                <Input
+                  type="date"
+                  value={deliveryDate}
+                  min={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setDeliveryDate(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
               <textarea placeholder="Notes for manufacturer (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[60px]" />
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'notes'))} />
               <p className="text-xs text-muted-foreground">Ships to your fixed store address.</p>

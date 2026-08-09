@@ -38,9 +38,9 @@ const SOURCE_LABEL: Record<Source, string> = {
   b2b: 'Restock', kiosk: 'Store Customer', custom: 'Customised',
 };
 
-type B2bOrder = { id: string; orderNumber: string; status: string; totalItems: number; createdAt: string; storeName: string | null; karigarCodes?: string[] };
+type B2bOrder = { id: string; orderNumber: string; status: string; totalItems: number; createdAt: string; deliveryDate: string | null; storeName: string | null; karigarCodes?: string[] };
 type KioskOrder = {
-  id: string; orderNumber: string; status: string; totalItems: number; createdAt: string;
+  id: string; orderNumber: string; status: string; totalItems: number; createdAt: string; deliveryDate: string | null;
   storeNameSnapshot: string; requirementNote: string | null;
   shipToStoreAddress: string; karigarCodes?: string[];
 };
@@ -58,6 +58,7 @@ type CustomOrder = {
 
 type Row = {
   id: string; source: Source; orderNumber: string; status: string; totalItems: number; createdAt: string;
+  deliveryDate: string | null;
   storeName: string | null; karigarCodes: string[];
   custom?: CustomOrder;
 };
@@ -125,15 +126,15 @@ export default function ManufacturerOrdersPage() {
       }
       const b2bRows: Row[] = (b2bJson.data ?? []).map((o) => ({
         id: o.id, source: 'b2b', orderNumber: o.orderNumber, status: o.status, totalItems: o.totalItems,
-        createdAt: o.createdAt, storeName: o.storeName, karigarCodes: o.karigarCodes ?? [],
+        createdAt: o.createdAt, deliveryDate: o.deliveryDate, storeName: o.storeName, karigarCodes: o.karigarCodes ?? [],
       }));
       const kioskRows: Row[] = (kioskJson.data ?? []).map((o) => ({
         id: o.id, source: 'kiosk', orderNumber: o.orderNumber, status: o.status, totalItems: o.totalItems,
-        createdAt: o.createdAt, storeName: o.storeNameSnapshot, karigarCodes: o.karigarCodes ?? [],
+        createdAt: o.createdAt, deliveryDate: o.deliveryDate, storeName: o.storeNameSnapshot, karigarCodes: o.karigarCodes ?? [],
       }));
       const customRows: Row[] = (customJson.data ?? []).map((o) => ({
         id: o.id, source: 'custom', orderNumber: o.orderNumber, status: o.status, totalItems: 0,
-        createdAt: o.createdAt, storeName: o.storeNameSnapshot, karigarCodes: o.karigarCode ? [o.karigarCode] : [], custom: o,
+        createdAt: o.createdAt, deliveryDate: o.deliveryDate, storeName: o.storeNameSnapshot, karigarCodes: o.karigarCode ? [o.karigarCode] : [], custom: o,
       }));
       setRows([...b2bRows, ...kioskRows, ...customRows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
       setError(null);
@@ -285,6 +286,11 @@ export default function ManufacturerOrdersPage() {
                   <div>
                     <p className="text-xs text-muted-foreground sm:hidden">Order Date</p>
                     <p className="text-sm text-muted-foreground">{new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                    {o.deliveryDate && (
+                      <p className="text-xs text-muted-foreground">
+                        Delivery: {new Date(o.deliveryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-start sm:justify-end"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span></div>
                 </div>

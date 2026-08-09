@@ -8,6 +8,7 @@ import { OrderItemDetailModal, type OrderItemProductSafe } from '@/components/or
 import { CustomSpecList } from '@/components/orders/CustomSpecList';
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
 import { useApi, apiPost, apiSend } from '@/hooks/use-api';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { OrderChat } from '@/components/orders/OrderChat';
@@ -36,10 +37,13 @@ export default function PendingApprovalsPage() {
   const custom = useApi<CustomRequest[]>('/api/store/custom-designs', '/store/login');
   const [busy, setBusy] = useState<string | null>(null);
 
-  async function act(kind: 'kiosk' | 'b2b', id: string, action: 'approve' | 'reject') {
+  async function act(kind: 'kiosk' | 'b2b', id: string, action: 'approve' | 'reject', deliveryDate?: string) {
     setBusy(id + action);
     try {
-      await apiPost(`/api/store/${kind === 'kiosk' ? 'kiosk-orders' : 'b2b-orders'}/${id}/${action}`);
+      await apiPost(
+        `/api/store/${kind === 'kiosk' ? 'kiosk-orders' : 'b2b-orders'}/${id}/${action}`,
+        action === 'approve' && deliveryDate ? { deliveryDate } : undefined,
+      );
       if (kind === 'kiosk') void kiosk.reload(); else void b2b.reload();
     } catch { /* ignore */ } finally { setBusy(null); }
   }
@@ -80,7 +84,7 @@ export default function PendingApprovalsPage() {
             <Row key={o.id} kind="kiosk" id={o.id} title={o.orderNumber} branch={o.branchNameSnapshot}
               sub={`${o.totalItems} item(s)`} note={o.requirementNote}
               items={o.items} busy={busy?.startsWith(o.id) ?? false} onNoteSaved={() => kiosk.reload()}
-              onApprove={() => act('kiosk', o.id, 'approve')} onReject={() => act('kiosk', o.id, 'reject')} />
+              onApprove={(deliveryDate) => void act('kiosk', o.id, 'approve', deliveryDate)} onReject={() => act('kiosk', o.id, 'reject')} />
           ))}
         </section>
       )}
@@ -92,7 +96,7 @@ export default function PendingApprovalsPage() {
             <Row key={o.id} kind="b2b" id={o.id} title={o.orderNumber} branch={o.branchNameSnapshot}
               sub={`${o.totalItems} item(s)`} note={o.requirementNote}
               items={o.items} busy={busy?.startsWith(o.id) ?? false} onNoteSaved={() => b2b.reload()}
-              onApprove={() => act('b2b', o.id, 'approve')} onReject={() => act('b2b', o.id, 'reject')} />
+              onApprove={(deliveryDate) => void act('b2b', o.id, 'approve', deliveryDate)} onReject={() => act('b2b', o.id, 'reject')} />
           ))}
         </section>
       )}
@@ -112,7 +116,7 @@ export default function PendingApprovalsPage() {
 
 function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onReject, onNoteSaved }: {
   kind: 'kiosk' | 'b2b'; id: string; title: string; branch: string | null; sub: string; note: string | null;
-  items: Item[]; busy: boolean; onApprove: () => void; onReject: () => void; onNoteSaved: () => void;
+  items: Item[]; busy: boolean; onApprove: (deliveryDate?: string) => void; onReject: () => void; onNoteSaved: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note ?? '');
@@ -121,6 +125,7 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
   const [chatOpen, setChatOpen] = useState(false);
   const [zoomItem, setZoomItem] = useState<Item | null>(null);
   const [productModal, setProductModal] = useState<OrderItemProductSafe | null>(null);
+  const [deliveryDate, setDeliveryDate] = useState('');
 
   async function saveNote() {
     setSaving(true);
@@ -142,8 +147,20 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
           </div>
           <p className="text-xs text-muted-foreground">{sub}</p>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" disabled={busy} onClick={onApprove} className="metal-sheen text-[#17120b] font-semibold">
+        <div className="flex flex-wrap items-center gap-2">
+          <div>
+            <label className="sr-only" htmlFor={`delivery-date-${id}`}>Delivery date (optional)</label>
+            <Input
+              id={`delivery-date-${id}`}
+              type="date"
+              value={deliveryDate}
+              min={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setDeliveryDate(e.target.value)}
+              title="Delivery date (optional)"
+              className="h-9 w-38 text-xs"
+            />
+          </div>
+          <Button size="sm" disabled={busy} onClick={() => onApprove(deliveryDate || undefined)} className="metal-sheen text-[#17120b] font-semibold">
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><CheckCircle2 className="mr-1 h-3.5 w-3.5" />Approve</>}
           </Button>
           <Button size="sm" variant="outline" disabled={busy} onClick={onReject} className="border-red-200 text-red-700 hover:bg-red-50">
