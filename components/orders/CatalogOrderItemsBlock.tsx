@@ -39,7 +39,7 @@ export function useCatalogOrderAssignment(orderId: string, source: 'b2b' | 'kios
   const [modalOpen, setModalOpen] = useState(false);
   const [assigning, setAssigning] = useState(false);
 
-  const codes = useKarigarCodes(orderId, source, /* filtered */ true);
+  const { filteredCodes, allCodes } = useKarigarCodes(orderId, source, /* filtered */ true);
   const unassigned = useMemo(() => items.filter((i) => !i.customisedOrderId), [items]);
   const endpointBase = source === 'kiosk' ? '/api/manufacturer/kiosk-orders' : '/api/manufacturer/orders';
 
@@ -82,17 +82,18 @@ export function useCatalogOrderAssignment(orderId: string, source: 'b2b' | 'kios
   const anchor = unassigned.find((i) => selected.has(i.id))?.product ?? unassigned[0]?.product ?? null;
   const totalQty = [...selected].reduce((sum, id) => sum + (items.find((i) => i.id === id)?.quantity ?? 0), 0);
 
-  return { selected, toggleItem, codes, unassigned, modalOpen, setModalOpen, assigning, pickedKarigar, handlePick, submitAssignment, anchor, totalQty };
+  return { selected, toggleItem, filteredCodes, allCodes, unassigned, modalOpen, setModalOpen, assigning, pickedKarigar, handlePick, submitAssignment, anchor, totalQty };
 }
 
 export type CatalogOrderAssignment = ReturnType<typeof useCatalogOrderAssignment>;
 
 /** The Karigar dropdown + "Assign items" button — render on the SAME row as "Ship to". */
 export function CatalogOrderKarigarPicker({ assignment }: { assignment: CatalogOrderAssignment }) {
-  if (assignment.unassigned.length === 0 || assignment.codes === null) return null;
+  if (assignment.unassigned.length === 0 || assignment.filteredCodes === null) return null;
   return (
     <KarigarPicker
-      codes={assignment.codes}
+      codes={assignment.filteredCodes}
+      allCodes={assignment.allCodes ?? undefined}
       selectedCount={assignment.selected.size}
       onPick={assignment.handlePick}
       onAssign={() => assignment.setModalOpen(true)}

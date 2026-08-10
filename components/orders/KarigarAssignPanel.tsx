@@ -9,20 +9,22 @@ import { apiPost } from '@/hooks/use-api';
 export type Karigar = { id: string; code: string };
 
 /**
- * Manufacturer-only Karigar picker (2026-08-10 redesign) — sits on the SAME
- * row as "Ship to", to its right. No longer a separate dashed box: the
- * per-item checkboxes live on each item row itself (see the item list in
- * app/manufacturer/orders/page.tsx), this component only owns the dropdown +
- * "Assign items" trigger.
+ * Manufacturer-only Karigar picker (2026-08-10 redesign, extended
+ * 2026-08-11) — sits on the SAME row as "Ship to", to its right. No longer a
+ * separate dashed box: the per-item checkboxes live on each item row itself
+ * (see the item list in app/manufacturer/orders/page.tsx), this component
+ * only owns the dropdown + "Assign items" trigger.
  *
- * `codes`: for a normal Catalog/Kiosk order, pass only the Karigar codes
- * present among this order's items (filtered) — picking one is handled by
- * the caller (auto-checks matching item rows). For a Retailer-Admin bespoke
- * request (no linked items), pass the manufacturer's FULL Karigar list
- * instead — there's nothing to filter by.
+ * `codes`: only the Karigar codes present among this order's items (or, for
+ * a Retailer-Admin bespoke request with no linked items, the full list —
+ * the caller decides). `allCodes`: the manufacturer's ENTIRE master-list,
+ * revealed via the dropdown's "More…" option — lets the manufacturer assign
+ * to a Karigar other than whichever one(s) already appear on this order's
+ * products (e.g. the product's usual Karigar left the company).
  */
 export function KarigarPicker({
   codes,
+  allCodes,
   selectedCount,
   onPick,
   onAssign,
@@ -30,6 +32,7 @@ export function KarigarPicker({
   assignBusy,
 }: {
   codes: Karigar[];
+  allCodes?: Karigar[];
   selectedCount: number;
   onPick: (karigar: Karigar | null) => void;
   onAssign: () => void;
@@ -37,18 +40,21 @@ export function KarigarPicker({
   assignBusy: boolean;
 }) {
   const [karigarId, setKarigarId] = useState('');
+  const [showAll, setShowAll] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newCode, setNewCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const visible = showAll && allCodes ? allCodes : codes;
+  const selected = visible.find((k) => k.id === karigarId) ?? null;
+  const hasMore = !showAll && allCodes && allCodes.length > codes.length;
+
   function handleSelect(value: string) {
-    if (value === '__add__') {
-      setAdding(true);
-      return;
-    }
+    if (value === '__add__') { setAdding(true); return; }
+    if (value === '__more__') { setShowAll(true); return; }
     setKarigarId(value);
-    onPick(codes.find((k) => k.id === value) ?? null);
+    onPick(visible.find((k) => k.id === value) ?? null);
   }
 
   async function confirmAdd() {
@@ -64,6 +70,23 @@ export function KarigarPicker({
       onPick(created);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to add Karigar');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeSelected() {
+    if (!selected) return;
+    if (!confirm(`Remove Karigar code "${selected.code}"? This clears it from any product/order using it.`)) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/manufacturer/karigars/${selected.id}`, { method: 'DELETE', credentials: 'same-origin' });
+      if (!res.ok) throw new Error('Failed to remove Karigar');
+      setKarigarId('');
+      onPick(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to remove Karigar');
     } finally {
       setBusy(false);
     }
@@ -98,9 +121,15 @@ export function KarigarPicker({
         onChange={(e) => handleSelect(e.target.value)}
       >
         <option value="">Choose Karigar…</option>
-        {codes.map((k) => <option key={k.id} value={k.id}>{k.code}</option>)}
+        {visible.map((k) => <option key={k.id} value={k.id}>{k.code}</option>)}
+        {hasMore && <option value="__more__">More…</option>}
         <option value="__add__">+ Add new Karigar Code…</option>
       </select>
+      {selected && (
+        <button type="button" disabled={busy} onClick={() => void removeSelected()} className="text-[11px] text-red-600 underline disabled:opacity-50">
+          Remove
+        </button>
+      )}
       <Button
         type="button"
         size="sm"
@@ -115,33 +144,39 @@ export function KarigarPicker({
   );
 }
 
-/** Fetches Karigar codes scoped to one order (filtered by its items) or the full manufacturer list. */
+/**
+ * Fetches Karigar codes scoped to one order (filtered by its items — the
+ * order-specific list, auto-synced server-side so a product-level code
+ * always appears even if it was never "+ Add"ed to the master-list) AND the
+ * manufacturer's full list (for the dropdown's "More…" option, #3 in the
+ * 2026-08-11 follow-up — a code from elsewhere in the catalogue may still be
+ * the right pick, e.g. reassigning to a different Karigar than the product's
+ * own default).
+ */
 export function useKarigarCodes(orderId: string | null, source: 'b2b' | 'kiosk' | 'retailer-custom', filtered: boolean) {
-  const [codes, setCodes] = useState<Karigar[] | null>(null);
+  const [filteredCodes, setFilteredCodes] = useState<Karigar[] | null>(null);
+  const [allCodes, setAllCodes] = useState<Karigar[] | null>(null);
 
   useEffect(() => {
     if (!orderId) return;
     let cancelled = false;
     (async () => {
+      const allRes = await fetch('/api/manufacturer/karigars', { credentials: 'same-origin', cache: 'no-store' });
+      const allJson = (await allRes.json()) as { data?: Karigar[] };
+      if (cancelled) return;
+      setAllCodes(allJson.data ?? []);
+
       if (!filtered) {
-        const res = await fetch('/api/manufacturer/karigars', { credentials: 'same-origin', cache: 'no-store' });
-        const json = (await res.json()) as { data?: Karigar[] };
-        if (!cancelled) setCodes(json.data ?? []);
+        setFilteredCodes(allJson.data ?? []);
         return;
       }
       const endpoint = source === 'kiosk' ? `/api/manufacturer/kiosk-orders/${orderId}/karigar-codes` : `/api/manufacturer/orders/${orderId}/karigar-codes`;
-      const [codesRes, allRes] = await Promise.all([
-        fetch(endpoint, { credentials: 'same-origin', cache: 'no-store' }),
-        fetch('/api/manufacturer/karigars', { credentials: 'same-origin', cache: 'no-store' }),
-      ]);
-      const codesJson = (await codesRes.json()) as { data?: string[] };
-      const allJson = (await allRes.json()) as { data?: Karigar[] };
-      if (cancelled) return;
-      const present = new Set(codesJson.data ?? []);
-      setCodes((allJson.data ?? []).filter((k) => present.has(k.code)));
+      const codesRes = await fetch(endpoint, { credentials: 'same-origin', cache: 'no-store' });
+      const codesJson = (await codesRes.json()) as { data?: Karigar[] };
+      if (!cancelled) setFilteredCodes(codesJson.data ?? []);
     })();
     return () => { cancelled = true; };
   }, [orderId, source, filtered]);
 
-  return codes;
+  return { filteredCodes, allCodes };
 }

@@ -39,11 +39,14 @@ manufacturerKarigarRoutes.delete('/karigars/:id', async (c) => {
 
 // ── Karigar codes present on one specific order's items ────────────────────────
 // Backs the "Filter by Karigar Code" dropdown, scoped to that order only.
+// Auto-syncs any product-level karigarCode into the master-list on read (see
+// syncKarigarCodes in lib/db/karigar.ts) — returns full Karigar rows, not
+// raw strings, so the frontend no longer needs a second fetch to resolve ids.
 manufacturerKarigarRoutes.get('/orders/:id/karigar-codes', async (c) => {
-  return sendData(c, await listKarigarCodesForB2bOrder(c.req.param('id')));
+  return sendData(c, await listKarigarCodesForB2bOrder(c.get('manufacturerId'), c.req.param('id')));
 });
 manufacturerKarigarRoutes.get('/kiosk-orders/:id/karigar-codes', async (c) => {
-  return sendData(c, await listKarigarCodesForKioskOrder(c.req.param('id')));
+  return sendData(c, await listKarigarCodesForKioskOrder(c.get('manufacturerId'), c.req.param('id')));
 });
 
 // ── Assign a Karigar to a subset of an order's items ────────────────────────────

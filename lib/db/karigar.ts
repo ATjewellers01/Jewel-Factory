@@ -27,19 +27,43 @@ export async function removeKarigar(manufacturerId: string, id: string) {
   return result.count > 0;
 }
 
+// Ensures every one of these raw product-level karigarCode strings has a
+// matching row in the manufacturer's Karigar master-list (2026-08-11) — a
+// code typed directly into Add/Edit Design's Karigar Code field never went
+// through "+ Add new Karigar Code", so the assignment dropdown (which reads
+// from the master-list, not the product) showed empty even though the
+// product clearly had a code. Silently backfills on read; never overwrites
+// or removes anything already in the master-list.
+async function syncKarigarCodes(manufacturerId: string, codes: string[]) {
+  const trimmed = [...new Set(codes.map((c) => c.trim()).filter(Boolean))];
+  if (trimmed.length === 0) return [];
+  const existing = await prisma.karigar.findMany({ where: { manufacturerId, code: { in: trimmed } } });
+  const existingCodes = new Set(existing.map((k) => k.code));
+  const missing = trimmed.filter((c) => !existingCodes.has(c));
+  if (missing.length === 0) return existing;
+  await prisma.karigar.createMany({
+    data: missing.map((code) => ({ manufacturerId, code })),
+    skipDuplicates: true, // races with a concurrent "+ Add new Karigar Code" on the same code
+  });
+  return prisma.karigar.findMany({ where: { manufacturerId, code: { in: trimmed } } });
+}
+
 // ── Karigar-code filter, scoped to one Catalog/Kiosk order's items ────────────
 // Used by the "Filter by Karigar Code" dropdown — only codes actually present
-// among this order's items, not the full manufacturer list.
+// among this order's items, not the full manufacturer list. Returns full
+// Karigar rows (id + code), auto-syncing any product-level code that isn't
+// in the master-list yet (see syncKarigarCodes above).
 
-export async function listKarigarCodesForB2bOrder(orderId: string): Promise<string[]> {
+export async function listKarigarCodesForB2bOrder(manufacturerId: string, orderId: string) {
   const items = await prisma.b2bOrderItem.findMany({
     where: { orderId },
     select: { manufacturerProduct: { select: { karigarCode: true } } },
   });
-  return [...new Set(items.map((i) => i.manufacturerProduct.karigarCode).filter((c): c is string => !!c))];
+  const codes = items.map((i) => i.manufacturerProduct.karigarCode).filter((c): c is string => !!c);
+  return syncKarigarCodes(manufacturerId, codes);
 }
 
-export async function listKarigarCodesForKioskOrder(orderId: string): Promise<string[]> {
+export async function listKarigarCodesForKioskOrder(manufacturerId: string, orderId: string) {
   const items = await prisma.kioskOrderItem.findMany({
     where: { orderId, manufacturerProductId: { not: null } },
     select: { manufacturerProductId: true },
@@ -50,7 +74,8 @@ export async function listKarigarCodesForKioskOrder(orderId: string): Promise<st
     where: { id: { in: productIds } },
     select: { karigarCode: true },
   });
-  return [...new Set(products.map((p) => p.karigarCode).filter((c): c is string => !!c))];
+  const codes = products.map((p) => p.karigarCode).filter((c): c is string => !!c);
+  return syncKarigarCodes(manufacturerId, codes);
 }
 
 // ── Assign a Karigar to a subset of an order's items ──────────────────────────
