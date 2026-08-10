@@ -66,7 +66,18 @@ export function useCatalogOrderAssignment(orderId: string, source: 'b2b' | 'kios
         karigarCode: pickedKarigar?.code ?? null,
       })) as { id: string };
       await apiPost(`/api/manufacturer/custom-designs/${created.id}/karigar-form`, {
+        category: fields.category || undefined,
+        quantity: fields.quantity || null,
+        purity: fields.purity || null,
+        weightGramsMin: fields.weightFrom ? Number(fields.weightFrom) : null,
+        weightGramsMax: fields.weightTo ? Number(fields.weightTo) : null,
+        size: fields.size || null,
+        sampleWeightGrams: fields.sampleWeight ? Number(fields.sampleWeight) : null,
+        totalWeightGrams: fields.totalWeight ? Number(fields.totalWeight) : null,
+        deliveryDate: fields.deliveryDate || null,
+        karigarDeliveryDate: fields.karigarDeliveryDate || null,
         meena: fields.meena || null, length: fields.length || null, broadness: fields.broadness || null, screw: fields.screw || null,
+        karigarNotes: fields.karigarNotes || null,
         narration1: fields.narration1 || null, narration2: fields.narration2 || null, qc: fields.qc || null,
         orderType: fields.orderType || null, orderStage: fields.orderStage || null, urgent: fields.urgent,
       }).catch(() => {}); // best-effort — the order is already created either way
@@ -209,8 +220,13 @@ export function CatalogOrderItemsBlock({
             subCategory: assignment.anchor?.subCategory ?? null,
             quantity: assignment.totalQty ? String(assignment.totalQty) : null,
             purity: assignment.anchor?.purity ?? null,
+            weightGramsMin: assignment.anchor?.weightGrams ?? null,
+            weightGramsMax: assignment.anchor?.weightGrams ?? null,
+            size: null,
+            sampleWeightGrams: null,
             deliveryDate: null,
             karigarDeliveryDate: null,
+            orderReceivedDate: null,
           }}
           onSubmit={(fields) => assignment.submitAssignment(fields, onAssigned)}
           onClose={() => assignment.setModalOpen(false)}

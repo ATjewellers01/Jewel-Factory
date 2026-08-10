@@ -4,23 +4,39 @@ import { Loader2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Optional } from '@/components/ui/field-mark';
+import { Optional, Required } from '@/components/ui/field-mark';
 
-/** Auto-filled (read-only) display fields, sourced differently per origin/caller. */
+/** Auto-filled starting values, sourced differently per origin/caller — all now editable. */
 export type AssignKarigarAutoFill = {
   category: string;
   subCategory: string | null;
   quantity: string | null;
   purity: string | null;
+  weightGramsMin: string | number | null;
+  weightGramsMax: string | number | null;
+  size: string | null;
+  sampleWeightGrams: string | number | null;
   deliveryDate: string | null; // client delivery date
-  karigarDeliveryDate: string | null; // client date minus 3 days (assign-time only; null while picking a Karigar pre-assign)
+  karigarDeliveryDate: string | null; // client date minus 3 days
+  orderReceivedDate: string | null; // read-only display — the order/request's own createdAt
 };
 
 export type AssignKarigarManualFields = {
+  category: string;
+  quantity: string;
+  purity: string;
+  weightFrom: string;
+  weightTo: string;
+  size: string;
+  sampleWeight: string;
+  totalWeight: string;
+  deliveryDate: string; // yyyy-mm-dd
+  karigarDeliveryDate: string; // yyyy-mm-dd
   meena: string;
   length: string;
   broadness: string;
   screw: string;
+  karigarNotes: string;
   qc: string;
   orderType: string;
   orderStage: string;
@@ -29,17 +45,42 @@ export type AssignKarigarManualFields = {
   urgent: boolean;
 };
 
-const EMPTY_MANUAL: AssignKarigarManualFields = {
-  meena: '', length: '', broadness: '', screw: '', qc: '', orderType: '', orderStage: '', narration1: '', narration2: '', urgent: false,
-};
+function toDateInput(v: string | null): string {
+  if (!v) return '';
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toISOString().slice(0, 10);
+}
+
+function buildInitial(autoFill: AssignKarigarAutoFill, initialManual?: Partial<AssignKarigarManualFields>): AssignKarigarManualFields {
+  return {
+    category: autoFill.category,
+    quantity: autoFill.quantity ?? '',
+    purity: autoFill.purity ?? '',
+    weightFrom: autoFill.weightGramsMin != null ? String(autoFill.weightGramsMin) : '',
+    weightTo: autoFill.weightGramsMax != null ? String(autoFill.weightGramsMax) : '',
+    size: autoFill.size ?? '',
+    sampleWeight: autoFill.sampleWeightGrams != null ? String(autoFill.sampleWeightGrams) : '',
+    totalWeight: '',
+    deliveryDate: toDateInput(autoFill.deliveryDate),
+    karigarDeliveryDate: toDateInput(autoFill.karigarDeliveryDate),
+    meena: '', length: '', broadness: '', screw: '', karigarNotes: '', qc: '', orderType: '', orderStage: '', narration1: '', narration2: '',
+    urgent: false,
+    ...initialManual,
+  };
+}
 
 /**
- * Shared Assignment Form modal (2026-08-10 redesign) — opens on "Assign
- * items" (create) AND on "Edit" (update an existing Customised Order).
- * Auto-filled fields are read-only display; the rest are manually entered.
- * Submitting calls `onSubmit` with the manual fields — the caller decides
- * whether that means creating a new CustomDesignOrder or PATCHing an
- * existing one.
+ * Shared Assignment Form modal (2026-08-10 redesign, extended 2026-08-11 to
+ * match the reference form) — opens on "Assign items" (create) AND on
+ * "Edit" (update an existing Customised Order). Every field the reference
+ * form shows is now editable here, including the ones that used to be
+ * read-only auto-filled display (Category, Quantity, Melting/Purity,
+ * weight range, Size, Sample Weight, both delivery dates) — the manufacturer
+ * can correct any of them before submitting. Meena and Order Type are
+ * required, matching the reference form's red asterisk; everything else
+ * stays optional. Order Received Date is the one truly read-only field
+ * (mirrors the source order/request's own createdAt).
  */
 export function AssignKarigarModal({
   title,
@@ -56,7 +97,7 @@ export function AssignKarigarModal({
   onSubmit: (fields: AssignKarigarManualFields) => Promise<void>;
   onClose: () => void;
 }) {
-  const [fields, setFields] = useState<AssignKarigarManualFields>({ ...EMPTY_MANUAL, ...initialManual });
+  const [fields, setFields] = useState<AssignKarigarManualFields>(buildInitial(autoFill, initialManual));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,6 +112,10 @@ export function AssignKarigarModal({
   }
 
   async function submit() {
+    if (!fields.meena.trim() || !fields.orderType.trim()) {
+      setError('Meena and Order Type are required.');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -82,33 +127,68 @@ export function AssignKarigarModal({
     }
   }
 
-  const display = (label: string, value: string) => (
-    <div>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium">{value || '—'}</p>
-    </div>
-  );
-
-  const fmtDate = (v: string | null) => v ? new Date(v).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '';
+  const orderReceivedDate = autoFill.orderReceivedDate
+    ? new Date(autoFill.orderReceivedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    : '—';
 
   return (
     <div className="fixed inset-0 z-50 flex min-h-full items-center justify-center overflow-y-auto bg-black/50 p-4 py-8" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="relative w-full max-w-xl rounded-2xl bg-card p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="relative w-full max-w-2xl rounded-2xl bg-card p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 rounded-full p-1.5 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
         <h2 className="font-display text-lg font-medium">{title}</h2>
 
         <div className="mt-4 space-y-4">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {display('Category', [autoFill.category, autoFill.subCategory].filter(Boolean).join(' › '))}
-            {display('Quantity', autoFill.quantity ?? '')}
-            {display('Melting / Purity', autoFill.purity ?? '')}
-            {display('Client Delivery Date', fmtDate(autoFill.deliveryDate))}
-            {display('Karigar Delivery Date', fmtDate(autoFill.karigarDeliveryDate))}
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Order Received Date</p>
+            <p className="text-sm font-medium">{orderReceivedDate}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <label className="space-y-1">
-              <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Meena<Optional /></span>
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Category<Optional /></span>
+              <input value={fields.category} onChange={(e) => set('category', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
+            </label>
+            <label className="space-y-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Quantity<Optional /></span>
+              <input value={fields.quantity} onChange={(e) => set('quantity', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
+            </label>
+            <label className="space-y-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Melting / Purity<Optional /></span>
+              <input value={fields.purity} onChange={(e) => set('purity', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
+            </label>
+            <label className="space-y-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">From Weight<Optional /></span>
+              <input type="number" step="0.001" value={fields.weightFrom} onChange={(e) => set('weightFrom', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
+            </label>
+            <label className="space-y-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">To Weight<Optional /></span>
+              <input type="number" step="0.001" value={fields.weightTo} onChange={(e) => set('weightTo', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
+            </label>
+            <label className="space-y-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Total Weight<Optional /></span>
+              <input type="number" step="0.001" value={fields.totalWeight} onChange={(e) => set('totalWeight', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
+            </label>
+            <label className="space-y-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sample Weight<Optional /></span>
+              <input type="number" step="0.001" value={fields.sampleWeight} onChange={(e) => set('sampleWeight', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
+            </label>
+            <label className="space-y-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Size<Optional /></span>
+              <input value={fields.size} onChange={(e) => set('size', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
+            </label>
+            <label className="space-y-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Client Delivery Date<Optional /></span>
+              <input type="date" value={fields.deliveryDate} onChange={(e) => set('deliveryDate', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
+            </label>
+            <label className="space-y-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Karigar Delivery Date<Optional /></span>
+              <input type="date" value={fields.karigarDeliveryDate} onChange={(e) => set('karigarDeliveryDate', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <label className="space-y-1">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Meena<Required /></span>
               <input value={fields.meena} onChange={(e) => set('meena', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
             </label>
             <label className="space-y-1">
@@ -128,7 +208,7 @@ export function AssignKarigarModal({
               <input value={fields.qc} onChange={(e) => set('qc', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
             </label>
             <label className="space-y-1">
-              <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Order Type<Optional /></span>
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Order Type<Required /></span>
               <input value={fields.orderType} onChange={(e) => set('orderType', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
             </label>
             <label className="space-y-1 col-span-2 sm:col-span-1">
@@ -137,6 +217,10 @@ export function AssignKarigarModal({
             </label>
           </div>
 
+          <label className="space-y-1 block">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Karigar Notes<Optional /></span>
+            <textarea value={fields.karigarNotes} onChange={(e) => set('karigarNotes', e.target.value)} rows={2} className="w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-sm" />
+          </label>
           <label className="space-y-1 block">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Narration 1<Optional /></span>
             <textarea value={fields.narration1} onChange={(e) => set('narration1', e.target.value)} rows={2} className="w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-sm" />

@@ -743,6 +743,12 @@ model CustomDesignOrder {
   broadness         String?
   screw             String?
   sampleWeightGrams Decimal?  @map("sample_weight_grams") @db.Decimal(8, 3)
+  // Reference-form fields added 2026-08-11 — total finished weight of the
+  // piece(s) (distinct from weightGramsMin/Max, which are the RANGE the
+  // client asked for) and a Karigar-facing notes field, distinct from
+  // Narration 1/2 (which mirror the reference form's own separate columns).
+  totalWeightGrams  Decimal?  @map("total_weight_grams") @db.Decimal(8, 3)
+  karigarNotes      String?   @map("karigar_notes")
   narration1        String?   @map("narration_1")
   narration2        String?   @map("narration_2")
   qc                String?   @map("qc")

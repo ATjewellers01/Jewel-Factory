@@ -234,6 +234,7 @@ export async function listCustomOrdersByManufacturer(manufacturerId: string) {
       referenceImageUrl: true, referenceImageUrls: true, designNotes: true,
       orderRef: true, deliveryDate: true, quantity: true, meena: true,
       length: true, size: true, broadness: true, screw: true, sampleWeightGrams: true,
+      totalWeightGrams: true, karigarNotes: true,
       status: true, trackingNumber: true, karigarCode: true, createdAt: true,
       // Karigar-assignment fields (2026-08-09) — present on both origins
       // (bespoke request OR assigned from a Catalog/Kiosk order); null when unset.
@@ -258,6 +259,11 @@ export async function updateCustomOrderKarigarForm(manufacturerId: string, id: s
   purity?: string | null;
   quantity?: string | null;
   deliveryDate?: Date | null;
+  karigarDeliveryDate?: Date | null;
+  size?: string | null;
+  sampleWeightGrams?: number | null;
+  totalWeightGrams?: number | null;
+  karigarNotes?: string | null;
   meena?: string | null;
   length?: string | null;
   broadness?: string | null;

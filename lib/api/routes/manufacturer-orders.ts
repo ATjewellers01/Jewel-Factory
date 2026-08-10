@@ -155,6 +155,11 @@ const KarigarFormBody = z.object({
   purity: z.string().nullable().optional(),
   quantity: z.string().nullable().optional(),
   deliveryDate: z.string().nullable().optional(), // ISO date string
+  karigarDeliveryDate: z.string().nullable().optional(), // ISO date string
+  size: z.string().nullable().optional(),
+  sampleWeightGrams: z.number().nullable().optional(),
+  totalWeightGrams: z.number().nullable().optional(),
+  karigarNotes: z.string().nullable().optional(),
   meena: z.string().nullable().optional(),
   length: z.string().nullable().optional(),
   broadness: z.string().nullable().optional(),
@@ -189,6 +194,7 @@ manufacturerOrderRoutes.patch('/custom-designs/:id/karigar-form', jsonValidator(
   const ok = await updateCustomOrderKarigarForm(c.get('manufacturerId'), c.req.param('id'), {
     ...body,
     deliveryDate: body.deliveryDate === undefined ? undefined : (body.deliveryDate ? new Date(body.deliveryDate) : null),
+    karigarDeliveryDate: body.karigarDeliveryDate === undefined ? undefined : (body.karigarDeliveryDate ? new Date(body.karigarDeliveryDate) : null),
   });
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, { ok: true });

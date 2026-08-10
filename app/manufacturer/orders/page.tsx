@@ -69,6 +69,7 @@ type CustomOrder = {
   orderRef: string | null; deliveryDate: string | null; quantity: string | null;
   meena: string | null; length: string | null; size: string | null;
   broadness: string | null; screw: string | null; sampleWeightGrams: string | null;
+  totalWeightGrams?: string | null; karigarNotes?: string | null;
   karigarCode: string | null;
   // Karigar-assignment fields (2026-08-09) — present when this Customised
   // Order originated from assigning items on a Catalog/Kiosk order, or once
@@ -530,6 +531,8 @@ export default function ManufacturerOrdersPage() {
                       broadness: o.custom.broadness,
                       screw: o.custom.screw,
                       sampleWeightGrams: o.custom.sampleWeightGrams,
+                      totalWeightGrams: o.custom.totalWeightGrams ?? null,
+                      karigarNotes: o.custom.karigarNotes ?? null,
                       narration1: o.custom.narration1 ?? null,
                       narration2: o.custom.narration2 ?? null,
                       qc: o.custom.qc ?? null,
@@ -539,6 +542,7 @@ export default function ManufacturerOrdersPage() {
                       karigarCode: o.custom.karigar?.code ?? o.custom.karigarCode,
                       designNotes: o.custom.designNotes,
                       imageUrl: o.custom.referenceImageUrls[0] ?? o.custom.referenceImageUrl,
+                      createdAt: o.custom.createdAt,
                     }}
                     onSaved={() => void loadList()}
                   />
@@ -704,7 +708,18 @@ function RetailerCustomRequestDetail({
         karigarCode: karigar?.code ?? null,
       })) as { id: string };
       await apiPost(`/api/manufacturer/custom-designs/${created.id}/karigar-form`, {
+        category: fields.category || undefined,
+        quantity: fields.quantity || null,
+        purity: fields.purity || null,
+        weightGramsMin: fields.weightFrom ? Number(fields.weightFrom) : null,
+        weightGramsMax: fields.weightTo ? Number(fields.weightTo) : null,
+        size: fields.size || null,
+        sampleWeightGrams: fields.sampleWeight ? Number(fields.sampleWeight) : null,
+        totalWeightGrams: fields.totalWeight ? Number(fields.totalWeight) : null,
+        deliveryDate: fields.deliveryDate || null,
+        karigarDeliveryDate: fields.karigarDeliveryDate || null,
         meena: fields.meena || null, length: fields.length || null, broadness: fields.broadness || null, screw: fields.screw || null,
+        karigarNotes: fields.karigarNotes || null,
         narration1: fields.narration1 || null, narration2: fields.narration2 || null, qc: fields.qc || null,
         orderType: fields.orderType || null, orderStage: fields.orderStage || null, urgent: fields.urgent,
       }).catch(() => {});
@@ -738,7 +753,11 @@ function RetailerCustomRequestDetail({
         <AssignKarigarModal
           title="Assign Karigar"
           submitLabel="Submit"
-          autoFill={{ category: '', subCategory: null, quantity: null, purity: null, deliveryDate: null, karigarDeliveryDate: null }}
+          autoFill={{
+            category: '', subCategory: null, quantity: null, purity: null,
+            weightGramsMin: null, weightGramsMax: null, size: null, sampleWeightGrams: null,
+            deliveryDate: null, karigarDeliveryDate: null, orderReceivedDate: request.createdAt,
+          }}
           onSubmit={submit}
           onClose={() => setModalOpen(false)}
         />

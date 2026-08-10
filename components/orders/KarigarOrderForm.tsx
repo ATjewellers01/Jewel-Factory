@@ -29,6 +29,8 @@ export type KarigarOrderFormData = {
   broadness: string | null;
   screw: string | null;
   sampleWeightGrams: string | number | null;
+  totalWeightGrams?: string | number | null;
+  karigarNotes?: string | null;
   narration1: string | null;
   narration2: string | null;
   qc: string | null;
@@ -38,6 +40,7 @@ export type KarigarOrderFormData = {
   karigarCode: string | null;
   designNotes: string | null;
   imageUrl: string | null;
+  createdAt?: string | null;
 };
 
 /**
@@ -53,7 +56,18 @@ export function KarigarOrderForm({ order, onSaved }: { order: KarigarOrderFormDa
 
   async function saveEdit(fields: AssignKarigarManualFields) {
     await apiSend('PATCH', `/api/manufacturer/custom-designs/${order.id}/karigar-form`, {
+      category: fields.category || undefined,
+      quantity: fields.quantity || null,
+      purity: fields.purity || null,
+      weightGramsMin: fields.weightFrom ? Number(fields.weightFrom) : null,
+      weightGramsMax: fields.weightTo ? Number(fields.weightTo) : null,
+      size: fields.size || null,
+      sampleWeightGrams: fields.sampleWeight ? Number(fields.sampleWeight) : null,
+      totalWeightGrams: fields.totalWeight ? Number(fields.totalWeight) : null,
+      deliveryDate: fields.deliveryDate || null,
+      karigarDeliveryDate: fields.karigarDeliveryDate || null,
       meena: fields.meena || null, length: fields.length || null, broadness: fields.broadness || null, screw: fields.screw || null,
+      karigarNotes: fields.karigarNotes || null,
       narration1: fields.narration1 || null, narration2: fields.narration2 || null, qc: fields.qc || null,
       orderType: fields.orderType || null, orderStage: fields.orderStage || null, urgent: fields.urgent,
     });
@@ -118,10 +132,15 @@ export function KarigarOrderForm({ order, onSaved }: { order: KarigarOrderFormDa
           submitLabel="Save"
           autoFill={{
             category: order.category, subCategory: order.subCategory, quantity: order.quantity,
-            purity: order.purity, deliveryDate: order.deliveryDate, karigarDeliveryDate: order.karigarDeliveryDate,
+            purity: order.purity, weightGramsMin: order.weightGramsMin, weightGramsMax: order.weightGramsMax,
+            size: order.size, sampleWeightGrams: order.sampleWeightGrams,
+            deliveryDate: order.deliveryDate, karigarDeliveryDate: order.karigarDeliveryDate,
+            orderReceivedDate: order.createdAt ?? null,
           }}
           initialManual={{
             meena: order.meena ?? '', length: order.length ?? '', broadness: order.broadness ?? '', screw: order.screw ?? '',
+            karigarNotes: order.karigarNotes ?? '',
+            totalWeight: order.totalWeightGrams != null ? String(order.totalWeightGrams) : '',
             qc: order.qc ?? '', orderType: order.orderType ?? '', orderStage: order.orderStage ?? '',
             narration1: order.narration1 ?? '', narration2: order.narration2 ?? '', urgent: order.urgent,
           }}
