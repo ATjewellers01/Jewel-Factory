@@ -12,7 +12,7 @@ import {
   updateKioskRequirementNote, updateB2bRequirementNote,
 } from '@/lib/db/orders';
 import {
-  listCustomRequests, forwardCustomRequest, placeCustomRequest,
+  listCustomRequests, placeRetailerCustomRequest, listRetailerCustomRequestsByStore,
 } from '@/lib/db/custom-design';
 import { listOrderMessages, addOrderMessage } from '@/lib/db/messages';
 import { signUpload, storeFolder } from '@/lib/storage';
@@ -168,12 +168,15 @@ storeOpsRoutes.post('/custom-designs/upload-sign', async (c) => {
   }
 });
 
+// Retailer Admin's own bespoke request (2026-08-10 redesign) — this no longer
+// creates a CustomDesignOrder immediately. It lands as a PENDING row in the
+// manufacturer's Catalog Orders list; a real CustomDesignOrder is only
+// created once the manufacturer assigns a Karigar to it (see
+// lib/api/routes/manufacturer-karigar.ts).
 storeOpsRoutes.post('/custom-designs', jsonValidator(StoreCustomBody), async (c) => {
   const storeId = c.get('storeId');
   const body = c.req.valid('json');
-  const req = await placeCustomRequest({
-    storeId,
-    branchId: null,
+  const result = await placeRetailerCustomRequest(storeId, {
     category: body.category,
     subCategory: body.subCategory as string | undefined,
     weightGramsMin: body.weightGramsMin,
@@ -192,18 +195,25 @@ storeOpsRoutes.post('/custom-designs', jsonValidator(StoreCustomBody), async (c)
     screw: body.screw as string | undefined,
     sampleWeightGrams: body.sampleWeightGrams,
   });
-  const result = await forwardCustomRequest(storeId, req.id, approverIdOrNull(c));
   if (!result.ok) {
     if (result.reason === 'no_manufacturer') {
       return sendError(c, 'bad_request', 'Store is not linked to a manufacturer yet.', 400);
     }
-    return sendError(c, 'not_found', 'Request not found', 404);
+    return sendError(c, 'not_found', 'Store not found', 404);
   }
-  return sendData(c, { id: req.id, orderNumber: result.orderNumber }, 201);
+  return sendData(c, { id: result.id, orderNumber: result.orderNumber }, 201);
 });
 
 storeOpsRoutes.get('/custom-designs', async (c) => {
   return sendData(c, await listCustomRequests(c.get('storeId')));
+});
+
+// Retailer Admin's own bespoke requests, separate from the branch/kiosk-
+// originated ones above (different model, different lifecycle — see
+// RetailerCustomRequest). Order History (app/store/b2b-orders/page.tsx)
+// merges this in alongside b2b/kiosk/custom.
+storeOpsRoutes.get('/retailer-custom-requests', async (c) => {
+  return sendData(c, await listRetailerCustomRequestsByStore(c.get('storeId')));
 });
 
 // ── Per-order chat (HO Manager side) ──────────────────────────────────────────

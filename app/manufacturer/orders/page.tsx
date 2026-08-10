@@ -3,14 +3,16 @@
 import { ChevronDown, ChevronUp, Loader2, ShoppingBag } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
+import { AssignKarigarModal, type AssignKarigarManualFields } from '@/components/orders/AssignKarigarModal';
+import { CatalogOrderItemsBlock, CatalogOrderKarigarPicker, useCatalogOrderAssignment, type CatalogOrderItem } from '@/components/orders/CatalogOrderItemsBlock';
 import { CustomSpecList } from '@/components/orders/CustomSpecList';
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
-import { KarigarAssignPanel } from '@/components/orders/KarigarAssignPanel';
+import { KarigarPicker, type Karigar } from '@/components/orders/KarigarAssignPanel';
 import { KarigarOrderForm } from '@/components/orders/KarigarOrderForm';
 import { ManufacturerOrderItemModal, type OrderItemProduct } from '@/components/orders/ManufacturerOrderItemModal';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
-import { apiSend } from '@/hooks/use-api';
+import { apiPost, apiSend } from '@/hooks/use-api';
 import { formatOrderStatus, formatOrderLevelStatus } from '@/lib/format';
 import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
@@ -29,15 +31,18 @@ import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib
 // Backend (getB2bOrdersByManufacturer, sanitizeKiosk,
 // listCustomOrdersByManufacturer) returns storeName/storeNameSnapshot for
 // exactly this reason (2026-08-05).
-type Source = 'b2b' | 'kiosk' | 'custom';
+type Source = 'b2b' | 'kiosk' | 'custom' | 'retailer-custom';
 
 // Restock (B2B) = the store ordering stock for itself; Store Customer (kiosk)
 // = a walk-in customer's order taken at the counter; Customised = a bespoke
-// design request. Only Customised gets a badge on the row — the other two
-// look identical there, per client wording ("itna sara nahi, sirf customised
-// order rakhna h") — but the filter dropdown still offers all three.
+// design request (already assigned a Karigar); retailer-custom = a Retailer
+// Admin's own bespoke request AWAITING Karigar assignment (2026-08-10
+// redesign — see RetailerCustomRequest). Only Customised/retailer-custom get
+// a badge on the row — Restock/Store Customer look identical there, per
+// client wording ("itna sara nahi, sirf customised order rakhna h") — but
+// the filter dropdown still offers all four.
 const SOURCE_LABEL: Record<Source, string> = {
-  b2b: 'Restock', kiosk: 'Store Customer', custom: 'Customised',
+  b2b: 'Restock', kiosk: 'Store Customer', custom: 'Customised', 'retailer-custom': 'Customised',
 };
 
 type B2bOrder = { id: string; orderNumber: string; status: string; totalItems: number; createdAt: string; deliveryDate: string | null; storeName: string | null; karigarCodes?: string[] };
@@ -45,6 +50,15 @@ type KioskOrder = {
   id: string; orderNumber: string; status: string; totalItems: number; createdAt: string; deliveryDate: string | null;
   storeNameSnapshot: string; requirementNote: string | null;
   shipToStoreAddress: string; karigarCodes?: string[];
+};
+// A Retailer Admin's own bespoke request, PENDING Karigar assignment — lands
+// in this same Catalog Orders list, tagged "Customised Order from {business
+// name}". Once assigned, orderId points at the resulting CustomDesignOrder
+// and the row would instead surface via the normal `custom` source on a
+// future reload (status flips to ASSIGNED server-side).
+type RetailerCustomRequestRow = {
+  id: string; orderNumber: string; status: 'PENDING' | 'ASSIGNED'; createdAt: string;
+  storeNameSnapshot: string; storeAddressSnapshot: string; orderId: string | null;
 };
 type CustomOrder = {
   id: string; orderNumber: string; status: string; createdAt: string;
@@ -72,6 +86,7 @@ type Row = {
   deliveryDate: string | null;
   storeName: string | null; karigarCodes: string[];
   custom?: CustomOrder;
+  retailerRequest?: RetailerCustomRequestRow;
 };
 
 type Item = {
@@ -81,6 +96,11 @@ type Item = {
   product: OrderItemProduct | null;
   customisedOrderId?: string | null;
   customisedOrderNumber?: string | null;
+  // Only set on items fetched via a Customised Order's own Items table — lets
+  // a per-item status change route back to the item's ORIGINAL b2b/kiosk
+  // order (status is still owned by that order, not the Customised Order).
+  sourceKind?: 'b2b' | 'kiosk';
+  sourceOrderId?: string;
 };
 type Detail = {
   requirementNote: string | null; shipToStoreAddress: string; items: Item[];
@@ -99,6 +119,7 @@ const ALL_ITEM_STATUSES = ['PENDING', 'IN_PROCESS', 'GHAT_RECEIVED', 'READY_FOR_
 function endpointFor(source: Source, id?: string) {
   if (source === 'kiosk') return `/api/manufacturer/kiosk-orders${id ? `/${id}` : ''}`;
   if (source === 'custom') return `/api/manufacturer/custom-designs${id ? `/${id}` : ''}`;
+  if (source === 'retailer-custom') return `/api/manufacturer/retailer-custom-requests${id ? `/${id}` : ''}`;
   return `/api/manufacturer/orders${id ? `/${id}` : ''}`;
 }
 
@@ -108,6 +129,7 @@ export default function ManufacturerOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
+  const [customItems, setCustomItems] = useState<Item[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [itemBusy, setItemBusy] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -124,17 +146,19 @@ export default function ManufacturerOrdersPage() {
   async function loadList() {
     setLoading(true);
     try {
-      const [b2bRes, kioskRes, customRes] = await Promise.all([
+      const [b2bRes, kioskRes, customRes, retailerReqRes] = await Promise.all([
         fetch('/api/manufacturer/orders', { cache: 'no-store', credentials: 'same-origin' }),
         fetch('/api/manufacturer/kiosk-orders', { cache: 'no-store', credentials: 'same-origin' }),
         fetch('/api/manufacturer/custom-designs', { cache: 'no-store', credentials: 'same-origin' }),
+        fetch('/api/manufacturer/retailer-custom-requests', { cache: 'no-store', credentials: 'same-origin' }),
       ]);
-      if (b2bRes.status === 401 || kioskRes.status === 401 || customRes.status === 401) { window.location.assign('/manufacturer/login'); return; }
+      if (b2bRes.status === 401 || kioskRes.status === 401 || customRes.status === 401 || retailerReqRes.status === 401) { window.location.assign('/manufacturer/login'); return; }
       const b2bJson = (await b2bRes.json()) as { data?: B2bOrder[]; error?: { message: string } };
       const kioskJson = (await kioskRes.json()) as { data?: KioskOrder[]; error?: { message: string } };
       const customJson = (await customRes.json()) as { data?: CustomOrder[]; error?: { message: string } };
-      if (!b2bRes.ok || b2bJson.error || !kioskRes.ok || kioskJson.error || !customRes.ok || customJson.error) {
-        setError(b2bJson.error?.message ?? kioskJson.error?.message ?? customJson.error?.message ?? 'Failed to load');
+      const retailerReqJson = (await retailerReqRes.json()) as { data?: RetailerCustomRequestRow[]; error?: { message: string } };
+      if (!b2bRes.ok || b2bJson.error || !kioskRes.ok || kioskJson.error || !customRes.ok || customJson.error || !retailerReqRes.ok || retailerReqJson.error) {
+        setError(b2bJson.error?.message ?? kioskJson.error?.message ?? customJson.error?.message ?? retailerReqJson.error?.message ?? 'Failed to load');
         return;
       }
       const b2bRows: Row[] = (b2bJson.data ?? []).map((o) => ({
@@ -161,7 +185,17 @@ export default function ManufacturerOrdersPage() {
           karigarCodes: o.karigarCode ? [o.karigarCode] : [], custom: { ...o, referenceOrderNumber },
         };
       });
-      setRows([...b2bRows, ...kioskRows, ...customRows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      // Only PENDING retailer-custom requests belong in this list — once
+      // assigned (status ASSIGNED, orderId set), the resulting CustomDesignOrder
+      // already surfaces via customRows above on the next load.
+      const retailerReqRows: Row[] = (retailerReqJson.data ?? [])
+        .filter((r) => r.status === 'PENDING')
+        .map((r) => ({
+          id: r.id, source: 'retailer-custom', orderNumber: r.orderNumber, status: 'PENDING', totalItems: 0,
+          createdAt: r.createdAt, deliveryDate: null, storeName: r.storeNameSnapshot, karigarCodes: [],
+          retailerRequest: r,
+        }));
+      setRows([...b2bRows, ...kioskRows, ...customRows, ...retailerReqRows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
       setError(null);
     } catch {
       setError('Network error');
@@ -191,11 +225,28 @@ export default function ManufacturerOrdersPage() {
   );
 
   async function toggle(row: Row) {
-    if (expanded === row.id) { setExpanded(null); setDetail(null); return; }
-    setExpanded(row.id); setDetail(null);
-    // Custom orders have no separate detail endpoint — listCustomOrdersByManufacturer
-    // already returns the full spec, so the row itself carries everything needed.
-    if (row.source === 'custom') return;
+    if (expanded === row.id) { setExpanded(null); setDetail(null); setCustomItems(null); return; }
+    setExpanded(row.id); setDetail(null); setCustomItems(null);
+    // Retailer-custom requests have no separate detail endpoint needed here
+    // — the list response already carries the full spec.
+    if (row.source === 'retailer-custom') return;
+    if (row.source === 'custom') {
+      const res = await fetch(`/api/manufacturer/custom-designs/${row.id}/items`, { cache: 'no-store', credentials: 'same-origin' });
+      const json = (await res.json()) as { data?: Array<Record<string, unknown>> };
+      setCustomItems((json.data ?? []).map((i) => ({
+        id: i.id as string,
+        productNameSnapshot: (i.productNameSnapshot as string) ?? '',
+        productImageSnapshot: (i.productImageSnapshot as string | null) ?? null,
+        categorySnapshot: (i.categorySnapshot as string | null) ?? null,
+        quantity: i.quantity as number,
+        status: (i.status as string) ?? 'PENDING',
+        purity: (i.purity as string | null) ?? null,
+        product: (i.manufacturerProduct as OrderItemProduct | null) ?? null,
+        sourceKind: i.sourceKind as 'b2b' | 'kiosk',
+        sourceOrderId: i.sourceOrderId as string,
+      })));
+      return;
+    }
     const res = await fetch(endpointFor(row.source, row.id), { cache: 'no-store', credentials: 'same-origin' });
     const json = (await res.json()) as { data?: Record<string, unknown> };
     if (!json.data) return;
@@ -267,6 +318,22 @@ export default function ManufacturerOrdersPage() {
     }
   }
 
+  // For an item shown on a Customised Order card — status still belongs to
+  // its ORIGINAL b2b/kiosk order, so route the PATCH there (sourceKind/
+  // sourceOrderId come from getCustomOrderItemsForManufacturer).
+  async function setCustomItemStatus(item: Item, next: string) {
+    if (next === item.status || !item.sourceKind || !item.sourceOrderId) return;
+    setItemBusy(item.id);
+    try {
+      await apiSend('PATCH', `${endpointFor(item.sourceKind, item.sourceOrderId)}/items/${item.id}`, { status: next });
+      setCustomItems((prev) => prev ? prev.map((it) => it.id === item.id ? { ...it, status: next } : it) : prev);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setItemBusy(null);
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4">
       <div>
@@ -286,6 +353,7 @@ export default function ManufacturerOrdersPage() {
             <option value="b2b">{SOURCE_LABEL.b2b}</option>
             <option value="kiosk">{SOURCE_LABEL.kiosk}</option>
             <option value="custom">{SOURCE_LABEL.custom}</option>
+            <option value="retailer-custom">{SOURCE_LABEL['retailer-custom']}</option>
           </select>
           {karigarOptions.length > 0 && (
             <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={karigarFilter} onChange={(e) => setKarigarFilter(e.target.value)}>
@@ -327,10 +395,16 @@ export default function ManufacturerOrdersPage() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground sm:hidden">Customer</p>
-                    <p className="text-sm font-medium text-primary truncate">{o.storeName ?? '—'}</p>
-                    {o.source === 'custom' && <span className="mt-0.5 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800">Customised</span>}
+                    {o.source === 'retailer-custom' ? (
+                      <p className="text-sm font-medium text-violet-800 truncate">Customised Order from {o.storeName ?? '—'}</p>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium text-primary truncate">{o.storeName ?? '—'}</p>
+                        {o.source === 'custom' && <span className="mt-0.5 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800">Customised</span>}
+                      </>
+                    )}
                   </div>
-                  <div><p className="text-xs text-muted-foreground sm:hidden">Items</p><p className="text-sm tabular-nums">{o.source === 'custom' ? '—' : o.totalItems}</p></div>
+                  <div><p className="text-xs text-muted-foreground sm:hidden">Items</p><p className="text-sm tabular-nums">{o.source === 'custom' || o.source === 'retailer-custom' ? '—' : o.totalItems}</p></div>
                   <div>
                     <p className="text-xs text-muted-foreground sm:hidden">Order Date</p>
                     <p className="text-sm text-muted-foreground">{new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
@@ -346,20 +420,22 @@ export default function ManufacturerOrdersPage() {
               </button>
               {expanded === o.id && o.source === 'custom' && o.custom && (
                 <div className="border-t bg-muted/10 px-4 pb-4 pt-3 space-y-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to</p>
-                    <p className="text-sm">{o.custom.storeAddressSnapshot || '—'}</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to</p>
+                      <p className="text-sm">{o.custom.storeAddressSnapshot || '—'}</p>
+                    </div>
+                    {o.custom.referenceOrderNumber && (
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Reference Order No.</p>
+                        <p className="text-sm">{o.custom.referenceOrderNumber}</p>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wider">Design</p>
                     <p className="text-sm">{o.custom.category}{o.custom.subCategory ? ` › ${o.custom.subCategory}` : ''}</p>
                   </div>
-                  {o.custom.referenceOrderNumber && (
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Reference Order No.</p>
-                      <p className="text-sm">{o.custom.referenceOrderNumber}</p>
-                    </div>
-                  )}
                   <CustomSpecList spec={o.custom} />
                   {o.custom.designNotes && <div><p className="text-xs text-muted-foreground uppercase tracking-wider">Remarks</p><p className="whitespace-pre-wrap text-sm">{o.custom.designNotes}</p></div>}
                   {(() => {
@@ -379,6 +455,59 @@ export default function ManufacturerOrdersPage() {
                       </div>
                     ) : null;
                   })()}
+                  {customItems === null && <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
+                  {customItems && customItems.length > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Items</p>
+                      <div className="hidden grid-cols-[5rem_1fr_3rem_7rem] items-center gap-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
+                        <span>Image</span><span>Design No.</span><span>Qty</span><span>Status</span>
+                      </div>
+                      <div className="space-y-2">
+                        {customItems.map((it) => (
+                          <div key={it.id} className="flex w-full items-center gap-3 rounded-lg hover:bg-black/5">
+                            <button
+                              type="button"
+                              onClick={() => it.product && setProductModal(it.product)}
+                              disabled={!it.product}
+                              className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
+                            >
+                              {it.productImageSnapshot ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={it.productImageSnapshot}
+                                  alt={it.productNameSnapshot}
+                                  className="h-20 w-20 shrink-0 rounded-lg border bg-white object-contain p-1 cursor-pointer hover:shadow-md transition-shadow"
+                                  onClick={(e) => { e.stopPropagation(); setZoomItem(it); }}
+                                />
+                              ) : <div className="h-20 w-20 shrink-0 rounded-lg border bg-muted" />}
+                              <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-medium">{it.product?.designNumber ?? it.productNameSnapshot}</span>
+                                <span className="block text-xs text-muted-foreground">
+                                  {it.product?.category ?? it.categorySnapshot ?? '—'}
+                                  {it.product?.subCategory ? ` › ${it.product.subCategory}` : ''}
+                                  {it.product?.weightGrams != null ? ` · ${it.product.weightGrams}gm` : ''}
+                                  {it.purity ? ` · ${it.purity}` : ''}
+                                </span>
+                              </span>
+                              <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
+                            </button>
+                            <div className="flex shrink-0 flex-col items-end gap-1">
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[it.status] ?? ''}`}>{formatOrderStatus(it.status)}</span>
+                              <select
+                                value={it.status}
+                                disabled={itemBusy === it.id}
+                                onChange={(e) => { e.stopPropagation(); void setCustomItemStatus(it, e.target.value); }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-6 rounded border border-input bg-transparent px-1 text-[10px] disabled:opacity-50"
+                              >
+                                {ALL_ITEM_STATUSES.map((s) => <option key={s} value={s}>{formatOrderStatus(s)}</option>)}
+                              </select>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <KarigarOrderForm
                     order={{
                       id: o.custom.id,
@@ -427,105 +556,22 @@ export default function ManufacturerOrdersPage() {
                   </div>
                 </div>
               )}
-              {expanded === o.id && o.source !== 'custom' && (
-                <div className="border-t bg-muted/10 px-4 pb-4 pt-3 space-y-3">
-                  {!detail && <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
-                  {detail?.requirementNote && (
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Remark</p>
-                      <p className="whitespace-pre-wrap text-sm">{detail.requirementNote}</p>
-                    </div>
-                  )}
-                  {detail && (
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to</p>
-                      <p className="text-sm">{detail.shipToStoreAddress || '—'}</p>
-                    </div>
-                  )}
-                  {detail?.items && detail.items.length > 0 && (
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Items</p>
-                      <div className="space-y-2">
-                        {detail.items.map((it) => (
-                          <div key={it.id} className="flex w-full items-center gap-3 rounded-lg hover:bg-black/5">
-                            <button
-                              type="button"
-                              onClick={() => it.product && setProductModal(it.product)}
-                              disabled={!it.product}
-                              className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
-                            >
-                              {it.productImageSnapshot ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  src={it.productImageSnapshot}
-                                  alt={it.productNameSnapshot}
-                                  className="h-20 w-20 shrink-0 rounded-lg border bg-white object-contain p-1 cursor-pointer hover:shadow-md transition-shadow"
-                                  onClick={(e) => { e.stopPropagation(); setZoomItem(it); }}
-                                />
-                              ) : <div className="h-20 w-20 shrink-0 rounded-lg border bg-muted" />}
-                              <span className="min-w-0 flex-1">
-                                <span className="block text-sm font-medium">{it.product?.designNumber ?? it.productNameSnapshot}</span>
-                                <span className="block text-xs text-muted-foreground">
-                                  {it.product?.category ?? it.categorySnapshot ?? '—'}
-                                  {it.product?.subCategory ? ` › ${it.product.subCategory}` : ''}
-                                  {it.product?.weightGrams != null ? ` · ${it.product.weightGrams}gm` : ''}
-                                  {it.purity ? ` · ${it.purity}` : ''}
-                                </span>
-                                {it.product?.karigarCode && (
-                                  <span className="mt-0.5 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Karigar: {it.product.karigarCode}</span>
-                                )}
-                                {it.customisedOrderId && (
-                                  <span className="mt-0.5 ml-1 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800">
-                                    Customised Order: {customisedOrderNumberFor(it.customisedOrderId) ?? '…'}
-                                  </span>
-                                )}
-                              </span>
-                              <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
-                            </button>
-                            <div className="flex shrink-0 flex-col items-end gap-1">
-                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[it.status] ?? ''}`}>{formatOrderStatus(it.status)}</span>
-                              <select
-                                value={it.status}
-                                disabled={itemBusy === it.id}
-                                onChange={(e) => { e.stopPropagation(); void setItemStatus(o, it, e.target.value); }}
-                                onClick={(e) => e.stopPropagation()}
-                                className="h-6 rounded border border-input bg-transparent px-1 text-[10px] disabled:opacity-50"
-                              >
-                                {ALL_ITEM_STATUSES.map((s) => <option key={s} value={s}>{formatOrderStatus(s)}</option>)}
-                              </select>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {detail?.items && (
-                    <KarigarAssignPanel
-                      orderId={o.id}
-                      source={o.source === 'kiosk' ? 'kiosk' : 'b2b'}
-                      items={detail.items.map((it) => ({
-                        id: it.id,
-                        label: `${it.product?.designNumber ?? it.productNameSnapshot} × ${it.quantity}`,
-                        karigarCode: it.product?.karigarCode ?? null,
-                        customisedOrderId: it.customisedOrderId ?? null,
-                        customisedOrderNumber: customisedOrderNumberFor(it.customisedOrderId),
-                      }))}
-                      onAssigned={() => void loadList()}
-                    />
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    {o.status === 'PENDING' && (
-                      <Button size="sm" disabled={busy === o.id} onClick={() => advance(o, 'IN_PROCESS')} className="metal-sheen text-[#17120b] font-semibold">
-                        {busy === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Mark as Approved'}
-                      </Button>
-                    )}
-                    {o.status !== 'COMPLETED' && o.status !== 'CANCELLED' && (
-                      <Button size="sm" variant="outline" disabled={busy === o.id} onClick={() => advance(o, 'COMPLETED')}>
-                        {busy === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Mark as Complete'}
-                      </Button>
-                    )}
-                  </div>
-                </div>
+              {expanded === o.id && o.source !== 'custom' && o.source !== 'retailer-custom' && (
+                <CatalogOrderDetail
+                  row={o}
+                  detail={detail}
+                  itemBusy={itemBusy}
+                  busy={busy}
+                  customisedOrderNumberFor={customisedOrderNumberFor}
+                  onItemStatusChange={(item, next) => void setItemStatus(o, item, next)}
+                  onItemClick={(item) => item.product && setProductModal(item.product)}
+                  onItemImageClick={(item) => setZoomItem(item)}
+                  onAssigned={() => void loadList()}
+                  onAdvance={(next) => advance(o, next)}
+                />
+              )}
+              {expanded === o.id && o.source === 'retailer-custom' && o.retailerRequest && (
+                <RetailerCustomRequestDetail row={o} request={o.retailerRequest} onAssigned={() => void loadList()} />
               )}
             </div>
           ))}
@@ -552,6 +598,151 @@ export default function ManufacturerOrdersPage() {
       )}
 
       {productModal && <ManufacturerOrderItemModal product={productModal} onClose={() => setProductModal(null)} />}
+    </div>
+  );
+}
+
+// Extracted so useCatalogOrderAssignment (a hook) can be called once per
+// expanded row without violating the rules of hooks inside .map().
+function CatalogOrderDetail({
+  row, detail, itemBusy, busy, customisedOrderNumberFor,
+  onItemStatusChange, onItemClick, onItemImageClick, onAssigned, onAdvance,
+}: {
+  row: Row;
+  detail: Detail | null;
+  itemBusy: string | null;
+  busy: string | null;
+  customisedOrderNumberFor: (id: string | null | undefined) => string | null;
+  onItemStatusChange: (item: Item, next: string) => void;
+  onItemClick: (item: Item) => void;
+  onItemImageClick: (item: Item) => void;
+  onAssigned: () => void;
+  onAdvance: (next: string) => void;
+}) {
+  const source = row.source === 'kiosk' ? 'kiosk' : 'b2b';
+  const assignment = useCatalogOrderAssignment(row.id, source, (detail?.items ?? []) as CatalogOrderItem[]);
+
+  return (
+    <div className="border-t bg-muted/10 px-4 pb-4 pt-3 space-y-3">
+      {!detail && <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
+      {detail?.requirementNote && (
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Remark</p>
+          <p className="whitespace-pre-wrap text-sm">{detail.requirementNote}</p>
+        </div>
+      )}
+      {detail && (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to</p>
+            <p className="text-sm">{detail.shipToStoreAddress || '—'}</p>
+          </div>
+          <CatalogOrderKarigarPicker assignment={assignment} />
+        </div>
+      )}
+      {detail?.items && (
+        <CatalogOrderItemsBlock
+          assignment={assignment}
+          items={detail.items as CatalogOrderItem[]}
+          customisedOrderNumberFor={customisedOrderNumberFor}
+          itemBusy={itemBusy}
+          onItemStatusChange={(item, next) => onItemStatusChange(item as Item, next)}
+          onItemClick={(item) => onItemClick(item as Item)}
+          onItemImageClick={(item) => onItemImageClick(item as Item)}
+          onAssigned={onAssigned}
+        />
+      )}
+      <div className="flex flex-wrap gap-2">
+        {row.status === 'PENDING' && (
+          <Button size="sm" disabled={busy === row.id} onClick={() => onAdvance('IN_PROCESS')} className="metal-sheen text-[#17120b] font-semibold">
+            {busy === row.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Mark as Approved'}
+          </Button>
+        )}
+        {row.status !== 'COMPLETED' && row.status !== 'CANCELLED' && (
+          <Button size="sm" variant="outline" disabled={busy === row.id} onClick={() => onAdvance('COMPLETED')}>
+            {busy === row.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Mark as Complete'}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Retailer Admin bespoke request (PENDING Karigar assignment) — no linked
+// items, so the Karigar dropdown shows the FULL manufacturer list (not
+// filtered), per the 2026-08-10 redesign.
+function RetailerCustomRequestDetail({
+  row, request, onAssigned,
+}: {
+  row: Row;
+  request: RetailerCustomRequestRow;
+  onAssigned: () => void;
+}) {
+  // No linked items to select here (unlike CatalogOrderDetail's
+  // useCatalogOrderAssignment) — a minimal picker + modal combo instead.
+  const [karigarId, setKarigarId] = useState('');
+  const [karigars, setKarigars] = useState<Karigar[] | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch('/api/manufacturer/karigars', { credentials: 'same-origin', cache: 'no-store' });
+      const json = (await res.json()) as { data?: Karigar[] };
+      if (!cancelled) setKarigars(json.data ?? []);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  async function submit(fields: AssignKarigarManualFields) {
+    setAssigning(true);
+    try {
+      const karigar = karigars?.find((k) => k.id === karigarId) ?? null;
+      const created = (await apiPost(`/api/manufacturer/retailer-custom-requests/${row.id}/assign-karigar`, {
+        karigarId: karigar?.id ?? null,
+        karigarCode: karigar?.code ?? null,
+      })) as { id: string };
+      await apiPost(`/api/manufacturer/custom-designs/${created.id}/karigar-form`, {
+        meena: fields.meena || null, length: fields.length || null, broadness: fields.broadness || null, screw: fields.screw || null,
+        narration1: fields.narration1 || null, narration2: fields.narration2 || null, qc: fields.qc || null,
+        orderType: fields.orderType || null, orderStage: fields.orderStage || null, urgent: fields.urgent,
+      }).catch(() => {});
+      setModalOpen(false);
+      onAssigned();
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  return (
+    <div className="border-t bg-muted/10 px-4 pb-4 pt-3 space-y-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to</p>
+          <p className="text-sm">{request.storeAddressSnapshot || '—'}</p>
+        </div>
+        {karigars !== null && (
+          <KarigarPicker
+            codes={karigars}
+            selectedCount={karigarId ? 1 : 0}
+            onPick={(k) => setKarigarId(k?.id ?? '')}
+            onAssign={() => setModalOpen(true)}
+            assignDisabled={assigning || !karigarId}
+            assignBusy={assigning}
+          />
+        )}
+      </div>
+
+      {modalOpen && (
+        <AssignKarigarModal
+          title="Assign Karigar"
+          submitLabel="Submit"
+          autoFill={{ category: '', subCategory: null, quantity: null, purity: null, deliveryDate: null, karigarDeliveryDate: null }}
+          onSubmit={submit}
+          onClose={() => setModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

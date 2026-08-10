@@ -129,6 +129,66 @@ export async function assignKarigarToB2bItems(input: {
   });
 }
 
+// ── Assign a Karigar to a Retailer Admin's own bespoke request ────────────────
+// (2026-08-10 redesign) — no linked items exist here, so the spec comes
+// straight from the RetailerCustomRequest row itself. Creates the
+// CustomDesignOrder, links it back via retailerCustomRequestId/orderId, and
+// flips the request's status to ASSIGNED. Unlike the item-assignment paths
+// above, karigarDeliveryDate/deliveryDate here come from the request's own
+// (Retailer-Admin-submitted) deliveryDate, which may be null — the manual
+// assignment form fills in what's missing.
+export async function assignKarigarToRetailerRequest(input: {
+  manufacturerId: string;
+  requestId: string;
+  karigarId: string | null;
+  karigarCode: string | null;
+}) {
+  const req = await prisma.retailerCustomRequest.findFirst({
+    where: { id: input.requestId, manufacturerId: input.manufacturerId, status: 'PENDING' },
+  });
+  if (!req) return null;
+
+  const orderNumber = await nextKarigarOrderNumber(input.manufacturerId);
+
+  return prisma.$transaction(async (tx) => {
+    const created = await tx.customDesignOrder.create({
+      data: {
+        manufacturerId: input.manufacturerId,
+        storeId: req.storeId,
+        storeNameSnapshot: req.storeNameSnapshot,
+        storeAddressSnapshot: req.storeAddressSnapshot,
+        category: req.category,
+        subCategory: req.subCategory,
+        weightGramsMin: req.weightGramsMin,
+        weightGramsMax: req.weightGramsMax,
+        purity: req.purity,
+        referenceImageUrl: req.referenceImageUrl,
+        referenceImageUrls: req.referenceImageUrls,
+        designNotes: req.designNotes,
+        orderRef: req.orderRef,
+        deliveryDate: req.deliveryDate,
+        karigarDeliveryDate: minusDays(req.deliveryDate, 3),
+        quantity: req.quantity,
+        meena: req.meena,
+        length: req.length,
+        size: req.size,
+        broadness: req.broadness,
+        screw: req.screw,
+        sampleWeightGrams: req.sampleWeightGrams,
+        karigarId: input.karigarId,
+        karigarCode: input.karigarCode,
+        orderNumber,
+        status: 'IN_PROCESS',
+      },
+    });
+    await tx.retailerCustomRequest.update({
+      where: { id: req.id },
+      data: { status: 'ASSIGNED', orderId: created.id },
+    });
+    return created;
+  });
+}
+
 export async function assignKarigarToKioskItems(input: {
   manufacturerId: string;
   kioskOrderId: string;

@@ -8,7 +8,8 @@ import {
 } from '@/lib/db/orders';
 import {
   listCustomOrdersByManufacturer, advanceCustomOrderStatus, setCustomOrderKarigarCode,
-  updateCustomOrderKarigarForm, getCustomOrderForManufacturer,
+  updateCustomOrderKarigarForm, getCustomOrderForManufacturer, getCustomOrderItemsForManufacturer,
+  listRetailerCustomRequestsByManufacturer, getRetailerCustomRequestForManufacturer,
 } from '@/lib/db/custom-design';
 import { getStoreById } from '@/lib/db/store-read';
 import { sendData, sendError } from '../envelope';
@@ -122,6 +123,11 @@ manufacturerOrderRoutes.get('/custom-designs/:id', async (c) => {
   if (!o) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, o);
 });
+manufacturerOrderRoutes.get('/custom-designs/:id/items', async (c) => {
+  const items = await getCustomOrderItemsForManufacturer(c.get('manufacturerId'), c.req.param('id'));
+  if (items === null) return sendError(c, 'not_found', 'Order not found', 404);
+  return sendData(c, items);
+});
 manufacturerOrderRoutes.patch('/custom-designs/:id', jsonValidator(CustomStatusBody), async (c) => {
   const { status, trackingNumber } = c.req.valid('json');
   const ok = await advanceCustomOrderStatus(c.get('manufacturerId'), c.req.param('id'), status as CustomOrderStatus, trackingNumber);
@@ -161,6 +167,21 @@ const KarigarFormBody = z.object({
   urgent: z.boolean().optional(),
   karigarId: z.string().uuid().nullable().optional(),
   karigarCode: z.string().max(80).nullable().optional(),
+});
+
+// Retailer Admin's own bespoke requests (2026-08-10 redesign) — PENDING rows
+// awaiting Karigar assignment, shown in the merged Catalog Orders list with
+// a "Customised Order from {business name}" tag (source === 'retailer-custom'
+// client-side). Assignment (which creates the real CustomDesignOrder) is
+// POST /api/manufacturer/retailer-custom-requests/:id/assign-karigar, see
+// manufacturer-karigar.ts.
+manufacturerOrderRoutes.get('/retailer-custom-requests', async (c) => {
+  return sendData(c, await listRetailerCustomRequestsByManufacturer(c.get('manufacturerId')));
+});
+manufacturerOrderRoutes.get('/retailer-custom-requests/:id', async (c) => {
+  const r = await getRetailerCustomRequestForManufacturer(c.get('manufacturerId'), c.req.param('id'));
+  if (!r) return sendError(c, 'not_found', 'Request not found', 404);
+  return sendData(c, r);
 });
 
 manufacturerOrderRoutes.patch('/custom-designs/:id/karigar-form', jsonValidator(KarigarFormBody), async (c) => {

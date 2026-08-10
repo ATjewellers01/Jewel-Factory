@@ -5,7 +5,7 @@ import { z } from 'zod';
 import {
   listKarigars, addKarigar, removeKarigar,
   listKarigarCodesForB2bOrder, listKarigarCodesForKioskOrder,
-  assignKarigarToB2bItems, assignKarigarToKioskItems,
+  assignKarigarToB2bItems, assignKarigarToKioskItems, assignKarigarToRetailerRequest,
 } from '@/lib/db/karigar';
 import { sendData, sendError } from '../envelope';
 import { manufacturerGuard, type AppEnv } from '../guards';
@@ -80,5 +80,26 @@ manufacturerKarigarRoutes.post('/kiosk-orders/:id/assign-karigar', jsonValidator
     karigarCode: karigarCode ?? null,
   });
   if (!order) return sendError(c, 'not_found', 'Order or items not found', 404);
+  return sendData(c, order, 201);
+});
+
+// ── Assign a Karigar to a Retailer Admin's own bespoke request ─────────────────
+// (2026-08-10) — no items to select; the Karigar dropdown for this origin
+// shows the manufacturer's FULL master list client-side (GET /karigars
+// above), not a filtered subset, since there's no linked catalog product.
+const AssignRetailerRequestBody = z.object({
+  karigarId: z.string().uuid().nullable().optional(),
+  karigarCode: z.string().max(80).nullable().optional(),
+});
+
+manufacturerKarigarRoutes.post('/retailer-custom-requests/:id/assign-karigar', jsonValidator(AssignRetailerRequestBody), async (c) => {
+  const { karigarId, karigarCode } = c.req.valid('json');
+  const order = await assignKarigarToRetailerRequest({
+    manufacturerId: c.get('manufacturerId'),
+    requestId: c.req.param('id'),
+    karigarId: karigarId ?? null,
+    karigarCode: karigarCode ?? null,
+  });
+  if (!order) return sendError(c, 'not_found', 'Request not found or already assigned', 404);
   return sendData(c, order, 201);
 });

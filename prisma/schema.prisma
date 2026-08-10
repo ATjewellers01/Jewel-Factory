@@ -104,12 +104,13 @@ model Manufacturer {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  products     ManufacturerProduct[]
-  stores       Store[]
-  b2bOrders    B2bOrder[]
-  kioskOrders  KioskOrder[]
-  customOrders CustomDesignOrder[]
-  karigars     Karigar[]
+  products             ManufacturerProduct[]
+  stores               Store[]
+  b2bOrders            B2bOrder[]
+  kioskOrders          KioskOrder[]
+  customOrders         CustomDesignOrder[]
+  karigars             Karigar[]
+  retailerCustomRequests RetailerCustomRequest[]
 
   @@map("manufacturers")
 }
@@ -166,14 +167,15 @@ model Store {
   // manufacturer's own retailerBadgeLabels, or null if unassigned.
   badgeLabel String? @map("badge_label")
 
-  managers       StoreManager[]
-  branches       Branch[]
-  products       Product[]
-  b2bOrders      B2bOrder[]
-  kioskOrders    KioskOrder[]
-  customRequests CustomDesignRequest[]
-  customOrders   CustomDesignOrder[]
-  resetTokens    PasswordResetToken[]
+  managers              StoreManager[]
+  branches              Branch[]
+  products              Product[]
+  b2bOrders             B2bOrder[]
+  kioskOrders           KioskOrder[]
+  customRequests        CustomDesignRequest[]
+  customOrders          CustomDesignOrder[]
+  retailerCustomRequests RetailerCustomRequest[]
+  resetTokens           PasswordResetToken[]
 
   @@index([ownerPhone]) // login-by-mobile lookup (email-less retailers)
   @@map("stores")
@@ -765,12 +767,71 @@ model CustomDesignOrder {
 
   b2bItems   B2bOrderItem[]
   kioskItems KioskOrderItem[]
+  retailerCustomRequest RetailerCustomRequest?
 
   @@index([manufacturerId])
   @@index([storeId])
   @@index([sourceB2bOrderId])
   @@index([sourceKioskOrderId])
   @@map("custom_design_orders")
+}
+
+// A Retailer Admin's own bespoke Customised Order request (2026-08-10 redesign)
+// — placed via /store/custom-designs/new, no linked catalog product. Unlike
+// the original flow, this does NOT create a CustomDesignOrder immediately.
+// It sits here as a PENDING row in the manufacturer's Catalog Orders list
+// (drawing a JFA-#### from the SAME nextCatalogOrderNumber counter every
+// other Catalog/Kiosk order uses, so it sorts/numbers identically), tagged
+// "Customised Order from {business name}". Only once the manufacturer picks/
+// adds a Karigar and submits the assignment form does a real
+// CustomDesignOrder (JFC-####) get created from it — orderId links back to
+// that once it happens, and status flips to ASSIGNED.
+model RetailerCustomRequest {
+  id             String       @id @default(uuid())
+  manufacturerId String       @map("manufacturer_id")
+  manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
+  storeId        String       @map("store_id")
+  store          Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  orderNumber String @unique @map("order_number") // JFA-#### — same counter as B2B/Kiosk
+
+  // store identity snapshot (no customer PII — mirrors CustomDesignOrder)
+  storeNameSnapshot    String  @map("store_name_snapshot")
+  storeAddressSnapshot String  @map("store_address_snapshot")
+
+  category           String
+  subCategory        String?  @map("sub_category")
+  weightGramsMin     Decimal? @map("weight_grams_min") @db.Decimal(8, 3)
+  weightGramsMax     Decimal? @map("weight_grams_max") @db.Decimal(8, 3)
+  purity             String?
+  referenceImageUrl  String?  @map("reference_image_url")
+  referenceImageUrls String[] @default([]) @map("reference_image_urls")
+  designNotes        String?  @map("design_notes")
+  orderRef           String?  @map("order_ref")
+  deliveryDate       DateTime? @map("delivery_date") @db.Date
+  quantity           String?
+  meena              String?
+  length             String?
+  size               String?
+  broadness          String?
+  screw              String?
+  sampleWeightGrams  Decimal? @map("sample_weight_grams") @db.Decimal(8, 3)
+
+  status RetailerCustomRequestStatus @default(PENDING)
+  orderId String? @unique @map("order_id") // set once a Karigar is assigned
+  order   CustomDesignOrder? @relation(fields: [orderId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([manufacturerId])
+  @@index([storeId])
+  @@map("retailer_custom_requests")
+}
+
+enum RetailerCustomRequestStatus {
+  PENDING
+  ASSIGNED
 }
 
 // Shared, manufacturer-scoped Karigar master-list — lets a Karigar-code
