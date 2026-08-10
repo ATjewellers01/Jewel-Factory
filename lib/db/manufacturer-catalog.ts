@@ -89,7 +89,7 @@ export type CreateProductInput = {
   minOrderQty?: number;
   pieces?: number;
   size?: string | null; // bangle size — only collected for the Bangles category
-  karigarCode?: string;
+  karigarCode?: string | null;
   status?: ProductStatus;
 };
 

@@ -101,7 +101,9 @@ const ProductBody = z.object({
   pieces: z.number().int().positive().optional(),
   // Bangle size. Nullable so clearing the field on a category change wipes it.
   size: z.string().max(40).nullish(),
-  karigarCode: z.string().optional(),
+  // Nullable so clearing the field in Edit actually wipes the stored code —
+  // undefined would mean "don't touch this field" (see updateManufacturerProduct).
+  karigarCode: z.string().nullish(),
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional(),
 });
 

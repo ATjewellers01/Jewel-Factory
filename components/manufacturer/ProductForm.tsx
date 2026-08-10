@@ -364,7 +364,10 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
       // Sent as null off the Bangles category so switching category clears a
       // size that was entered earlier, rather than leaving it orphaned.
       size: showSize ? (form.size.trim() || null) : null,
-      karigarCode: form.karigarCode || undefined,
+      // null (not undefined) when cleared — undefined means "don't touch this
+      // field" server-side, so an emptied field would otherwise silently keep
+      // its old value instead of clearing.
+      karigarCode: form.karigarCode.trim() || null,
       status: form.status,
     };
   }
