@@ -21,6 +21,20 @@ export type AssignKarigarAutoFill = {
   orderReceivedDate: string | null; // read-only display — the order/request's own createdAt
 };
 
+/** One item being assigned — shown read-only below the form, and in the PDF. */
+export type AssignKarigarItem = {
+  id: string;
+  designNumber: string;
+  imageUrl: string | null;
+  quantity: number;
+  category: string | null;
+  subCategory: string | null;
+  weightGrams: string | number | null;
+  purity: string | null;
+};
+
+export type AssignKarigarKarigarOption = { id: string; code: string };
+
 export type AssignKarigarManualFields = {
   category: string;
   quantity: string;
@@ -89,6 +103,10 @@ export function AssignKarigarModal({
   submitLabel,
   onSubmit,
   onClose,
+  karigarOptions,
+  karigarId,
+  onKarigarChange,
+  items,
 }: {
   title: string;
   autoFill: AssignKarigarAutoFill;
@@ -96,6 +114,12 @@ export function AssignKarigarModal({
   submitLabel: string;
   onSubmit: (fields: AssignKarigarManualFields) => Promise<void>;
   onClose: () => void;
+  /** The Karigar this order/item-batch is (or will be) assigned to — editable here too. */
+  karigarOptions?: AssignKarigarKarigarOption[];
+  karigarId?: string;
+  onKarigarChange?: (id: string) => void;
+  /** The specific items being assigned — shown read-only with images below the form. */
+  items?: AssignKarigarItem[];
 }) {
   const [fields, setFields] = useState<AssignKarigarManualFields>(buildInitial(autoFill, initialManual));
   const [busy, setBusy] = useState(false);
@@ -138,9 +162,24 @@ export function AssignKarigarModal({
         <h2 className="font-display text-lg font-medium">{title}</h2>
 
         <div className="mt-4 space-y-4">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Order Received Date</p>
-            <p className="text-sm font-medium">{orderReceivedDate}</p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Order Received Date</p>
+              <p className="text-sm font-medium">{orderReceivedDate}</p>
+            </div>
+            {karigarOptions && (
+              <label className="space-y-1">
+                <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Karigar<Required /></span>
+                <select
+                  value={karigarId ?? ''}
+                  onChange={(e) => onKarigarChange?.(e.target.value)}
+                  className="h-8 min-w-40 rounded-md border border-input bg-transparent px-2 text-sm"
+                >
+                  <option value="">Choose Karigar…</option>
+                  {karigarOptions.map((k) => <option key={k.id} value={k.id}>{k.code}</option>)}
+                </select>
+              </label>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -234,6 +273,31 @@ export function AssignKarigarModal({
             <input type="checkbox" checked={fields.urgent} onChange={(e) => set('urgent', e.target.checked)} />
             <span className="font-medium text-red-600">Urgent</span>
           </label>
+
+          {items && items.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Items ({items.length})</p>
+              <div className="space-y-2 rounded-md border border-input/50 p-2">
+                {items.map((it) => (
+                  <div key={it.id} className="flex items-center gap-3">
+                    {it.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={it.imageUrl} alt={it.designNumber} className="h-14 w-14 shrink-0 rounded-lg border bg-white object-contain p-1" />
+                    ) : <div className="h-14 w-14 shrink-0 rounded-lg border bg-muted" />}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">{it.designNumber}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {it.category ?? '—'}{it.subCategory ? ` › ${it.subCategory}` : ''}
+                        {it.weightGrams != null ? ` · ${it.weightGrams}gm` : ''}
+                        {it.purity ? ` · ${it.purity}` : ''}
+                      </p>
+                    </div>
+                    <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {error && <p className="text-xs text-red-600">{error}</p>}
 

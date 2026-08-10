@@ -43,13 +43,23 @@ export type KarigarOrderFormData = {
   createdAt?: string | null;
 };
 
+export type KarigarOrderFormItem = {
+  designNumber: string;
+  imageUrl: string | null;
+  quantity: number;
+  category: string | null;
+  subCategory: string | null;
+  weightGrams: string | number | null;
+  purity: string | null;
+};
+
 /**
  * Customised Order card content (2026-08-10 redesign) — an "Edit" button
  * (reopens AssignKarigarModal, PATCHing the manual fields) plus a "PDF"
  * dropdown (Customer PDF / Karigar PDF). The manual-field editing UI itself
  * now lives in AssignKarigarModal, shared with the create-time Assign flow.
  */
-export function KarigarOrderForm({ order, onSaved }: { order: KarigarOrderFormData; onSaved: () => void }) {
+export function KarigarOrderForm({ order, items, onSaved }: { order: KarigarOrderFormData; items?: KarigarOrderFormItem[]; onSaved: () => void }) {
   const [editing, setEditing] = useState(false);
   const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
   const [pdfBusy, setPdfBusy] = useState<'customer' | 'karigar' | null>(null);
@@ -98,6 +108,7 @@ export function KarigarOrderForm({ order, onSaved }: { order: KarigarOrderFormDa
       karigarCode: order.karigarCode,
       designNotes: order.designNotes,
       imageUrl: order.imageUrl,
+      items: items ?? [],
     };
   }
 
@@ -144,6 +155,16 @@ export function KarigarOrderForm({ order, onSaved }: { order: KarigarOrderFormDa
             qc: order.qc ?? '', orderType: order.orderType ?? '', orderStage: order.orderStage ?? '',
             narration1: order.narration1 ?? '', narration2: order.narration2 ?? '', urgent: order.urgent,
           }}
+          items={(items ?? []).map((it, i) => ({
+            id: String(i),
+            designNumber: it.designNumber,
+            imageUrl: it.imageUrl,
+            quantity: it.quantity,
+            category: it.category,
+            subCategory: it.subCategory,
+            weightGrams: it.weightGrams,
+            purity: it.purity,
+          }))}
           onSubmit={saveEdit}
           onClose={() => setEditing(false)}
         />

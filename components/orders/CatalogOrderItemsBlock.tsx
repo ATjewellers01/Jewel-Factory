@@ -33,7 +33,7 @@ const ALL_ITEM_STATUSES = ['PENDING', 'IN_PROCESS', 'GHAT_RECEIVED', 'READY_FOR_
  * the picker (dropdown + "Assign items") on the SAME row as "Ship to",
  * while the item checkboxes stay in the item rows underneath.
  */
-export function useCatalogOrderAssignment(orderId: string, source: 'b2b' | 'kiosk', items: CatalogOrderItem[]) {
+export function useCatalogOrderAssignment(orderId: string, source: 'b2b' | 'kiosk', items: CatalogOrderItem[], orderDeliveryDate: string | null) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pickedKarigar, setPickedKarigar] = useState<Karigar | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -92,8 +92,20 @@ export function useCatalogOrderAssignment(orderId: string, source: 'b2b' | 'kios
 
   const anchor = unassigned.find((i) => selected.has(i.id))?.product ?? unassigned[0]?.product ?? null;
   const totalQty = [...selected].reduce((sum, id) => sum + (items.find((i) => i.id === id)?.quantity ?? 0), 0);
+  const selectedItems = unassigned.filter((i) => selected.has(i.id));
 
-  return { selected, toggleItem, filteredCodes, allCodes, unassigned, modalOpen, setModalOpen, assigning, pickedKarigar, handlePick, submitAssignment, anchor, totalQty };
+  // Karigar delivery date = client delivery date minus 3 days (matches the
+  // server-side calculation in lib/db/karigar.ts) — computed here too so the
+  // modal shows a real date at ASSIGN time, not just after creation.
+  const karigarDeliveryDate = orderDeliveryDate
+    ? (() => { const d = new Date(orderDeliveryDate); d.setDate(d.getDate() - 3); return d.toISOString(); })()
+    : null;
+
+  return {
+    selected, toggleItem, filteredCodes, allCodes, unassigned, modalOpen, setModalOpen, assigning,
+    pickedKarigar, handlePick, submitAssignment, anchor, totalQty, selectedItems,
+    orderDeliveryDate, karigarDeliveryDate,
+  };
 }
 
 export type CatalogOrderAssignment = ReturnType<typeof useCatalogOrderAssignment>;
@@ -224,10 +236,23 @@ export function CatalogOrderItemsBlock({
             weightGramsMax: assignment.anchor?.weightGrams ?? null,
             size: null,
             sampleWeightGrams: null,
-            deliveryDate: null,
-            karigarDeliveryDate: null,
+            deliveryDate: assignment.orderDeliveryDate,
+            karigarDeliveryDate: assignment.karigarDeliveryDate,
             orderReceivedDate: null,
           }}
+          karigarOptions={assignment.filteredCodes ?? undefined}
+          karigarId={assignment.pickedKarigar?.id ?? ''}
+          onKarigarChange={(id) => assignment.handlePick(assignment.filteredCodes?.find((k) => k.id === id) ?? null)}
+          items={assignment.selectedItems.map((it) => ({
+            id: it.id,
+            designNumber: it.product?.designNumber ?? it.productNameSnapshot,
+            imageUrl: it.productImageSnapshot,
+            quantity: it.quantity,
+            category: it.product?.category ?? it.categorySnapshot,
+            subCategory: it.product?.subCategory ?? null,
+            weightGrams: it.product?.weightGrams ?? null,
+            purity: it.purity,
+          }))}
           onSubmit={(fields) => assignment.submitAssignment(fields, onAssigned)}
           onClose={() => assignment.setModalOpen(false)}
         />

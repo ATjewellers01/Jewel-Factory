@@ -544,6 +544,15 @@ export default function ManufacturerOrdersPage() {
                       imageUrl: o.custom.referenceImageUrls[0] ?? o.custom.referenceImageUrl,
                       createdAt: o.custom.createdAt,
                     }}
+                    items={(customItems ?? []).map((it) => ({
+                      designNumber: it.product?.designNumber ?? it.productNameSnapshot,
+                      imageUrl: it.productImageSnapshot,
+                      quantity: it.quantity,
+                      category: it.product?.category ?? it.categorySnapshot,
+                      subCategory: it.product?.subCategory ?? null,
+                      weightGrams: it.product?.weightGrams ?? null,
+                      purity: it.purity,
+                    }))}
                     onSaved={() => void loadList()}
                   />
                   <div className="flex flex-wrap gap-2">
@@ -624,7 +633,7 @@ function CatalogOrderDetail({
   onAdvance: (next: string) => void;
 }) {
   const source = row.source === 'kiosk' ? 'kiosk' : 'b2b';
-  const assignment = useCatalogOrderAssignment(row.id, source, (detail?.items ?? []) as CatalogOrderItem[]);
+  const assignment = useCatalogOrderAssignment(row.id, source, (detail?.items ?? []) as CatalogOrderItem[], row.deliveryDate);
 
   return (
     <div className="border-t bg-muted/10 px-4 pb-4 pt-3 space-y-3">
@@ -758,6 +767,9 @@ function RetailerCustomRequestDetail({
             weightGramsMin: null, weightGramsMax: null, size: null, sampleWeightGrams: null,
             deliveryDate: null, karigarDeliveryDate: null, orderReceivedDate: request.createdAt,
           }}
+          karigarOptions={karigars ?? undefined}
+          karigarId={karigarId}
+          onKarigarChange={setKarigarId}
           onSubmit={submit}
           onClose={() => setModalOpen(false)}
         />

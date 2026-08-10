@@ -38,7 +38,18 @@ export type KarigarPdfOrder = {
   urgent: boolean;
   karigarCode: string | null;
   designNotes: string | null; // requirement note / remarks
+  imageUrl: string | null; // legacy single reference image, shown only if items is empty
+  items: KarigarPdfItem[];
+};
+
+export type KarigarPdfItem = {
+  designNumber: string;
   imageUrl: string | null;
+  quantity: number;
+  category: string | null;
+  subCategory: string | null;
+  weightGrams: string | number | null;
+  purity: string | null;
 };
 
 const GOLD = [201, 168, 76] as const; // #c9a84c — the app's gold accent
@@ -230,7 +241,53 @@ export async function downloadKarigarOrderPdf(order: KarigarPdfOrder, variant: '
     }
   }
 
-  if (order.imageUrl) {
+  // Item list with images — the specific pieces this JFC-#### covers (empty
+  // for the bespoke-request origin, which falls back to the legacy single
+  // reference image below instead).
+  if (order.items.length > 0) {
+    doc.setDrawColor(230);
+    doc.line(marginX, y, pageW - marginX, y);
+    y += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(130);
+    doc.text('ITEMS', marginX, y);
+    y += 5;
+
+    const imgSize = 22;
+    for (const item of order.items) {
+      if (y + imgSize > 275) { doc.addPage(); y = 16; }
+      if (item.imageUrl) {
+        const dataUrl = await imageToDataUrl(item.imageUrl);
+        if (dataUrl) {
+          try {
+            doc.setDrawColor(225);
+            doc.roundedRect(marginX, y, imgSize, imgSize, 1, 1);
+            doc.addImage(dataUrl, imageFormat(dataUrl), marginX + 1, y + 1, imgSize - 2, imgSize - 2, undefined, 'FAST');
+          } catch {
+            // Corrupt/unsupported image data — text still renders below.
+          }
+        }
+      }
+      const textX = marginX + imgSize + 4;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(...INK);
+      doc.text(item.designNumber, textX, y + 6);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(110);
+      const specLine = [item.category, item.subCategory].filter(Boolean).join(' › ')
+        + (item.weightGrams != null ? ` · ${item.weightGrams}g` : '')
+        + (item.purity ? ` · ${item.purity}` : '');
+      doc.text(specLine, textX, y + 11, { maxWidth: pageW - marginX - textX - 20 });
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(...INK);
+      doc.text(`× ${item.quantity}`, pageW - marginX, y + 6, { align: 'right' });
+      y += imgSize + 4;
+    }
+  } else if (order.imageUrl) {
     const dataUrl = await imageToDataUrl(order.imageUrl);
     if (dataUrl) {
       try {
@@ -239,6 +296,7 @@ export async function downloadKarigarOrderPdf(order: KarigarPdfOrder, variant: '
         doc.line(marginX, y, pageW - marginX, y);
         y += 6;
         doc.addImage(dataUrl, imageFormat(dataUrl), marginX, y, size, size, undefined, 'FAST');
+        y += size + 4;
       } catch {
         // Corrupt/unsupported image data — skip, text content already rendered.
       }
