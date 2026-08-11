@@ -141,6 +141,7 @@ export function KarigarOrderForm({ order, items, onSaved }: { order: KarigarOrde
         <AssignKarigarModal
           title={`Edit ${order.orderNumber}`}
           submitLabel="Save"
+          karigarLabel={order.karigarCode}
           autoFill={{
             category: order.category, subCategory: order.subCategory, quantity: order.quantity,
             purity: order.purity, weightGramsMin: order.weightGramsMin, weightGramsMax: order.weightGramsMax,

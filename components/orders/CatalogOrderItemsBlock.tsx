@@ -240,9 +240,7 @@ export function CatalogOrderItemsBlock({
             karigarDeliveryDate: assignment.karigarDeliveryDate,
             orderReceivedDate: null,
           }}
-          karigarOptions={assignment.filteredCodes ?? undefined}
-          karigarId={assignment.pickedKarigar?.id ?? ''}
-          onKarigarChange={(id) => assignment.handlePick(assignment.filteredCodes?.find((k) => k.id === id) ?? null)}
+          karigarLabel={assignment.pickedKarigar?.code ?? null}
           items={assignment.selectedItems.map((it) => ({
             id: it.id,
             designNumber: it.product?.designNumber ?? it.productNameSnapshot,

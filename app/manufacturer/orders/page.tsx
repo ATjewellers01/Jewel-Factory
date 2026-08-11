@@ -767,9 +767,7 @@ function RetailerCustomRequestDetail({
             weightGramsMin: null, weightGramsMax: null, size: null, sampleWeightGrams: null,
             deliveryDate: null, karigarDeliveryDate: null, orderReceivedDate: request.createdAt,
           }}
-          karigarOptions={karigars ?? undefined}
-          karigarId={karigarId}
-          onKarigarChange={setKarigarId}
+          karigarLabel={karigars?.find((k) => k.id === karigarId)?.code ?? null}
           onSubmit={submit}
           onClose={() => setModalOpen(false)}
         />

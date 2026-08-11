@@ -33,8 +33,6 @@ export type AssignKarigarItem = {
   purity: string | null;
 };
 
-export type AssignKarigarKarigarOption = { id: string; code: string };
-
 export type AssignKarigarManualFields = {
   category: string;
   quantity: string;
@@ -103,9 +101,7 @@ export function AssignKarigarModal({
   submitLabel,
   onSubmit,
   onClose,
-  karigarOptions,
-  karigarId,
-  onKarigarChange,
+  karigarLabel,
   items,
 }: {
   title: string;
@@ -114,10 +110,13 @@ export function AssignKarigarModal({
   submitLabel: string;
   onSubmit: (fields: AssignKarigarManualFields) => Promise<void>;
   onClose: () => void;
-  /** The Karigar this order/item-batch is (or will be) assigned to — editable here too. */
-  karigarOptions?: AssignKarigarKarigarOption[];
-  karigarId?: string;
-  onKarigarChange?: (id: string) => void;
+  /**
+   * The Karigar this order/item-batch is (or will be) assigned to — read-only
+   * display here, since it's already picked via the dropdown BEFORE this
+   * modal opens (or was picked at assignment time, for Edit). Changing the
+   * Karigar happens there, not inside this form.
+   */
+  karigarLabel?: string | null;
   /** The specific items being assigned — shown read-only with images below the form. */
   items?: AssignKarigarItem[];
 }) {
@@ -170,18 +169,11 @@ export function AssignKarigarModal({
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Order Received Date</p>
               <p className="text-sm font-medium">{orderReceivedDate}</p>
             </div>
-            {karigarOptions && (
-              <label className="space-y-1">
-                <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Karigar<Required /></span>
-                <select
-                  value={karigarId ?? ''}
-                  onChange={(e) => onKarigarChange?.(e.target.value)}
-                  className="h-8 min-w-40 rounded-md border border-input bg-transparent px-2 text-sm"
-                >
-                  <option value="">Choose Karigar…</option>
-                  {karigarOptions.map((k) => <option key={k.id} value={k.id}>{k.code}</option>)}
-                </select>
-              </label>
+            {karigarLabel !== undefined && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Karigar</p>
+                <p className="text-sm font-medium">{karigarLabel || '—'}</p>
+              </div>
             )}
           </div>
 
