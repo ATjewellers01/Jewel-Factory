@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { AssignKarigarModal, type AssignKarigarManualFields } from '@/components/orders/AssignKarigarModal';
 import { KarigarPicker, useKarigarCodes, type Karigar } from '@/components/orders/KarigarAssignPanel';
-import { apiPost } from '@/hooks/use-api';
+import { apiPost, apiSend } from '@/hooks/use-api';
 import { formatOrderStatus } from '@/lib/format';
 import type { OrderItemProduct } from '@/components/orders/ManufacturerOrderItemModal';
 
@@ -106,7 +106,7 @@ export function useCatalogOrderAssignment(orderId: string, source: 'b2b' | 'kios
       // the order itself was created. Surface the error instead (2026-08-11
       // fix — a silent .catch(() => {}) here previously masked real PATCH
       // failures, so the order existed but every manual field stayed null).
-      await apiPost(`/api/manufacturer/custom-designs/${created.id}/karigar-form`, {
+      await apiSend('PATCH', `/api/manufacturer/custom-designs/${created.id}/karigar-form`, {
         category: fields.category || undefined,
         quantity: fields.quantity || null,
         purity: fields.purity || null,
