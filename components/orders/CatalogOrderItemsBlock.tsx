@@ -238,7 +238,10 @@ export function CatalogOrderItemsBlock({
             sampleWeightGrams: null,
             deliveryDate: assignment.orderDeliveryDate,
             karigarDeliveryDate: assignment.karigarDeliveryDate,
-            orderReceivedDate: null,
+            // "Order Received Date" here means the day the Karigar is being
+            // assigned (today), NOT the source order's own placement date —
+            // confirmed with the client (2026-08-11).
+            orderReceivedDate: new Date().toISOString(),
           }}
           karigarLabel={assignment.pickedKarigar?.code ?? null}
           items={assignment.selectedItems.map((it) => ({

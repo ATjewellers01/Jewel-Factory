@@ -765,7 +765,9 @@ function RetailerCustomRequestDetail({
           autoFill={{
             category: '', subCategory: null, quantity: null, purity: null,
             weightGramsMin: null, weightGramsMax: null, size: null, sampleWeightGrams: null,
-            deliveryDate: null, karigarDeliveryDate: null, orderReceivedDate: request.createdAt,
+            // "Order Received Date" = the day the Karigar is being assigned
+            // (today), not the bespoke request's own placement date.
+            deliveryDate: null, karigarDeliveryDate: null, orderReceivedDate: new Date().toISOString(),
           }}
           karigarLabel={karigars?.find((k) => k.id === karigarId)?.code ?? null}
           onSubmit={submit}
