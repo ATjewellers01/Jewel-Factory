@@ -1,19 +1,23 @@
 /**
  * Client-side PDF export for a Karigar-assignment Customised Order — two
  * variants sharing one layout:
- *  - Customer PDF: full client (store) identity + the real client delivery date.
- *  - Karigar PDF: NO client identity, but includes every applicable remark
- *    (requirement note, Narration 1/2, bespoke-request Karigar Notes) since
- *    production notes aren't PII; delivery date shown is karigarDeliveryDate
- *    (client date minus a 3-day buffer, computed server-side).
+ *  - Customer PDF: shows ONLY the Catalog order number (JFA-####) — the
+ *    customer has no reason to see the internal JFC-#### tracking number.
+ *    Full client (store) identity + the real client delivery date.
+ *  - Karigar PDF: shows ONLY the Customised order number (JFC-####) — the
+ *    Karigar has no reason to see the reference order. NO client identity,
+ *    but includes every applicable remark (requirement note, Narration 1/2,
+ *    bespoke-request Karigar Notes) since production notes aren't PII;
+ *    delivery date shown is karigarDeliveryDate (client date minus a 3-day
+ *    buffer, computed server-side).
  * Urgent orders render with a red border/highlight on every page.
  * `jspdf` is dynamically imported so it never lands in the initial bundle —
  * same pattern as lib/catalogue-pdf.ts.
  */
 
 export type KarigarPdfOrder = {
-  orderNumber: string; // JFC-####
-  referenceOrderNumber: string | null; // JFA-#### of the source order, if any
+  orderNumber: string; // JFC-#### — shown only on the Karigar PDF
+  referenceOrderNumber: string | null; // JFA-#### of the source order — shown only on the Customer PDF
   storeName: string | null;
   storeAddress: string | null;
   category: string;
@@ -50,6 +54,7 @@ export type KarigarPdfItem = {
   subCategory: string | null;
   weightGrams: string | number | null;
   purity: string | null;
+  description: string | null;
 };
 
 const GOLD = [201, 168, 76] as const; // #c9a84c — the app's gold accent
@@ -133,16 +138,13 @@ export async function downloadKarigarOrderPdf(order: KarigarPdfOrder, variant: '
   doc.setLineWidth(0.2);
   y += 8;
 
+  // Customer PDF shows ONLY the Catalog order number (JFA-####) — the
+  // customer never sees the internal JFC-#### tracking number. Karigar PDF
+  // shows ONLY the Customised order number (JFC-####) — the Karigar has no
+  // reason to see the reference order. Neither PDF shows both.
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.text(order.orderNumber, marginX, y);
-  if (order.referenceOrderNumber) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(120);
-    doc.text(`Ref. order: ${order.referenceOrderNumber}`, pageW - marginX, y, { align: 'right' });
-    doc.setTextColor(...INK);
-  }
+  doc.text(variant === 'customer' ? (order.referenceOrderNumber ?? order.orderNumber) : order.orderNumber, marginX, y);
   y += 8;
 
   if (variant === 'customer') {
@@ -241,9 +243,13 @@ export async function downloadKarigarOrderPdf(order: KarigarPdfOrder, variant: '
     }
   }
 
-  // Item list with images — the specific pieces this JFC-#### covers (empty
-  // for the bespoke-request origin, which falls back to the legacy single
-  // reference image below instead).
+  // Item list — the specific pieces this JFC-#### covers, with the SAME full
+  // detail Add Design shows (category, sub-category, weight, purity,
+  // description — never karigarCode). A bigger image than before so the
+  // piece is actually recognisable on the printed page (PDFs can't offer
+  // an interactive zoom, so the image itself needs to be large/clear up front).
+  // Falls back to the legacy single reference image only when there are no
+  // linked items (the bespoke-request origin).
   if (order.items.length > 0) {
     doc.setDrawColor(230);
     doc.line(marginX, y, pageW - marginX, y);
@@ -254,38 +260,48 @@ export async function downloadKarigarOrderPdf(order: KarigarPdfOrder, variant: '
     doc.text('ITEMS', marginX, y);
     y += 5;
 
-    const imgSize = 22;
+    const imgSize = 34;
     for (const item of order.items) {
-      if (y + imgSize > 275) { doc.addPage(); y = 16; }
+      const blockHeight = Math.max(imgSize, 24);
+      if (y + blockHeight > 275) { doc.addPage(); y = 16; }
       if (item.imageUrl) {
         const dataUrl = await imageToDataUrl(item.imageUrl);
         if (dataUrl) {
           try {
             doc.setDrawColor(225);
-            doc.roundedRect(marginX, y, imgSize, imgSize, 1, 1);
+            doc.roundedRect(marginX, y, imgSize, imgSize, 1.5, 1.5);
             doc.addImage(dataUrl, imageFormat(dataUrl), marginX + 1, y + 1, imgSize - 2, imgSize - 2, undefined, 'FAST');
           } catch {
             // Corrupt/unsupported image data — text still renders below.
           }
         }
       }
-      const textX = marginX + imgSize + 4;
+      const textX = marginX + imgSize + 5;
+      const textW = pageW - marginX - textX - 22;
+      let ty = y + 5;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10.5);
+      doc.setTextColor(...INK);
+      doc.text(item.designNumber, textX, ty);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9.5);
-      doc.setTextColor(...INK);
-      doc.text(item.designNumber, textX, y + 6);
+      doc.text(`× ${item.quantity}`, pageW - marginX, ty, { align: 'right' });
+      ty += 5;
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
+      doc.setFontSize(8.5);
       doc.setTextColor(110);
       const specLine = [item.category, item.subCategory].filter(Boolean).join(' › ')
         + (item.weightGrams != null ? ` · ${item.weightGrams}g` : '')
         + (item.purity ? ` · ${item.purity}` : '');
-      doc.text(specLine, textX, y + 11, { maxWidth: pageW - marginX - textX - 20 });
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9);
-      doc.setTextColor(...INK);
-      doc.text(`× ${item.quantity}`, pageW - marginX, y + 6, { align: 'right' });
-      y += imgSize + 4;
+      if (specLine) { doc.text(specLine, textX, ty, { maxWidth: textW }); ty += 4.5; }
+      if (item.description) {
+        doc.setFontSize(8);
+        doc.setTextColor(130);
+        const descLines = doc.splitTextToSize(item.description, textW).slice(0, 3);
+        doc.text(descLines, textX, ty);
+        ty += descLines.length * 4;
+      }
+      y += Math.max(imgSize, ty - y) + 5;
     }
   } else if (order.imageUrl) {
     const dataUrl = await imageToDataUrl(order.imageUrl);

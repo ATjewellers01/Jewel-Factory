@@ -1,12 +1,48 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { AssignKarigarModal, type AssignKarigarManualFields } from '@/components/orders/AssignKarigarModal';
 import { KarigarPicker, useKarigarCodes, type Karigar } from '@/components/orders/KarigarAssignPanel';
 import { apiPost } from '@/hooks/use-api';
 import { formatOrderStatus } from '@/lib/format';
 import type { OrderItemProduct } from '@/components/orders/ManufacturerOrderItemModal';
+
+/**
+ * Resolves customisedOrderId -> JFC-#### order number for the "Customised
+ * Order: JFC-####" badge on an assigned item (2026-08-11) — the Customised
+ * Orders list itself no longer merges into this page, so this fetches each
+ * one lazily and caches it (a module-level cache since the same order can
+ * be assigned to from multiple item rows/orders in one session).
+ */
+const orderNumberCache = new Map<string, string>();
+
+function useCustomisedOrderNumbers(customisedOrderIds: string[]) {
+  const [, forceRender] = useState(0);
+  const fetchingRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const toFetch = customisedOrderIds.filter((id) => !orderNumberCache.has(id) && !fetchingRef.current.has(id));
+    if (toFetch.length === 0) return;
+    toFetch.forEach((id) => fetchingRef.current.add(id));
+    (async () => {
+      await Promise.all(toFetch.map(async (id) => {
+        try {
+          const res = await fetch(`/api/manufacturer/custom-designs/${id}`, { credentials: 'same-origin', cache: 'no-store' });
+          const json = (await res.json()) as { data?: { orderNumber?: string } };
+          if (json.data?.orderNumber) orderNumberCache.set(id, json.data.orderNumber);
+        } catch {
+          // best-effort — badge falls back to "Assigned" if this fails
+        } finally {
+          fetchingRef.current.delete(id);
+        }
+      }));
+      forceRender((n) => n + 1);
+    })();
+  }, [customisedOrderIds]);
+
+  return (id: string | null | undefined) => (id ? orderNumberCache.get(id) ?? null : null);
+}
 
 export type CatalogOrderItem = {
   id: string;
@@ -65,6 +101,11 @@ export function useCatalogOrderAssignment(orderId: string, source: 'b2b' | 'kios
         karigarId: pickedKarigar?.id ?? null,
         karigarCode: pickedKarigar?.code ?? null,
       })) as { id: string };
+      // NOT best-effort — if this fails, the manufacturer's manually-entered
+      // fields (Meena, Screw, Narration, etc.) are silently lost even though
+      // the order itself was created. Surface the error instead (2026-08-11
+      // fix — a silent .catch(() => {}) here previously masked real PATCH
+      // failures, so the order existed but every manual field stayed null).
       await apiPost(`/api/manufacturer/custom-designs/${created.id}/karigar-form`, {
         category: fields.category || undefined,
         quantity: fields.quantity || null,
@@ -80,7 +121,7 @@ export function useCatalogOrderAssignment(orderId: string, source: 'b2b' | 'kios
         karigarNotes: fields.karigarNotes || null,
         narration1: fields.narration1 || null, narration2: fields.narration2 || null, qc: fields.qc || null,
         orderType: fields.orderType || null, orderStage: fields.orderStage || null, urgent: fields.urgent,
-      }).catch(() => {}); // best-effort — the order is already created either way
+      });
       setSelected(new Set());
       setPickedKarigar(null);
       setModalOpen(false);
@@ -130,7 +171,6 @@ export function CatalogOrderKarigarPicker({ assignment }: { assignment: CatalogO
 export function CatalogOrderItemsBlock({
   assignment,
   items,
-  customisedOrderNumberFor,
   itemBusy,
   onItemStatusChange,
   onItemClick,
@@ -139,13 +179,15 @@ export function CatalogOrderItemsBlock({
 }: {
   assignment: CatalogOrderAssignment;
   items: CatalogOrderItem[];
-  customisedOrderNumberFor: (id: string | null | undefined) => string | null;
   itemBusy: string | null;
   onItemStatusChange: (item: CatalogOrderItem, next: string) => void;
   onItemClick: (item: CatalogOrderItem) => void;
   onItemImageClick: (item: CatalogOrderItem) => void;
   onAssigned: () => void;
 }) {
+  const assignedIds = useMemo(() => items.map((i) => i.customisedOrderId).filter((x): x is string => !!x), [items]);
+  const customisedOrderNumberFor = useCustomisedOrderNumbers(assignedIds);
+
   return (
     <>
       <div>
@@ -198,7 +240,7 @@ export function CatalogOrderItemsBlock({
                       )}
                       {it.customisedOrderId && (
                         <span className="mt-0.5 ml-1 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800">
-                          Customised Order: {customisedOrderNumberFor(it.customisedOrderId) ?? '…'}
+                          Customised Order: {customisedOrderNumberFor(it.customisedOrderId) ?? 'Assigned'}
                         </span>
                       )}
                     </span>

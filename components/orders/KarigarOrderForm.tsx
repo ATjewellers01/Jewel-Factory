@@ -51,6 +51,7 @@ export type KarigarOrderFormItem = {
   subCategory: string | null;
   weightGrams: string | number | null;
   purity: string | null;
+  description: string | null;
 };
 
 /**
