@@ -156,12 +156,15 @@ export function AssignKarigarModal({
     : '—';
 
   return (
-    <div className="fixed inset-0 z-50 flex min-h-full items-center justify-center overflow-y-auto bg-black/50 p-4 py-8" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="relative w-full max-w-2xl rounded-2xl bg-card p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 rounded-full p-1.5 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
-        <h2 className="font-display text-lg font-medium">{title}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-card shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b px-4 py-3 sm:px-5">
+          <h2 className="font-display text-lg font-medium">{title}</h2>
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
+        </div>
 
-        <div className="mt-4 space-y-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+          <div className="space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Order Received Date</p>
@@ -300,13 +303,14 @@ export function AssignKarigarModal({
           )}
 
           {error && <p className="text-xs text-red-600">{error}</p>}
-
-          <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="button" disabled={busy} onClick={() => void submit()} className="metal-sheen text-[#17120b] font-semibold">
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : submitLabel}
-            </Button>
           </div>
+        </div>
+
+        <div className="flex justify-end gap-2 border-t px-4 py-3 sm:px-5">
+          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+          <Button type="button" disabled={busy} onClick={() => void submit()} className="metal-sheen text-[#17120b] font-semibold">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : submitLabel}
+          </Button>
         </div>
       </div>
     </div>
