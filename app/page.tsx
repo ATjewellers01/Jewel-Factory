@@ -15,11 +15,6 @@ const LoginModal = dynamic(
   () => import('@/components/landing/LoginModal').then((module) => module.LoginModal),
   { ssr: false },
 );
-const RegisterPromptModal = dynamic(
-  () => import('@/components/landing/RegisterPromptModal').then((module) => module.RegisterPromptModal),
-  { ssr: false },
-);
-
 type ShowcaseProduct = {
   id: string; designNumber?: string; name?: string | null;
   category: string | null; subCategory?: string | null;
@@ -403,7 +398,6 @@ export default function LandingPage() {
       )}
 
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
-      <RegisterPromptModal />
     </div>
   );
 }
