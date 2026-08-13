@@ -9,7 +9,11 @@ export type OrderItemProduct = {
   designNumber: string;
   category: string | null;
   subCategory: string | null;
+  subCategory2?: string | null;
   weightGrams: string | number | null;
+  grossWeightGrams?: string | number | null;
+  netWeightGrams?: string | number | null;
+  pieces?: number | null;
   size: string | null;
   purity: string | null;
   description: string | null;

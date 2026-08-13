@@ -291,9 +291,19 @@ model ManufacturerProduct {
   designNumber String        @unique @map("design_number") // JF-0001, auto-generated
   name         String? // deprecated — design name removed per client request; kept nullable for legacy rows
   category     String?
-  subCategory  String?       @map("sub_category")
+  subCategory  String?       @map("sub_category") // shown as "Sub-category 1" in the Add Design form (display-only rename)
+  // "Sub-category 2" in the Add Design form — Plain or Studded (free text,
+  // not enforced here; the form only offers those two options). Studded
+  // switches the form's single Weight field to separate Gross/Net Weight
+  // inputs below; Plain (or unset) keeps using weightGrams unchanged.
+  subCategory2 String?       @map("sub_category_2")
   description  String?
   weightGrams  Decimal?      @map("weight_grams") @db.Decimal(8, 3)
+  // Only used when subCategory2 = "Studded" — manually entered, independent
+  // values (no auto-calculation). weightGrams stays the field of record for
+  // "Plain" designs.
+  grossWeightGrams Decimal?  @map("gross_weight_grams") @db.Decimal(8, 3)
+  netWeightGrams   Decimal?  @map("net_weight_grams") @db.Decimal(8, 3)
   purity       String?
   gemstones    String[]      @default([])
   occasionTags String[]      @default([]) @map("occasion_tags")

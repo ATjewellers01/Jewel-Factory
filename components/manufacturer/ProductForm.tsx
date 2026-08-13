@@ -33,13 +33,20 @@ const CATEGORY_TO_JEWELLERY_TYPE: Record<string, (typeof JEWELLERY_TYPES)[number
   Watch: 'bangle',
 };
 
+// "Sub-category 2" options — displayed as-is, stored as free text (not DB-enforced).
+const SUB_CATEGORY_2_OPTIONS = ['Plain', 'Studded'] as const;
+
 export type ProductFormData = {
   id?: string;
   name?: string;
   category: string;
-  subCategory: string;
+  subCategory: string; // "Sub-category 1" in the form
+  subCategory2: string; // "Sub-category 2" — Plain | Studded
   description: string;
   weightGrams: string;
+  // Only used when subCategory2 === 'Studded' — see SUB_CATEGORY_2_OPTIONS.
+  grossWeightGrams: string;
+  netWeightGrams: string;
   purity: string;
   minOrderQty: string;
   pieces: string;
@@ -59,8 +66,9 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
   const [form, setForm] = useState<ProductFormData>(
     initial ?? {
-      name: '', category: '', subCategory: '', description: '',
-      weightGrams: '', purity: '', minOrderQty: '1', pieces: '1', size: '', karigarCode: '',
+      name: '', category: '', subCategory: '', subCategory2: '', description: '',
+      weightGrams: '', grossWeightGrams: '', netWeightGrams: '',
+      purity: '', minOrderQty: '1', pieces: '1', size: '', karigarCode: '',
       status: 'ACTIVE', // new designs are visible by default
     },
   );
@@ -353,11 +361,18 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   }
 
   function buildPayload() {
+    const studded = form.subCategory2 === 'Studded';
     return {
       category: form.category || undefined,
       subCategory: form.subCategory || undefined,
+      subCategory2: form.subCategory2 || null,
       description: form.description || undefined,
-      weightGrams: form.weightGrams ? Number(form.weightGrams) : undefined,
+      // Studded uses Gross/Net Weight instead — weightGrams is nulled out so a
+      // value entered while on Plain doesn't linger unseen after switching,
+      // same reasoning as clearing size off a non-Bangles category below.
+      weightGrams: studded ? null : (form.weightGrams ? Number(form.weightGrams) : null),
+      grossWeightGrams: studded ? (form.grossWeightGrams ? Number(form.grossWeightGrams) : null) : null,
+      netWeightGrams: studded ? (form.netWeightGrams ? Number(form.netWeightGrams) : null) : null,
       purity: form.purity || undefined,
       minOrderQty: form.minOrderQty ? Number(form.minOrderQty) : 1,
       pieces: form.pieces ? Number(form.pieces) : 1,
@@ -493,7 +508,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
             <FieldError errors={toFieldErrors(fieldErrors.category)} />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Sub-category<Optional /></label>
+            <label className="text-xs font-medium text-muted-foreground">Sub-category 1<Optional /></label>
             {subOptions.length > 0 && !subCustom ? (
               <select
                 className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
@@ -522,13 +537,36 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
             )}
             <FieldError errors={toFieldErrors(fieldErrors.subCategory)} />
           </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Sub-category 2<Optional /></label>
+            <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.subCategory2} onChange={set('subCategory2')}>
+              <option value="">—</option>
+              {SUB_CATEGORY_2_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <FieldError errors={toFieldErrors(fieldErrors.subCategory2)} />
+          </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Weight (gm)<Optional /></label>
-            <Input className="mt-1" type="number" step="0.001" placeholder="12.5" value={form.weightGrams} onChange={set('weightGrams')} />
-            <FieldError errors={toFieldErrors(fieldErrors.weightGrams)} />
-          </div>
+          {form.subCategory2 === 'Studded' ? (
+            <>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Gross Weight (gm)<Optional /></label>
+                <Input className="mt-1" type="number" step="0.001" placeholder="12.5" value={form.grossWeightGrams} onChange={set('grossWeightGrams')} />
+                <FieldError errors={toFieldErrors(fieldErrors.grossWeightGrams)} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Net Weight (gm)<Optional /></label>
+                <Input className="mt-1" type="number" step="0.001" placeholder="10.2" value={form.netWeightGrams} onChange={set('netWeightGrams')} />
+                <FieldError errors={toFieldErrors(fieldErrors.netWeightGrams)} />
+              </div>
+            </>
+          ) : (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Weight (gm)<Optional /></label>
+              <Input className="mt-1" type="number" step="0.001" placeholder="12.5" value={form.weightGrams} onChange={set('weightGrams')} />
+              <FieldError errors={toFieldErrors(fieldErrors.weightGrams)} />
+            </div>
+          )}
           <div>
             <label className="text-xs font-medium text-muted-foreground">Purity<Optional /></label>
             <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.purity} onChange={set('purity')}>

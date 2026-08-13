@@ -91,8 +91,17 @@ manufacturerCatalogRoutes.get('/products/:id', async (c) => {
 const ProductBody = z.object({
   category: z.string().optional(),
   subCategory: z.string().optional(),
+  // "Sub-category 2" — Plain | Studded. Nullable so switching back to Plain
+  // (or clearing it) actually wipes the stored value, same reasoning as
+  // karigarCode/size below.
+  subCategory2: z.string().nullish(),
   description: z.string().optional(),
   weightGrams: z.number().positive().optional(),
+  // Only meaningful when subCategory2 = "Studded" — manually entered,
+  // independent of each other and of weightGrams. Nullable for the same
+  // clear-on-switch-back reason as subCategory2.
+  grossWeightGrams: z.number().positive().nullish(),
+  netWeightGrams: z.number().positive().nullish(),
   purity: z.string().optional(),
   gemstones: z.array(z.string()).optional(),
   occasionTags: z.array(z.string()).optional(),

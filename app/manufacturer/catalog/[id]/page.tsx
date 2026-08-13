@@ -19,7 +19,8 @@ export default function EditProductPage() {
         const json = (await res.json()) as {
           data?: {
             id: string; designNumber: string; name: string | null; category: string | null;
-            subCategory: string | null; description: string | null; weightGrams: string | null;
+            subCategory: string | null; subCategory2: string | null; description: string | null; weightGrams: string | null;
+            grossWeightGrams: string | null; netWeightGrams: string | null;
             purity: string | null; minOrderQty: number; pieces: number | null; size: string | null; karigarCode: string | null;
             status: string; hasTryon: boolean;
             images: { id: string; secureUrl: string; isPrimary: boolean }[];
@@ -35,8 +36,11 @@ export default function EditProductPage() {
           name: p.name ?? '',
           category: p.category ?? '',
           subCategory: p.subCategory ?? '',
+          subCategory2: p.subCategory2 ?? '',
           description: p.description ?? '',
           weightGrams: p.weightGrams != null ? String(p.weightGrams) : '',
+          grossWeightGrams: p.grossWeightGrams != null ? String(p.grossWeightGrams) : '',
+          netWeightGrams: p.netWeightGrams != null ? String(p.netWeightGrams) : '',
           purity: p.purity ?? '',
           minOrderQty: String(p.minOrderQty ?? 1),
           pieces: String(p.pieces ?? 1),

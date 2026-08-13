@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronDown, ChevronUp, Loader2, ShoppingBag } from 'lucide-react';
+import { Loader2, ShoppingBag } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import { AssignKarigarModal, type AssignKarigarManualFields } from '@/components/orders/AssignKarigarModal';
@@ -9,6 +9,7 @@ import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { KarigarPicker, type Karigar } from '@/components/orders/KarigarAssignPanel';
 import { ManufacturerOrderItemModal, type OrderItemProduct } from '@/components/orders/ManufacturerOrderItemModal';
 import { OrderFilters } from '@/components/orders/OrderFilters';
+import { OrderSummaryModal } from '@/components/orders/OrderSummaryModal';
 import { Button } from '@/components/ui/button';
 import { apiPost, apiSend } from '@/hooks/use-api';
 import { formatOrderLevelStatus } from '@/lib/format';
@@ -368,38 +369,11 @@ export default function ManufacturerOrdersPage() {
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 align-top text-right">
                         <div className="flex justify-end gap-2">
-                          <Button type="button" size="sm" variant="outline" onClick={() => toggle(o)}>
-                            Order Summary {expanded === o.id ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
-                          </Button>
+                          <Button type="button" size="sm" variant="outline" onClick={() => toggle(o)}>Order Summary</Button>
                           <Button type="button" size="sm" variant="outline" onClick={() => setNotesRow(o)}>Order Notes</Button>
                         </div>
                       </td>
                     </tr>
-                    {expanded === o.id && (
-                      <tr>
-                        <td colSpan={8} className="p-0">
-                          <div className="flex items-center gap-2 border-t bg-[#17120b]/[0.02] px-4 py-2">
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span>
-                          </div>
-                          {o.source !== 'retailer-custom' && (
-                            <CatalogOrderDetail
-                              row={o}
-                              detail={detail}
-                              itemBusy={itemBusy}
-                              busy={busy}
-                              onItemStatusChange={(item, next) => void setItemStatus(o, item, next)}
-                              onItemClick={(item) => item.product && setProductModal(item.product)}
-                              onItemImageClick={(item) => setZoomItem(item)}
-                              onAssigned={() => void loadList()}
-                              onAdvance={(next) => advance(o, next)}
-                            />
-                          )}
-                          {o.source === 'retailer-custom' && o.retailerRequest && (
-                            <RetailerCustomRequestDetail row={o} request={o.retailerRequest} onAssigned={() => void loadList()} />
-                          )}
-                        </td>
-                      </tr>
-                    )}
                   </Fragment>
                 ))}
               </tbody>
@@ -407,6 +381,57 @@ export default function ManufacturerOrdersPage() {
           </div>
         </div>
       )}
+
+      {expanded && (() => {
+        const o = filtered.find((r) => r.id === expanded);
+        if (!o) return null;
+        return (
+          <OrderSummaryModal
+            order={{
+              orderNumber: o.orderNumber,
+              storeName: o.storeName,
+              orderDate: o.createdAt,
+              deliveryDate: o.deliveryDate,
+              requirementNote: o.requirementNote,
+              items: (detail?.items ?? []).map((it) => ({
+                id: it.id,
+                designNumber: it.product?.designNumber ?? it.productNameSnapshot,
+                imageUrl: it.productImageSnapshot,
+                quantity: it.quantity,
+                status: it.status,
+                // Plain designs only have one Weight field, so Gross and Net
+                // both show it; Studded designs collect the two separately.
+                grossWeightGrams: it.product?.grossWeightGrams ?? it.product?.weightGrams ?? null,
+                netWeightGrams: it.product?.netWeightGrams ?? it.product?.weightGrams ?? null,
+                pieces: it.product?.pieces ?? null,
+                karigarCode: it.product?.karigarCode ?? null,
+              })),
+            }}
+            onClose={() => { setExpanded(null); setDetail(null); }}
+          >
+            <div className="flex items-center gap-2 pb-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</span>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span>
+            </div>
+            {o.source !== 'retailer-custom' && (
+              <CatalogOrderDetail
+                row={o}
+                detail={detail}
+                itemBusy={itemBusy}
+                busy={busy}
+                onItemStatusChange={(item, next) => void setItemStatus(o, item, next)}
+                onItemClick={(item) => item.product && setProductModal(item.product)}
+                onItemImageClick={(item) => setZoomItem(item)}
+                onAssigned={() => void loadList()}
+                onAdvance={(next) => advance(o, next)}
+              />
+            )}
+            {o.source === 'retailer-custom' && o.retailerRequest && (
+              <RetailerCustomRequestDetail row={o} request={o.retailerRequest} onAssigned={() => void loadList()} />
+            )}
+          </OrderSummaryModal>
+        );
+      })()}
 
       {notesRow && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setNotesRow(null)} role="dialog" aria-modal="true">

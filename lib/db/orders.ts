@@ -227,13 +227,14 @@ export async function getKioskOrderForManufacturer(manufacturerId: string, id: s
 // manufacturer-facing routes, never retailer/store-manager ones.
 async function hydrateItemsWithProduct<T extends { manufacturerProductId: string | null }>(
   items: T[],
-): Promise<Array<T & { product: null | { karigarCode: string | null; category: string | null; subCategory: string | null; weightGrams: unknown; size: string | null; purity: string | null; description: string | null; designNumber: string; images: { secureUrl: string; isPrimary: boolean }[] } }>> {
+): Promise<Array<T & { product: null | { karigarCode: string | null; category: string | null; subCategory: string | null; subCategory2: string | null; weightGrams: unknown; grossWeightGrams: unknown; netWeightGrams: unknown; pieces: number; size: string | null; purity: string | null; description: string | null; designNumber: string; images: { secureUrl: string; isPrimary: boolean }[] } }>> {
   const ids = [...new Set(items.map((i) => i.manufacturerProductId).filter((x): x is string => !!x))];
   if (ids.length === 0) return items.map((i) => ({ ...i, product: null }));
   const products = await prisma.manufacturerProduct.findMany({
     where: { id: { in: ids } },
     select: {
-      id: true, karigarCode: true, category: true, subCategory: true, weightGrams: true, size: true,
+      id: true, karigarCode: true, category: true, subCategory: true, subCategory2: true,
+      weightGrams: true, grossWeightGrams: true, netWeightGrams: true, pieces: true, size: true,
       purity: true, description: true, designNumber: true,
       images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], select: { secureUrl: true, isPrimary: true } },
     },
@@ -401,7 +402,8 @@ export async function getB2bOrderForManufacturer(manufacturerId: string, id: str
         include: {
           manufacturerProduct: {
             select: {
-              id: true, karigarCode: true, category: true, subCategory: true, weightGrams: true,
+              id: true, karigarCode: true, category: true, subCategory: true, subCategory2: true,
+              weightGrams: true, grossWeightGrams: true, netWeightGrams: true, pieces: true,
               purity: true, description: true, designNumber: true,
               images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], select: { secureUrl: true, isPrimary: true } },
             },

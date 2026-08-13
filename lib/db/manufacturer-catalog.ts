@@ -79,9 +79,13 @@ export async function listActiveProducts(filters: { category?: string; search?: 
 
 export type CreateProductInput = {
   category?: string;
-  subCategory?: string;
+  subCategory?: string; // "Sub-category 1" in the Add Design form
+  subCategory2?: string | null; // "Sub-category 2" — Plain | Studded
   description?: string;
   weightGrams?: number;
+  // Only meaningful when subCategory2 = "Studded" — see the schema comment.
+  grossWeightGrams?: number | null;
+  netWeightGrams?: number | null;
   purity?: string;
   gemstones?: string[];
   occasionTags?: string[];
@@ -101,8 +105,11 @@ export async function createManufacturerProduct(manufacturerId: string, input: C
       designNumber,
       category: input.category ?? null,
       subCategory: input.subCategory ?? null,
+      subCategory2: input.subCategory2 ?? null,
       description: input.description ?? null,
       weightGrams: input.weightGrams ?? null,
+      grossWeightGrams: input.grossWeightGrams ?? null,
+      netWeightGrams: input.netWeightGrams ?? null,
       purity: input.purity ?? null,
       gemstones: input.gemstones ?? [],
       occasionTags: input.occasionTags ?? [],
@@ -148,8 +155,11 @@ export async function updateManufacturerProduct(
     data: {
       ...(input.category !== undefined ? { category: input.category } : {}),
       ...(input.subCategory !== undefined ? { subCategory: input.subCategory } : {}),
+      ...(input.subCategory2 !== undefined ? { subCategory2: input.subCategory2 } : {}),
       ...(input.description !== undefined ? { description: input.description } : {}),
       ...(input.weightGrams !== undefined ? { weightGrams: input.weightGrams } : {}),
+      ...(input.grossWeightGrams !== undefined ? { grossWeightGrams: input.grossWeightGrams } : {}),
+      ...(input.netWeightGrams !== undefined ? { netWeightGrams: input.netWeightGrams } : {}),
       ...(input.purity !== undefined ? { purity: input.purity } : {}),
       ...(input.gemstones !== undefined ? { gemstones: input.gemstones } : {}),
       ...(input.occasionTags !== undefined ? { occasionTags: input.occasionTags } : {}),
