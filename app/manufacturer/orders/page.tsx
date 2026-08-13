@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronDown, ChevronUp, Loader2, ShoppingBag } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import { AssignKarigarModal, type AssignKarigarManualFields } from '@/components/orders/AssignKarigarModal';
 import { CatalogOrderItemsBlock, CatalogOrderKarigarPicker, useCatalogOrderAssignment, type CatalogOrderItem } from '@/components/orders/CatalogOrderItemsBlock';
@@ -43,11 +43,15 @@ const SOURCE_LABEL: Record<Source, string> = {
   b2b: 'Restock', kiosk: 'Store Customer', custom: 'Customised', 'retailer-custom': 'Customised',
 };
 
-type B2bOrder = { id: string; orderNumber: string; status: string; totalItems: number; createdAt: string; deliveryDate: string | null; storeName: string | null; karigarCodes?: string[] };
+type B2bOrder = {
+  id: string; orderNumber: string; status: string; totalItems: number; createdAt: string; deliveryDate: string | null;
+  storeName: string | null; karigarCodes?: string[]; totalQuantity?: number; pendingQuantity?: number;
+  requirementNote: string | null;
+};
 type KioskOrder = {
   id: string; orderNumber: string; status: string; totalItems: number; createdAt: string; deliveryDate: string | null;
   storeNameSnapshot: string; requirementNote: string | null;
-  shipToStoreAddress: string; karigarCodes?: string[];
+  shipToStoreAddress: string; karigarCodes?: string[]; totalQuantity?: number; pendingQuantity?: number;
 };
 // A Retailer Admin's own bespoke request, PENDING Karigar assignment — lands
 // in this same Catalog Orders list, tagged "Customised Order from {business
@@ -84,6 +88,8 @@ type Row = {
   id: string; source: Source; orderNumber: string; status: string; totalItems: number; createdAt: string;
   deliveryDate: string | null;
   storeName: string | null; karigarCodes: string[];
+  totalQuantity: number | null; pendingQuantity: number | null;
+  requirementNote: string | null;
   custom?: CustomOrder;
   retailerRequest?: RetailerCustomRequestRow;
 };
@@ -139,6 +145,7 @@ export default function ManufacturerOrdersPage() {
   const [zoomItem, setZoomItem] = useState<Item | null>(null);
   const [zoomCustomImages, setZoomCustomImages] = useState<string[] | null>(null);
   const [productModal, setProductModal] = useState<OrderItemProduct | null>(null);
+  const [notesRow, setNotesRow] = useState<Row | null>(null);
 
   async function loadList() {
     setLoading(true);
@@ -166,10 +173,12 @@ export default function ManufacturerOrdersPage() {
       const b2bRows: Row[] = (b2bJson.data ?? []).map((o) => ({
         id: o.id, source: 'b2b', orderNumber: o.orderNumber, status: o.status, totalItems: o.totalItems,
         createdAt: o.createdAt, deliveryDate: o.deliveryDate, storeName: o.storeName, karigarCodes: o.karigarCodes ?? [],
+        totalQuantity: o.totalQuantity ?? null, pendingQuantity: o.pendingQuantity ?? null, requirementNote: o.requirementNote,
       }));
       const kioskRows: Row[] = (kioskJson.data ?? []).map((o) => ({
         id: o.id, source: 'kiosk', orderNumber: o.orderNumber, status: o.status, totalItems: o.totalItems,
         createdAt: o.createdAt, deliveryDate: o.deliveryDate, storeName: o.storeNameSnapshot, karigarCodes: o.karigarCodes ?? [],
+        totalQuantity: o.totalQuantity ?? null, pendingQuantity: o.pendingQuantity ?? null, requirementNote: o.requirementNote,
       }));
       // Only PENDING retailer-custom requests belong in this list — once
       // assigned (status ASSIGNED, orderId set), the resulting CustomDesignOrder
@@ -179,6 +188,7 @@ export default function ManufacturerOrdersPage() {
         .map((r) => ({
           id: r.id, source: 'retailer-custom', orderNumber: r.orderNumber, status: 'PENDING', totalItems: 0,
           createdAt: r.createdAt, deliveryDate: null, storeName: r.storeNameSnapshot, karigarCodes: [],
+          totalQuantity: null, pendingQuantity: null, requirementNote: null,
           retailerRequest: r,
         }));
       setRows([...b2bRows, ...kioskRows, ...retailerReqRows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
@@ -316,67 +326,96 @@ export default function ManufacturerOrdersPage() {
       )}
       {filtered.length > 0 && (
         <div className="rounded-xl border bg-card overflow-hidden">
-          {/* Column headings — new users otherwise have to guess what each
-              value in a row represents. */}
-          <div className="hidden grid-cols-[1fr_1fr_auto_8rem_9rem] items-center gap-4 border-b bg-muted/20 px-4 py-2 sm:grid">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Order ID</span>
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Customer</span>
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Items</span>
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Order Date</span>
-            <span className="text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</span>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[860px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b bg-[#17120b]/[0.03] text-left">
+                  <th className="whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Order ID</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Client Name</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Order Date</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Delivery Date</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Qty</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pending Qty</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Order Notes</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filtered.map((o) => (
+                  <Fragment key={o.id}>
+                    <tr className="hover:bg-[#c9a84c]/5">
+                      <td className="whitespace-nowrap px-4 py-3 align-top font-medium">{o.orderNumber}</td>
+                      <td className="px-4 py-3 align-top">
+                        {o.source === 'retailer-custom' ? (
+                          <p className="font-medium text-violet-800">Customised Order from {o.storeName ?? '—'}</p>
+                        ) : (
+                          <>
+                            <p className="font-medium text-[#8a6d1d]">{o.storeName ?? '—'}</p>
+                            {o.source === 'custom' && <span className="mt-0.5 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800">Customised</span>}
+                          </>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 align-top text-muted-foreground">
+                        {new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 align-top text-muted-foreground">
+                        {o.deliveryDate ? new Date(o.deliveryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 align-top text-right tabular-nums">{o.totalQuantity ?? '—'}</td>
+                      <td className="whitespace-nowrap px-4 py-3 align-top text-right tabular-nums">{o.pendingQuantity ?? '—'}</td>
+                      <td className="max-w-[16rem] px-4 py-3 align-top">
+                        <p className="truncate text-muted-foreground">{o.requirementNote || '—'}</p>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 align-top text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button type="button" size="sm" variant="outline" onClick={() => toggle(o)}>
+                            Order Summary {expanded === o.id ? <ChevronUp className="ml-1 h-3.5 w-3.5" /> : <ChevronDown className="ml-1 h-3.5 w-3.5" />}
+                          </Button>
+                          <Button type="button" size="sm" variant="outline" onClick={() => setNotesRow(o)}>Order Notes</Button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expanded === o.id && (
+                      <tr>
+                        <td colSpan={8} className="p-0">
+                          <div className="flex items-center gap-2 border-t bg-[#17120b]/[0.02] px-4 py-2">
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span>
+                          </div>
+                          {o.source !== 'retailer-custom' && (
+                            <CatalogOrderDetail
+                              row={o}
+                              detail={detail}
+                              itemBusy={itemBusy}
+                              busy={busy}
+                              onItemStatusChange={(item, next) => void setItemStatus(o, item, next)}
+                              onItemClick={(item) => item.product && setProductModal(item.product)}
+                              onItemImageClick={(item) => setZoomItem(item)}
+                              onAssigned={() => void loadList()}
+                              onAdvance={(next) => advance(o, next)}
+                            />
+                          )}
+                          {o.source === 'retailer-custom' && o.retailerRequest && (
+                            <RetailerCustomRequestDetail row={o} request={o.retailerRequest} onAssigned={() => void loadList()} />
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="divide-y">
-          {filtered.map((o) => (
-            <div key={o.id}>
-              <button type="button" onClick={() => toggle(o)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/30">
-                <div className="grid flex-1 grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-[1fr_1fr_auto_8rem_9rem] sm:items-center sm:gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground sm:hidden">Order</p>
-                    <p className="text-sm font-medium">{o.orderNumber}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground sm:hidden">Customer</p>
-                    {o.source === 'retailer-custom' ? (
-                      <p className="text-sm font-medium text-violet-800 truncate">Customised Order from {o.storeName ?? '—'}</p>
-                    ) : (
-                      <>
-                        <p className="text-sm font-medium text-primary truncate">{o.storeName ?? '—'}</p>
-                        {o.source === 'custom' && <span className="mt-0.5 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800">Customised</span>}
-                      </>
-                    )}
-                  </div>
-                  <div><p className="text-xs text-muted-foreground sm:hidden">Items</p><p className="text-sm tabular-nums">{o.source === 'custom' || o.source === 'retailer-custom' ? '—' : o.totalItems}</p></div>
-                  <div>
-                    <p className="text-xs text-muted-foreground sm:hidden">Order Date</p>
-                    <p className="text-sm text-muted-foreground">{new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                    {o.deliveryDate && (
-                      <p className="text-xs text-muted-foreground">
-                        Delivery: {new Date(o.deliveryDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-start sm:justify-end"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span></div>
-                </div>
-                {expanded === o.id ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-              </button>
-              {expanded === o.id && o.source !== 'retailer-custom' && (
-                <CatalogOrderDetail
-                  row={o}
-                  detail={detail}
-                  itemBusy={itemBusy}
-                  busy={busy}
-                  onItemStatusChange={(item, next) => void setItemStatus(o, item, next)}
-                  onItemClick={(item) => item.product && setProductModal(item.product)}
-                  onItemImageClick={(item) => setZoomItem(item)}
-                  onAssigned={() => void loadList()}
-                  onAdvance={(next) => advance(o, next)}
-                />
-              )}
-              {expanded === o.id && o.source === 'retailer-custom' && o.retailerRequest && (
-                <RetailerCustomRequestDetail row={o} request={o.retailerRequest} onAssigned={() => void loadList()} />
-              )}
+        </div>
+      )}
+
+      {notesRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setNotesRow(null)} role="dialog" aria-modal="true">
+          <div className="w-full max-w-md rounded-xl border bg-card p-5 shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Order Notes — {notesRow.orderNumber}</h2>
+              <button type="button" onClick={() => setNotesRow(null)} className="text-muted-foreground hover:text-foreground" aria-label="Close">✕</button>
             </div>
-          ))}
+            <p className="whitespace-pre-wrap text-sm text-muted-foreground">{notesRow.requirementNote || 'No notes for this order.'}</p>
           </div>
         </div>
       )}
@@ -503,7 +542,7 @@ function RetailerCustomRequestDetail({
         karigarId: karigar?.id ?? null,
         karigarCode: karigar?.code ?? null,
       })) as { id: string };
-      await apiPost(`/api/manufacturer/custom-designs/${created.id}/karigar-form`, {
+      await apiSend('PATCH', `/api/manufacturer/custom-designs/${created.id}/karigar-form`, {
         category: fields.category || undefined,
         quantity: fields.quantity || null,
         purity: fields.purity || null,

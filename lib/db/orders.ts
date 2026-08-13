@@ -195,7 +195,7 @@ export async function getKioskOrdersByManufacturer(manufacturerId: string) {
   const orders = await prisma.kioskOrder.findMany({
     where: { manufacturerId, pendingStoreApproval: false, forwardedToManufacturer: true },
     orderBy: { createdAt: 'desc' },
-    include: { items: { select: { manufacturerProductId: true } } },
+    include: { items: { select: { manufacturerProductId: true, quantity: true, customisedOrderId: true } } },
   });
   const allIds = [...new Set(orders.flatMap((o) => o.items.map((i) => i.manufacturerProductId).filter((x): x is string => !!x)))];
   const karigarByProductId = allIds.length
@@ -207,6 +207,8 @@ export async function getKioskOrdersByManufacturer(manufacturerId: string) {
   return orders.map(({ items, ...o }) => ({
     ...o,
     karigarCodes: [...new Set(items.map((i) => i.manufacturerProductId && karigarByProductId.get(i.manufacturerProductId)).filter((x): x is string => !!x))],
+    totalQuantity: items.reduce((sum, i) => sum + i.quantity, 0),
+    pendingQuantity: items.filter((i) => !i.customisedOrderId).reduce((sum, i) => sum + i.quantity, 0),
   }));
 }
 
@@ -379,13 +381,15 @@ export async function getB2bOrdersByManufacturer(manufacturerId: string) {
     orderBy: { createdAt: 'desc' },
     include: {
       store: { select: { name: true } },
-      items: { select: { manufacturerProduct: { select: { karigarCode: true } } } },
+      items: { select: { quantity: true, customisedOrderId: true, manufacturerProduct: { select: { karigarCode: true } } } },
     },
   });
   return rows.map(({ items, store, ...o }) => ({
     ...o,
     storeName: store?.name ?? null,
     karigarCodes: [...new Set(items.map((i) => i.manufacturerProduct.karigarCode).filter((x): x is string => !!x))],
+    totalQuantity: items.reduce((sum, i) => sum + i.quantity, 0),
+    pendingQuantity: items.filter((i) => !i.customisedOrderId).reduce((sum, i) => sum + i.quantity, 0),
   }));
 }
 
