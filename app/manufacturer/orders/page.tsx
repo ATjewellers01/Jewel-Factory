@@ -4,7 +4,7 @@ import { Loader2, ShoppingBag } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import { AssignKarigarModal, type AssignKarigarManualFields } from '@/components/orders/AssignKarigarModal';
-import { CatalogOrderItemsBlock, CatalogOrderKarigarPicker, useCatalogOrderAssignment, type CatalogOrderItem } from '@/components/orders/CatalogOrderItemsBlock';
+import { ALL_ITEM_STATUSES, CatalogOrderAssignModal, CatalogOrderKarigarPicker, useCatalogOrderAssignment, useCustomisedOrderNumbers, type CatalogOrderItem } from '@/components/orders/CatalogOrderItemsBlock';
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { KarigarPicker, type Karigar } from '@/components/orders/KarigarAssignPanel';
 import { ManufacturerOrderItemModal, type OrderItemProduct } from '@/components/orders/ManufacturerOrderItemModal';
@@ -385,51 +385,32 @@ export default function ManufacturerOrdersPage() {
       {expanded && (() => {
         const o = filtered.find((r) => r.id === expanded);
         if (!o) return null;
+        if (o.source === 'retailer-custom') {
+          return (
+            <OrderSummaryModal
+              order={{
+                orderNumber: o.orderNumber, storeName: o.storeName, orderDate: o.createdAt,
+                deliveryDate: o.deliveryDate, requirementNote: o.requirementNote, items: [],
+              }}
+              onClose={() => { setExpanded(null); setDetail(null); }}
+            >
+              {o.retailerRequest && <RetailerCustomRequestDetail row={o} request={o.retailerRequest} onAssigned={() => void loadList()} />}
+            </OrderSummaryModal>
+          );
+        }
         return (
-          <OrderSummaryModal
-            order={{
-              orderNumber: o.orderNumber,
-              storeName: o.storeName,
-              orderDate: o.createdAt,
-              deliveryDate: o.deliveryDate,
-              requirementNote: o.requirementNote,
-              items: (detail?.items ?? []).map((it) => ({
-                id: it.id,
-                designNumber: it.product?.designNumber ?? it.productNameSnapshot,
-                imageUrl: it.productImageSnapshot,
-                quantity: it.quantity,
-                status: it.status,
-                // Plain designs only have one Weight field, so Gross and Net
-                // both show it; Studded designs collect the two separately.
-                grossWeightGrams: it.product?.grossWeightGrams ?? it.product?.weightGrams ?? null,
-                netWeightGrams: it.product?.netWeightGrams ?? it.product?.weightGrams ?? null,
-                pieces: it.product?.pieces ?? null,
-                karigarCode: it.product?.karigarCode ?? null,
-              })),
-            }}
+          <CatalogOrderDetail
+            row={o}
+            detail={detail}
+            itemBusy={itemBusy}
+            busy={busy}
+            onItemStatusChange={(item, next) => void setItemStatus(o, item, next)}
+            onItemClick={(item) => item.product && setProductModal(item.product)}
+            onItemImageClick={(item) => setZoomItem(item)}
+            onAssigned={() => void loadList()}
+            onAdvance={(next) => advance(o, next)}
             onClose={() => { setExpanded(null); setDetail(null); }}
-          >
-            <div className="flex items-center gap-2 pb-3">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</span>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[o.status] ?? ''}`}>{formatOrderLevelStatus(o.status)}</span>
-            </div>
-            {o.source !== 'retailer-custom' && (
-              <CatalogOrderDetail
-                row={o}
-                detail={detail}
-                itemBusy={itemBusy}
-                busy={busy}
-                onItemStatusChange={(item, next) => void setItemStatus(o, item, next)}
-                onItemClick={(item) => item.product && setProductModal(item.product)}
-                onItemImageClick={(item) => setZoomItem(item)}
-                onAssigned={() => void loadList()}
-                onAdvance={(next) => advance(o, next)}
-              />
-            )}
-            {o.source === 'retailer-custom' && o.retailerRequest && (
-              <RetailerCustomRequestDetail row={o} request={o.retailerRequest} onAssigned={() => void loadList()} />
-            )}
-          </OrderSummaryModal>
+          />
         );
       })()}
 
@@ -469,10 +450,13 @@ export default function ManufacturerOrdersPage() {
 }
 
 // Extracted so useCatalogOrderAssignment (a hook) can be called once per
-// expanded row without violating the rules of hooks inside .map().
+// expanded row without violating the rules of hooks inside .map(). Renders
+// the merged Order Summary modal (2026-08-14) — the checkbox/status-dropdown/
+// Customised-Order-No. item table now lives inside OrderSummaryModal itself,
+// not a separate "ITEMS" panel underneath it.
 function CatalogOrderDetail({
   row, detail, itemBusy, busy,
-  onItemStatusChange, onItemClick, onItemImageClick, onAssigned, onAdvance,
+  onItemStatusChange, onItemClick, onItemImageClick, onAssigned, onAdvance, onClose,
 }: {
   row: Row;
   detail: Detail | null;
@@ -483,38 +467,72 @@ function CatalogOrderDetail({
   onItemImageClick: (item: Item) => void;
   onAssigned: () => void;
   onAdvance: (next: string) => void;
+  onClose: () => void;
 }) {
   const source = row.source === 'kiosk' ? 'kiosk' : 'b2b';
-  const assignment = useCatalogOrderAssignment(row.id, source, (detail?.items ?? []) as CatalogOrderItem[], row.deliveryDate);
+  const items = useMemo(() => (detail?.items ?? []) as CatalogOrderItem[], [detail]);
+  const assignment = useCatalogOrderAssignment(row.id, source, items, row.deliveryDate);
+  const assignedIds = useMemo(() => items.map((i) => i.customisedOrderId).filter((x): x is string => !!x), [items]);
+  const customisedOrderNumberFor = useCustomisedOrderNumbers(assignedIds);
 
   return (
-    <div className="border-t bg-muted/10 px-4 pb-4 pt-3 space-y-3">
+    <OrderSummaryModal
+      order={{
+        orderNumber: row.orderNumber,
+        storeName: row.storeName,
+        orderDate: row.createdAt,
+        deliveryDate: row.deliveryDate,
+        requirementNote: detail?.requirementNote ?? row.requirementNote,
+        items: items.map((it) => ({
+          id: it.id,
+          designNumber: it.product?.designNumber ?? it.productNameSnapshot,
+          imageUrl: it.productImageSnapshot,
+          quantity: it.quantity,
+          status: it.status,
+          // Plain designs only have one Weight field, so Gross and Net both
+          // show it; Studded designs collect the two separately.
+          grossWeightGrams: it.product?.grossWeightGrams ?? it.product?.weightGrams ?? null,
+          netWeightGrams: it.product?.netWeightGrams ?? it.product?.weightGrams ?? null,
+          pieces: it.product?.pieces ?? null,
+          karigarCode: it.product?.karigarCode ?? null,
+          customisedOrderId: it.customisedOrderId ?? null,
+          customisedOrderNo: customisedOrderNumberFor(it.customisedOrderId),
+          canOpenProduct: !!it.product,
+        })),
+      }}
+      selected={assignment.selected}
+      onToggleSelect={assignment.toggleItem}
+      statusOptions={ALL_ITEM_STATUSES}
+      itemBusy={itemBusy}
+      onStatusChange={(summaryItem, next) => {
+        const item = items.find((i) => i.id === summaryItem.id);
+        if (item) onItemStatusChange(item as Item, next);
+      }}
+      onDesignClick={(summaryItem) => {
+        const item = items.find((i) => i.id === summaryItem.id);
+        if (item) onItemClick(item as Item);
+      }}
+      onImageClick={(summaryItem) => {
+        const item = items.find((i) => i.id === summaryItem.id);
+        if (item) onItemImageClick(item as Item);
+      }}
+      onClose={onClose}
+    >
       {!detail && <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
-      {detail?.requirementNote && (
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Remark</p>
-          <p className="whitespace-pre-wrap text-sm">{detail.requirementNote}</p>
-        </div>
-      )}
       {detail && (
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to</p>
-            <p className="text-sm">{detail.shipToStoreAddress || '—'}</p>
+        <div className="flex flex-wrap items-start justify-between gap-3 pb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</span>
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[row.status] ?? ''}`}>{formatOrderLevelStatus(row.status)}</span>
           </div>
           <CatalogOrderKarigarPicker assignment={assignment} />
         </div>
       )}
-      {detail?.items && (
-        <CatalogOrderItemsBlock
-          assignment={assignment}
-          items={detail.items as CatalogOrderItem[]}
-          itemBusy={itemBusy}
-          onItemStatusChange={(item, next) => onItemStatusChange(item as Item, next)}
-          onItemClick={(item) => onItemClick(item as Item)}
-          onItemImageClick={(item) => onItemImageClick(item as Item)}
-          onAssigned={onAssigned}
-        />
+      {detail && (
+        <div className="pb-3">
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Ship to</p>
+          <p className="text-sm">{detail.shipToStoreAddress || '—'}</p>
+        </div>
       )}
       <div className="flex flex-wrap gap-2">
         {row.status === 'PENDING' && (
@@ -528,7 +546,8 @@ function CatalogOrderDetail({
           </Button>
         )}
       </div>
-    </div>
+      <CatalogOrderAssignModal assignment={assignment} onAssigned={onAssigned} />
+    </OrderSummaryModal>
   );
 }
 

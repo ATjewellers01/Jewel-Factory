@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AssignKarigarModal, type AssignKarigarManualFields } from '@/components/orders/AssignKarigarModal';
 import { KarigarPicker, useKarigarCodes, type Karigar } from '@/components/orders/KarigarAssignPanel';
 import { apiPost, apiSend } from '@/hooks/use-api';
-import { formatOrderStatus } from '@/lib/format';
 import type { OrderItemProduct } from '@/components/orders/ManufacturerOrderItemModal';
 
 /**
@@ -17,7 +16,7 @@ import type { OrderItemProduct } from '@/components/orders/ManufacturerOrderItem
  */
 const orderNumberCache = new Map<string, string>();
 
-function useCustomisedOrderNumbers(customisedOrderIds: string[]) {
+export function useCustomisedOrderNumbers(customisedOrderIds: string[]) {
   const [, forceRender] = useState(0);
   const fetchingRef = useRef<Set<string>>(new Set());
 
@@ -56,12 +55,7 @@ export type CatalogOrderItem = {
   customisedOrderId?: string | null;
 };
 
-const STATUS: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-800', IN_PROCESS: 'bg-blue-100 text-blue-800',
-  GHAT_RECEIVED: 'bg-purple-100 text-purple-800', READY_FOR_DELIVERY: 'bg-indigo-100 text-indigo-800',
-  DISPATCHED: 'bg-amber-100 text-amber-800', COMPLETED: 'bg-green-100 text-green-800', CANCELLED: 'bg-red-100 text-red-700',
-};
-const ALL_ITEM_STATUSES = ['PENDING', 'IN_PROCESS', 'GHAT_RECEIVED', 'READY_FOR_DELIVERY', 'DISPATCHED', 'COMPLETED', 'CANCELLED'];
+export const ALL_ITEM_STATUSES = ['PENDING', 'IN_PROCESS', 'GHAT_RECEIVED', 'READY_FOR_DELIVERY', 'DISPATCHED', 'COMPLETED', 'CANCELLED'];
 
 /**
  * Karigar assignment state/logic for one Catalog/Kiosk order (2026-08-10
@@ -167,139 +161,54 @@ export function CatalogOrderKarigarPicker({ assignment }: { assignment: CatalogO
   );
 }
 
-/** The ITEMS table (table headers, checkbox-per-row, status dropdown) + the Assignment modal. */
-export function CatalogOrderItemsBlock({
+/**
+ * The Assign-Karigar modal trigger — the item table itself (checkbox,
+ * status dropdown, Customised Order No., image/design-code links) now
+ * renders directly inside OrderSummaryModal's own table (2026-08-14), so
+ * this component only owns the modal that opens once "Assign items" is
+ * clicked.
+ */
+export function CatalogOrderAssignModal({
   assignment,
-  items,
-  itemBusy,
-  onItemStatusChange,
-  onItemClick,
-  onItemImageClick,
   onAssigned,
 }: {
   assignment: CatalogOrderAssignment;
-  items: CatalogOrderItem[];
-  itemBusy: string | null;
-  onItemStatusChange: (item: CatalogOrderItem, next: string) => void;
-  onItemClick: (item: CatalogOrderItem) => void;
-  onItemImageClick: (item: CatalogOrderItem) => void;
   onAssigned: () => void;
 }) {
-  const assignedIds = useMemo(() => items.map((i) => i.customisedOrderId).filter((x): x is string => !!x), [items]);
-  const customisedOrderNumberFor = useCustomisedOrderNumbers(assignedIds);
-
+  if (!assignment.modalOpen) return null;
   return (
-    <>
-      <div>
-        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5">Items</p>
-        {items.length > 0 && (
-          <div className="space-y-1">
-            <div className="hidden grid-cols-[1.5rem_5rem_1fr_3rem_7rem] items-center gap-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
-              <span />
-              <span>Image</span>
-              <span>Design No.</span>
-              <span>Qty</span>
-              <span>Status</span>
-            </div>
-            <div className="space-y-2">
-              {items.map((it) => (
-                <div key={it.id} className="flex w-full items-center gap-3 rounded-lg hover:bg-black/5">
-                  {!it.customisedOrderId ? (
-                    <input
-                      type="checkbox"
-                      checked={assignment.selected.has(it.id)}
-                      onChange={(e) => { e.stopPropagation(); assignment.toggleItem(it.id); }}
-                      className="ml-1 h-4 w-4 shrink-0"
-                    />
-                  ) : <span className="ml-1 h-4 w-4 shrink-0" />}
-                  <button
-                    type="button"
-                    onClick={() => it.product && onItemClick(it)}
-                    disabled={!it.product}
-                    className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
-                  >
-                    {it.productImageSnapshot ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={it.productImageSnapshot}
-                        alt={it.productNameSnapshot}
-                        className="h-20 w-20 shrink-0 rounded-lg border bg-white object-contain p-1 cursor-pointer hover:shadow-md transition-shadow"
-                        onClick={(e) => { e.stopPropagation(); onItemImageClick(it); }}
-                      />
-                    ) : <div className="h-20 w-20 shrink-0 rounded-lg border bg-muted" />}
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium">{it.product?.designNumber ?? it.productNameSnapshot}</span>
-                      <span className="block text-xs text-muted-foreground">
-                        {it.product?.category ?? it.categorySnapshot ?? '—'}
-                        {it.product?.subCategory ? ` › ${it.product.subCategory}` : ''}
-                        {it.product?.weightGrams != null ? ` · ${it.product.weightGrams}gm` : ''}
-                        {it.purity ? ` · ${it.purity}` : ''}
-                      </span>
-                      {it.product?.karigarCode && (
-                        <span className="mt-0.5 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Karigar: {it.product.karigarCode}</span>
-                      )}
-                      {it.customisedOrderId && (
-                        <span className="mt-0.5 ml-1 inline-block rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800">
-                          Customised Order: {customisedOrderNumberFor(it.customisedOrderId) ?? 'Assigned'}
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-sm tabular-nums text-muted-foreground">× {it.quantity}</span>
-                  </button>
-                  <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[it.status] ?? ''}`}>{formatOrderStatus(it.status)}</span>
-                    <select
-                      value={it.status}
-                      disabled={itemBusy === it.id}
-                      onChange={(e) => { e.stopPropagation(); onItemStatusChange(it, e.target.value); }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="h-6 rounded border border-input bg-transparent px-1 text-[10px] disabled:opacity-50"
-                    >
-                      {ALL_ITEM_STATUSES.map((s) => <option key={s} value={s}>{formatOrderStatus(s)}</option>)}
-                    </select>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {assignment.modalOpen && (
-        <AssignKarigarModal
-          title="Assign Karigar"
-          submitLabel="Submit"
-          autoFill={{
-            category: assignment.anchor?.category ?? '',
-            subCategory: assignment.anchor?.subCategory ?? null,
-            quantity: assignment.totalQty ? String(assignment.totalQty) : null,
-            purity: assignment.anchor?.purity ?? null,
-            weightGramsMin: assignment.anchor?.weightGrams ?? null,
-            weightGramsMax: assignment.anchor?.weightGrams ?? null,
-            size: null,
-            sampleWeightGrams: null,
-            deliveryDate: assignment.orderDeliveryDate,
-            karigarDeliveryDate: assignment.karigarDeliveryDate,
-            // "Order Received Date" here means the day the Karigar is being
-            // assigned (today), NOT the source order's own placement date —
-            // confirmed with the client (2026-08-11).
-            orderReceivedDate: new Date().toISOString(),
-          }}
-          karigarLabel={assignment.pickedKarigar?.code ?? null}
-          items={assignment.selectedItems.map((it) => ({
-            id: it.id,
-            designNumber: it.product?.designNumber ?? it.productNameSnapshot,
-            imageUrl: it.productImageSnapshot,
-            quantity: it.quantity,
-            category: it.product?.category ?? it.categorySnapshot,
-            subCategory: it.product?.subCategory ?? null,
-            weightGrams: it.product?.weightGrams ?? null,
-            purity: it.purity,
-          }))}
-          onSubmit={(fields) => assignment.submitAssignment(fields, onAssigned)}
-          onClose={() => assignment.setModalOpen(false)}
-        />
-      )}
-    </>
+    <AssignKarigarModal
+      title="Assign Karigar"
+      submitLabel="Submit"
+      autoFill={{
+        category: assignment.anchor?.category ?? '',
+        subCategory: assignment.anchor?.subCategory ?? null,
+        quantity: assignment.totalQty ? String(assignment.totalQty) : null,
+        purity: assignment.anchor?.purity ?? null,
+        weightGramsMin: assignment.anchor?.weightGrams ?? null,
+        weightGramsMax: assignment.anchor?.weightGrams ?? null,
+        size: null,
+        sampleWeightGrams: null,
+        deliveryDate: assignment.orderDeliveryDate,
+        karigarDeliveryDate: assignment.karigarDeliveryDate,
+        // "Order Received Date" here means the day the Karigar is being
+        // assigned (today), NOT the source order's own placement date —
+        // confirmed with the client (2026-08-11).
+        orderReceivedDate: new Date().toISOString(),
+      }}
+      karigarLabel={assignment.pickedKarigar?.code ?? null}
+      items={assignment.selectedItems.map((it) => ({
+        id: it.id,
+        designNumber: it.product?.designNumber ?? it.productNameSnapshot,
+        imageUrl: it.productImageSnapshot,
+        quantity: it.quantity,
+        category: it.product?.category ?? it.categorySnapshot,
+        subCategory: it.product?.subCategory ?? null,
+        weightGrams: it.product?.weightGrams ?? null,
+        purity: it.purity,
+      }))}
+      onSubmit={(fields) => assignment.submitAssignment(fields, onAssigned)}
+      onClose={() => assignment.setModalOpen(false)}
+    />
   );
 }

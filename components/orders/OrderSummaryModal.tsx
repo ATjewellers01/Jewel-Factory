@@ -21,6 +21,13 @@ export type OrderSummaryItem = {
   netWeightGrams: string | number | null;
   pieces: number | null;
   karigarCode: string | null; // null/empty -> shown as "0"
+  // Set once a Karigar has been assigned to this item — the JFC-#### number
+  // of the resulting Customised Order. Unassigned items can still be
+  // selected (checkbox) for a new assignment; assigned ones show this
+  // instead of a checkbox.
+  customisedOrderId: string | null;
+  customisedOrderNo: string | null;
+  canOpenProduct: boolean; // whether Design Code is clickable (has a linked product)
 };
 
 export type OrderSummaryData = {
@@ -45,7 +52,26 @@ function num(value: string | number | null): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-export function OrderSummaryModal({ order, onClose, children }: { order: OrderSummaryData; onClose: () => void; children?: ReactNode }) {
+export function OrderSummaryModal({
+  order, onClose, children,
+  selected, onToggleSelect,
+  statusOptions, itemBusy, onStatusChange,
+  onDesignClick, onImageClick,
+}: {
+  order: OrderSummaryData;
+  onClose: () => void;
+  children?: ReactNode;
+  // Karigar-assignment checkbox selection — omit these props entirely
+  // (e.g. for a source with no assignment flow) to hide the checkbox column.
+  selected?: Set<string>;
+  onToggleSelect?: (itemId: string) => void;
+  // Order Stage as an editable dropdown — omit to render it as plain text.
+  statusOptions?: string[];
+  itemBusy?: string | null;
+  onStatusChange?: (item: OrderSummaryItem, next: string) => void;
+  onDesignClick?: (item: OrderSummaryItem) => void;
+  onImageClick?: (item: OrderSummaryItem) => void;
+}) {
   const [busy, setBusy] = useState<'image' | 'large-image' | 'excel' | 'pdf' | null>(null);
   const remarks = order.requirementNote?.trim() || 'No remarks';
 
@@ -54,13 +80,13 @@ export function OrderSummaryModal({ order, onClose, children }: { order: OrderSu
   const totalNet = order.items.reduce((sum, it) => sum + num(it.netWeightGrams), 0);
 
   function downloadExcel() {
-    const header = ['#', 'Design Code', 'Tag Number', 'Order Stage', 'Quantity', 'Gross Wt.', 'Net Wt.', 'Pcs.', 'Remarks', 'Karigar'];
+    const header = ['#', 'Design Code', 'Tag Number', 'Customised Order No.', 'Order Stage', 'Quantity', 'Gross Wt.', 'Net Wt.', 'Pcs.', 'Remarks', 'Karigar'];
     const rows = order.items.map((it, i) => [
-      String(i + 1), it.designNumber, '', formatOrderStatus(it.status), String(it.quantity),
+      String(i + 1), it.designNumber, '', it.customisedOrderNo || '', formatOrderStatus(it.status), String(it.quantity),
       it.grossWeightGrams != null ? String(it.grossWeightGrams) : '', it.netWeightGrams != null ? String(it.netWeightGrams) : '',
       String(it.pieces ?? ''), remarks, it.karigarCode || '0',
     ]);
-    rows.push(['Total', '', '', '', String(totalQty), totalGross.toFixed(2), totalNet.toFixed(2), '', '', '']);
+    rows.push(['Total', '', '', '', '', String(totalQty), totalGross.toFixed(2), totalNet.toFixed(2), '', '', '']);
     const csv = [header, ...rows]
       .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
       .join('\r\n');
@@ -102,12 +128,14 @@ export function OrderSummaryModal({ order, onClose, children }: { order: OrderSu
 
           {/* Table */}
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[820px] border-collapse text-sm">
+            <table className="w-full min-w-225 border-collapse text-sm">
               <thead>
                 <tr className="border-b bg-[#17120b]/[0.03] text-left">
+                  {selected && <th className="w-8 px-2 py-2" />}
                   <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">#</th>
                   <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Design Code</th>
                   <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Tag Number</th>
+                  <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Customised Order No.</th>
                   <th className="px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Order Stage</th>
                   <th className="px-2 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Quantity</th>
                   <th className="px-2 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Gross Wt.</th>
@@ -121,10 +149,43 @@ export function OrderSummaryModal({ order, onClose, children }: { order: OrderSu
               <tbody className="divide-y">
                 {order.items.map((it, i) => (
                   <tr key={it.id}>
+                    {selected && (
+                      <td className="px-2 py-2 align-middle">
+                        {!it.customisedOrderId && onToggleSelect && (
+                          <input
+                            type="checkbox"
+                            checked={selected.has(it.id)}
+                            onChange={() => onToggleSelect(it.id)}
+                            className="h-4 w-4"
+                            aria-label={`Select ${it.designNumber}`}
+                          />
+                        )}
+                      </td>
+                    )}
                     <td className="px-2 py-2 align-middle">{i + 1}</td>
-                    <td className="px-2 py-2 align-middle font-medium">{it.designNumber}</td>
+                    <td className="px-2 py-2 align-middle font-medium">
+                      {it.canOpenProduct && onDesignClick ? (
+                        <button type="button" onClick={() => onDesignClick(it)} className="text-primary hover:underline">{it.designNumber}</button>
+                      ) : it.designNumber}
+                    </td>
                     <td className="px-2 py-2 align-middle text-muted-foreground">—</td>
-                    <td className="px-2 py-2 align-middle text-muted-foreground">{formatOrderStatus(it.status)}</td>
+                    <td className="px-2 py-2 align-middle">
+                      {it.customisedOrderId ? (
+                        <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-800">{it.customisedOrderNo ?? 'Assigned'}</span>
+                      ) : <span className="text-muted-foreground">—</span>}
+                    </td>
+                    <td className="px-2 py-2 align-middle">
+                      {statusOptions && onStatusChange ? (
+                        <select
+                          value={it.status}
+                          disabled={itemBusy === it.id}
+                          onChange={(e) => onStatusChange(it, e.target.value)}
+                          className="h-7 rounded border border-input bg-transparent px-1 text-xs disabled:opacity-50"
+                        >
+                          {statusOptions.map((s) => <option key={s} value={s}>{formatOrderStatus(s)}</option>)}
+                        </select>
+                      ) : <span className="text-muted-foreground">{formatOrderStatus(it.status)}</span>}
+                    </td>
                     <td className="px-2 py-2 align-middle text-right tabular-nums">{it.quantity}</td>
                     <td className="px-2 py-2 align-middle text-right tabular-nums">{it.grossWeightGrams != null ? String(it.grossWeightGrams) : '—'}</td>
                     <td className="px-2 py-2 align-middle text-right tabular-nums">{it.netWeightGrams != null ? String(it.netWeightGrams) : '—'}</td>
@@ -134,7 +195,12 @@ export function OrderSummaryModal({ order, onClose, children }: { order: OrderSu
                     <td className="px-2 py-2 align-middle">
                       {it.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={it.imageUrl} alt={it.designNumber} className="h-12 w-12 rounded border object-contain bg-white" />
+                        <img
+                          src={it.imageUrl}
+                          alt={it.designNumber}
+                          onClick={() => onImageClick?.(it)}
+                          className={`h-12 w-12 rounded border object-contain bg-white ${onImageClick ? 'cursor-zoom-in hover:shadow-md transition-shadow' : ''}`}
+                        />
                       ) : <span className="text-muted-foreground">—</span>}
                     </td>
                   </tr>
@@ -142,7 +208,7 @@ export function OrderSummaryModal({ order, onClose, children }: { order: OrderSu
               </tbody>
               <tfoot>
                 <tr className="border-t-2 bg-[#c9a84c]/10 font-semibold">
-                  <td className="px-2 py-2" colSpan={4}>Total</td>
+                  <td className="px-2 py-2" colSpan={selected ? 6 : 5}>Total</td>
                   <td className="px-2 py-2 text-right tabular-nums">{totalQty}</td>
                   <td className="px-2 py-2 text-right tabular-nums">{totalGross.toFixed(2)}</td>
                   <td className="px-2 py-2 text-right tabular-nums">{totalNet.toFixed(2)}</td>

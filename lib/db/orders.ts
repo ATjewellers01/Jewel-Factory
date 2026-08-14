@@ -195,7 +195,7 @@ export async function getKioskOrdersByManufacturer(manufacturerId: string) {
   const orders = await prisma.kioskOrder.findMany({
     where: { manufacturerId, pendingStoreApproval: false, forwardedToManufacturer: true },
     orderBy: { createdAt: 'desc' },
-    include: { items: { select: { manufacturerProductId: true, quantity: true, customisedOrderId: true } } },
+    include: { items: { select: { manufacturerProductId: true, quantity: true, status: true } } },
   });
   const allIds = [...new Set(orders.flatMap((o) => o.items.map((i) => i.manufacturerProductId).filter((x): x is string => !!x)))];
   const karigarByProductId = allIds.length
@@ -208,7 +208,11 @@ export async function getKioskOrdersByManufacturer(manufacturerId: string) {
     ...o,
     karigarCodes: [...new Set(items.map((i) => i.manufacturerProductId && karigarByProductId.get(i.manufacturerProductId)).filter((x): x is string => !!x))],
     totalQuantity: items.reduce((sum, i) => sum + i.quantity, 0),
-    pendingQuantity: items.filter((i) => !i.customisedOrderId).reduce((sum, i) => sum + i.quantity, 0),
+    // "Pending" = items whose own per-line status is still PENDING (the
+    // Order Stage shown per row), not whether a Karigar has been assigned —
+    // an item can be Karigar-assigned (customisedOrderId set) yet still sit
+    // at PENDING until the manufacturer advances its status.
+    pendingQuantity: items.filter((i) => i.status === 'PENDING').reduce((sum, i) => sum + i.quantity, 0),
   }));
 }
 
@@ -382,7 +386,7 @@ export async function getB2bOrdersByManufacturer(manufacturerId: string) {
     orderBy: { createdAt: 'desc' },
     include: {
       store: { select: { name: true } },
-      items: { select: { quantity: true, customisedOrderId: true, manufacturerProduct: { select: { karigarCode: true } } } },
+      items: { select: { quantity: true, status: true, manufacturerProduct: { select: { karigarCode: true } } } },
     },
   });
   return rows.map(({ items, store, ...o }) => ({
@@ -390,7 +394,10 @@ export async function getB2bOrdersByManufacturer(manufacturerId: string) {
     storeName: store?.name ?? null,
     karigarCodes: [...new Set(items.map((i) => i.manufacturerProduct.karigarCode).filter((x): x is string => !!x))],
     totalQuantity: items.reduce((sum, i) => sum + i.quantity, 0),
-    pendingQuantity: items.filter((i) => !i.customisedOrderId).reduce((sum, i) => sum + i.quantity, 0),
+    // "Pending" = items whose own per-line status is still PENDING (the
+    // Order Stage shown per row), not whether a Karigar has been assigned —
+    // see the matching note on getKioskOrdersByManufacturer.
+    pendingQuantity: items.filter((i) => i.status === 'PENDING').reduce((sum, i) => sum + i.quantity, 0),
   }));
 }
 
