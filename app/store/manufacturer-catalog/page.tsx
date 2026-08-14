@@ -22,7 +22,12 @@ import { matchesDescriptionQuery, rankSimilar } from '@/lib/product-similarity';
 import { SORT_OPTIONS, weightExtent, matchWeightRange, sortProducts, type SortOption } from '@/lib/weight-filter';
 
 type Img = { secureUrl: string; isPrimary: boolean };
-type Product = { id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; size?: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
+type Product = {
+  id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null;
+  subCategory2?: string | null; purity: string | null; weightGrams: string | null;
+  grossWeightGrams?: string | null; netWeightGrams?: string | null;
+  size?: string | null; description?: string | null; hasTryon: boolean; images: Img[];
+};
 // Sales info across ALL of this retailer's branches, keyed by manufacturerProductId.
 type SalesInfo = { stars: number; unitsLast30d: number };
 

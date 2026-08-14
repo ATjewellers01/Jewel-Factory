@@ -11,7 +11,12 @@ import { Button } from '@/components/ui/button';
 import { useB2bCart } from '@/hooks/use-b2b-cart';
 
 type Img = { secureUrl: string; isPrimary: boolean };
-type Product = { id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; size?: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
+type Product = {
+  id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null;
+  subCategory2?: string | null; purity: string | null; weightGrams: string | null;
+  grossWeightGrams?: string | null; netWeightGrams?: string | null;
+  size?: string | null; description?: string | null; hasTryon: boolean; images: Img[];
+};
 
 const PAGE_SIZE = 5;
 

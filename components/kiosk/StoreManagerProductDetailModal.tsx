@@ -13,8 +13,14 @@ export type StoreManagerProduct = {
   name?: string | null;
   category: string | null;
   subCategory: string | null;
+  // "Sub-category 2" — Plain | Studded. Studded designs show separate Gross/
+  // Net Weight rows instead of the single Weight row (see grossWeightGrams/
+  // netWeightGrams below).
+  subCategory2?: string | null;
   purity?: string | null;
   weightGrams: string | null;
+  grossWeightGrams?: string | null;
+  netWeightGrams?: string | null;
   size?: string | null; // bangles only — hidden when absent
   description?: string | null;
   hasTryon: boolean;
@@ -132,7 +138,10 @@ function ProductBlock({
 }) {
   const [imageIndex, setImageIndex] = useState(0);
   const selectedImage = product.images[imageIndex] ?? product.images[0];
+  const studded = product.subCategory2 === 'Studded';
   const formattedWeight = formatWeight(product.weightGrams);
+  const formattedGross = formatWeight(product.grossWeightGrams ?? null);
+  const formattedNet = formatWeight(product.netWeightGrams ?? null);
 
   return (
     <article className="flex h-full min-h-0 flex-col bg-[#fdfcf9] sm:grid sm:grid-cols-[0.96fr_1.04fr]">
@@ -164,7 +173,14 @@ function ProductBlock({
           </div>
           <div className="mt-2 grid grid-cols-2 overflow-hidden rounded-xl border border-[#ded3c3] bg-white text-xs shadow-[0_5px_22px_rgba(75,54,28,0.04)] sm:mt-4 sm:text-sm">
             {product.purity ? <Spec label="Purity" value={product.purity} /> : null}
-            {formattedWeight ? <Spec label="Weight" value={formattedWeight} /> : null}
+            {studded ? (
+              <>
+                {formattedGross ? <Spec label="Gross Weight" value={formattedGross} /> : null}
+                {formattedNet ? <Spec label="Net Weight" value={formattedNet} /> : null}
+              </>
+            ) : (
+              formattedWeight ? <Spec label="Weight" value={formattedWeight} /> : null
+            )}
             {product.size ? <Spec label="Size" value={product.size} /> : null}
             <Spec label="Category" value={`${product.category ?? '—'}${product.subCategory ? ` › ${product.subCategory}` : ''}`} wide={!product.size} />
           </div>

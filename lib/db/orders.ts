@@ -141,7 +141,8 @@ async function hydrateItemsForStoreManager<T extends { manufacturerProductId: st
     ? await prisma.manufacturerProduct.findMany({
         where: { id: { in: ids } },
         select: {
-          id: true, category: true, subCategory: true, weightGrams: true, size: true,
+          id: true, category: true, subCategory: true, subCategory2: true,
+          weightGrams: true, grossWeightGrams: true, netWeightGrams: true, size: true,
           purity: true, description: true, designNumber: true, hasTryon: true,
           images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], select: { secureUrl: true, isPrimary: true } },
         },

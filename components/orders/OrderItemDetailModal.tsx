@@ -9,7 +9,10 @@ export type OrderItemProductSafe = {
   designNumber: string;
   category: string | null;
   subCategory: string | null;
+  subCategory2?: string | null;
   weightGrams: string | number | null;
+  grossWeightGrams?: string | number | null;
+  netWeightGrams?: string | number | null;
   size: string | null;
   purity: string | null;
   description: string | null;
@@ -50,7 +53,14 @@ export function OrderItemDetailModal({ product, onClose }: { product: OrderItemP
             </div>
             <div className="overflow-hidden rounded-lg border text-sm">
               {product.purity && <div className="flex justify-between px-4 py-2"><span className="text-muted-foreground">Purity</span><span className="font-medium">{product.purity}</span></div>}
-              {formatWeight(product.weightGrams) && <div className="flex justify-between bg-muted/40 px-4 py-2"><span className="text-muted-foreground">Weight</span><span className="font-medium">{formatWeight(product.weightGrams)}</span></div>}
+              {product.subCategory2 === 'Studded' ? (
+                <>
+                  {formatWeight(product.grossWeightGrams ?? null) && <div className="flex justify-between bg-muted/40 px-4 py-2"><span className="text-muted-foreground">Gross Weight</span><span className="font-medium">{formatWeight(product.grossWeightGrams ?? null)}</span></div>}
+                  {formatWeight(product.netWeightGrams ?? null) && <div className="flex justify-between px-4 py-2"><span className="text-muted-foreground">Net Weight</span><span className="font-medium">{formatWeight(product.netWeightGrams ?? null)}</span></div>}
+                </>
+              ) : (
+                formatWeight(product.weightGrams) && <div className="flex justify-between bg-muted/40 px-4 py-2"><span className="text-muted-foreground">Weight</span><span className="font-medium">{formatWeight(product.weightGrams)}</span></div>
+              )}
               {product.size && <div className="flex justify-between px-4 py-2"><span className="text-muted-foreground">Size</span><span className="font-medium">{product.size}</span></div>}
               <div className="flex justify-between px-4 py-2"><span className="text-muted-foreground">Category</span><span className="text-right font-medium">{product.category ?? '—'}{product.subCategory ? ` › ${product.subCategory}` : ''}</span></div>
             </div>

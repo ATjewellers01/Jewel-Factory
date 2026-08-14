@@ -12,7 +12,12 @@ import { useStoreManagerKioskCart } from '@/hooks/use-store-manager-cart';
 import { useStoreManager } from '../store-manager-context';
 
 type Img = { secureUrl: string; isPrimary: boolean };
-type Product = { id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null; purity: string | null; weightGrams: string | null; size?: string | null; description?: string | null; hasTryon: boolean; images: Img[] };
+type Product = {
+  id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null;
+  subCategory2?: string | null; purity: string | null; weightGrams: string | null;
+  grossWeightGrams?: string | null; netWeightGrams?: string | null;
+  size?: string | null; description?: string | null; hasTryon: boolean; images: Img[];
+};
 
 const PAGE_SIZE = 5;
 
