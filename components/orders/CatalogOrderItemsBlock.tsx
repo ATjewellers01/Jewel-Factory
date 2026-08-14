@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { AssignKarigarModal, type AssignKarigarManualFields } from '@/components/orders/AssignKarigarModal';
-import { KarigarPicker, useKarigarCodes, type Karigar } from '@/components/orders/KarigarAssignPanel';
+import { useKarigarCodes, type Karigar } from '@/components/orders/KarigarAssignPanel';
 import { apiPost, apiSend } from '@/hooks/use-api';
 import type { OrderItemProduct } from '@/components/orders/ManufacturerOrderItemModal';
 
@@ -81,10 +81,13 @@ export function useCatalogOrderAssignment(orderId: string, source: 'b2b' | 'kios
     });
   }
 
+  // Picking a Karigar inside the Assign modal only records the choice — it
+  // does NOT touch `selected`. Item selection happens beforehand via the
+  // checkboxes in OrderSummaryModal's table (2026-08-14 redesign); auto-
+  // matching items to whichever Karigar gets picked would otherwise silently
+  // overwrite whatever the manufacturer had manually checked off.
   function handlePick(karigar: Karigar | null) {
     setPickedKarigar(karigar);
-    if (!karigar) { setSelected(new Set()); return; }
-    setSelected(new Set(unassigned.filter((i) => i.product?.karigarCode === karigar.code).map((i) => i.id)));
   }
 
   async function submitAssignment(fields: AssignKarigarManualFields, onAssigned: () => void) {
@@ -145,22 +148,6 @@ export function useCatalogOrderAssignment(orderId: string, source: 'b2b' | 'kios
 
 export type CatalogOrderAssignment = ReturnType<typeof useCatalogOrderAssignment>;
 
-/** The Karigar dropdown + "Assign items" button — render on the SAME row as "Ship to". */
-export function CatalogOrderKarigarPicker({ assignment }: { assignment: CatalogOrderAssignment }) {
-  if (assignment.unassigned.length === 0 || assignment.filteredCodes === null) return null;
-  return (
-    <KarigarPicker
-      codes={assignment.filteredCodes}
-      allCodes={assignment.allCodes ?? undefined}
-      selectedCount={assignment.selected.size}
-      onPick={assignment.handlePick}
-      onAssign={() => assignment.setModalOpen(true)}
-      assignDisabled={assignment.assigning}
-      assignBusy={assignment.assigning}
-    />
-  );
-}
-
 /**
  * The Assign-Karigar modal trigger — the item table itself (checkbox,
  * status dropdown, Customised Order No., image/design-code links) now
@@ -196,7 +183,9 @@ export function CatalogOrderAssignModal({
         // confirmed with the client (2026-08-11).
         orderReceivedDate: new Date().toISOString(),
       }}
-      karigarLabel={assignment.pickedKarigar?.code ?? null}
+      karigarCodes={{ codes: assignment.filteredCodes ?? [], allCodes: assignment.allCodes ?? undefined }}
+      karigarId={assignment.pickedKarigar?.id ?? ''}
+      onKarigarChange={assignment.handlePick}
       items={assignment.selectedItems.map((it) => ({
         id: it.id,
         designNumber: it.product?.designNumber ?? it.productNameSnapshot,

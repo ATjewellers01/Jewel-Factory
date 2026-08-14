@@ -208,12 +208,14 @@ export async function getKioskOrdersByManufacturer(manufacturerId: string) {
   return orders.map(({ items, ...o }) => ({
     ...o,
     karigarCodes: [...new Set(items.map((i) => i.manufacturerProductId && karigarByProductId.get(i.manufacturerProductId)).filter((x): x is string => !!x))],
-    totalQuantity: items.reduce((sum, i) => sum + i.quantity, 0),
-    // "Pending" = items whose own per-line status is still PENDING (the
-    // Order Stage shown per row), not whether a Karigar has been assigned —
-    // an item can be Karigar-assigned (customisedOrderId set) yet still sit
-    // at PENDING until the manufacturer advances its status.
-    pendingQuantity: items.filter((i) => i.status === 'PENDING').reduce((sum, i) => sum + i.quantity, 0),
+    // Total/Pending Qty count DESIGN-CODE ROWS (line items), not a quantity
+    // sum — matches the Order Summary modal's own Total row. "Pending" =
+    // rows whose own per-line status is still PENDING (the Order Stage shown
+    // per row), not whether a Karigar has been assigned — an item can be
+    // Karigar-assigned (customisedOrderId set) yet still sit at PENDING
+    // until the manufacturer advances its status.
+    totalQuantity: items.length,
+    pendingQuantity: items.filter((i) => i.status === 'PENDING').length,
   }));
 }
 
@@ -394,11 +396,10 @@ export async function getB2bOrdersByManufacturer(manufacturerId: string) {
     ...o,
     storeName: store?.name ?? null,
     karigarCodes: [...new Set(items.map((i) => i.manufacturerProduct.karigarCode).filter((x): x is string => !!x))],
-    totalQuantity: items.reduce((sum, i) => sum + i.quantity, 0),
-    // "Pending" = items whose own per-line status is still PENDING (the
-    // Order Stage shown per row), not whether a Karigar has been assigned —
-    // see the matching note on getKioskOrdersByManufacturer.
-    pendingQuantity: items.filter((i) => i.status === 'PENDING').reduce((sum, i) => sum + i.quantity, 0),
+    // Row counts, not a quantity sum — see the matching note on
+    // getKioskOrdersByManufacturer.
+    totalQuantity: items.length,
+    pendingQuantity: items.filter((i) => i.status === 'PENDING').length,
   }));
 }
 

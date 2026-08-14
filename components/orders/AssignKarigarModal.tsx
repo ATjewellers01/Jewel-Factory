@@ -3,6 +3,7 @@
 import { Loader2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { KarigarSelect, type Karigar } from '@/components/orders/KarigarAssignPanel';
 import { Button } from '@/components/ui/button';
 import { Optional, Required } from '@/components/ui/field-mark';
 
@@ -102,6 +103,9 @@ export function AssignKarigarModal({
   onSubmit,
   onClose,
   karigarLabel,
+  karigarCodes,
+  karigarId,
+  onKarigarChange,
   items,
 }: {
   title: string;
@@ -111,12 +115,20 @@ export function AssignKarigarModal({
   onSubmit: (fields: AssignKarigarManualFields) => Promise<void>;
   onClose: () => void;
   /**
-   * The Karigar this order/item-batch is (or will be) assigned to — read-only
-   * display here, since it's already picked via the dropdown BEFORE this
-   * modal opens (or was picked at assignment time, for Edit). Changing the
-   * Karigar happens there, not inside this form.
+   * Read-only Karigar display — for a caller (e.g. Edit) where the Karigar
+   * was already picked at assignment time and isn't changeable here. Mutually
+   * exclusive with karigarCodes/karigarId/onKarigarChange below.
    */
   karigarLabel?: string | null;
+  /**
+   * An editable Karigar dropdown INSIDE this modal (2026-08-14) — for the
+   * create-time Assign flow, which no longer has an outer picker before this
+   * modal opens. `codes`/`allCodes` come from the same useKarigarCodes hook
+   * the caller already uses elsewhere.
+   */
+  karigarCodes?: { codes: Karigar[]; allCodes?: Karigar[] };
+  karigarId?: string;
+  onKarigarChange?: (karigar: Karigar | null) => void;
   /** The specific items being assigned — shown read-only with images below the form. */
   items?: AssignKarigarItem[];
 }) {
@@ -135,6 +147,10 @@ export function AssignKarigarModal({
   }
 
   async function submit() {
+    if (karigarCodes && !karigarId) {
+      setError('Choose a Karigar.');
+      return;
+    }
     if (!fields.meena.trim() || !fields.orderType.trim()) {
       setError('Meena and Order Type are required.');
       return;
@@ -173,6 +189,17 @@ export function AssignKarigarModal({
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Karigar</p>
                 <p className="text-sm font-medium">{karigarLabel || '—'}</p>
+              </div>
+            )}
+            {karigarCodes && onKarigarChange && (
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Karigar<Required /></p>
+                <KarigarSelect
+                  codes={karigarCodes.codes}
+                  allCodes={karigarCodes.allCodes}
+                  karigarId={karigarId ?? ''}
+                  onPick={onKarigarChange}
+                />
               </div>
             )}
           </div>

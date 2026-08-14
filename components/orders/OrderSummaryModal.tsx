@@ -57,6 +57,7 @@ export function OrderSummaryModal({
   selected, onToggleSelect,
   statusOptions, itemBusy, onStatusChange,
   onDesignClick, onImageClick,
+  onAssignClick, assignDisabled, assignBusy,
 }: {
   order: OrderSummaryData;
   onClose: () => void;
@@ -71,11 +72,19 @@ export function OrderSummaryModal({
   onStatusChange?: (item: OrderSummaryItem, next: string) => void;
   onDesignClick?: (item: OrderSummaryItem) => void;
   onImageClick?: (item: OrderSummaryItem) => void;
+  // "Assign items" button, top-right of the header (2026-08-14) — omit to
+  // hide it entirely (e.g. a source with no assignment flow). Disabled until
+  // at least one item is checked off.
+  onAssignClick?: () => void;
+  assignDisabled?: boolean;
+  assignBusy?: boolean;
 }) {
   const [busy, setBusy] = useState<'image' | 'large-image' | 'excel' | 'pdf' | null>(null);
   const remarks = order.requirementNote?.trim() || 'No remarks';
 
-  const totalQty = order.items.reduce((sum, it) => sum + it.quantity, 0);
+  // "Total" = how many design-code rows this order has, not a quantity sum —
+  // matches the list page's Total/Pending Qty, which now also counts rows.
+  const totalRows = order.items.length;
   const totalGross = order.items.reduce((sum, it) => sum + num(it.grossWeightGrams), 0);
   const totalNet = order.items.reduce((sum, it) => sum + num(it.netWeightGrams), 0);
 
@@ -86,7 +95,7 @@ export function OrderSummaryModal({
       it.grossWeightGrams != null ? String(it.grossWeightGrams) : '', it.netWeightGrams != null ? String(it.netWeightGrams) : '',
       String(it.pieces ?? ''), remarks, it.karigarCode || '0',
     ]);
-    rows.push(['Total', '', '', '', '', String(totalQty), totalGross.toFixed(2), totalNet.toFixed(2), '', '', '']);
+    rows.push(['Total', '', '', '', '', String(totalRows), totalGross.toFixed(2), totalNet.toFixed(2), '', '', '']);
     const csv = [header, ...rows]
       .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
       .join('\r\n');
@@ -118,7 +127,16 @@ export function OrderSummaryModal({
               <p className="text-sm"><span className="text-muted-foreground">Delivery date : </span><span className="font-semibold">{fmtDate(order.deliveryDate)}</span></p>
               <p className="text-sm"><span className="text-muted-foreground">Order ID : </span><span className="font-semibold">{order.orderNumber}</span></p>
             </div>
-            <div className="text-right">
+            <div className="pr-8 text-right">
+              {onAssignClick && (
+                <Button
+                  type="button" size="sm" disabled={assignDisabled}
+                  onClick={onAssignClick}
+                  className="mb-2 metal-sheen text-[#17120b] font-semibold"
+                >
+                  {assignBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Assign items'}
+                </Button>
+              )}
               <p className="font-display text-lg font-semibold">
                 <span className="text-[#17120b]">JEWEL</span><span className="text-[#c9a84c]"> FACTORY</span>
               </p>
@@ -209,7 +227,7 @@ export function OrderSummaryModal({
               <tfoot>
                 <tr className="border-t-2 bg-[#c9a84c]/10 font-semibold">
                   <td className="px-2 py-2" colSpan={selected ? 6 : 5}>Total</td>
-                  <td className="px-2 py-2 text-right tabular-nums">{totalQty}</td>
+                  <td className="px-2 py-2 text-right tabular-nums">{totalRows}</td>
                   <td className="px-2 py-2 text-right tabular-nums">{totalGross.toFixed(2)}</td>
                   <td className="px-2 py-2 text-right tabular-nums">{totalNet.toFixed(2)}</td>
                   <td className="px-2 py-2" colSpan={4} />

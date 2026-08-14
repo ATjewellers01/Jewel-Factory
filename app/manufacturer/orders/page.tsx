@@ -4,7 +4,7 @@ import { Loader2, ShoppingBag } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useState } from 'react';
 
 import { AssignKarigarModal, type AssignKarigarManualFields } from '@/components/orders/AssignKarigarModal';
-import { ALL_ITEM_STATUSES, CatalogOrderAssignModal, CatalogOrderKarigarPicker, useCatalogOrderAssignment, useCustomisedOrderNumbers, type CatalogOrderItem } from '@/components/orders/CatalogOrderItemsBlock';
+import { ALL_ITEM_STATUSES, CatalogOrderAssignModal, useCatalogOrderAssignment, useCustomisedOrderNumbers, type CatalogOrderItem } from '@/components/orders/CatalogOrderItemsBlock';
 import { ImageZoomModal } from '@/components/orders/ImageZoomModal';
 import { KarigarPicker, type Karigar } from '@/components/orders/KarigarAssignPanel';
 import { ManufacturerOrderItemModal, type OrderItemProduct } from '@/components/orders/ManufacturerOrderItemModal';
@@ -516,16 +516,16 @@ function CatalogOrderDetail({
         const item = items.find((i) => i.id === summaryItem.id);
         if (item) onItemImageClick(item as Item);
       }}
+      onAssignClick={() => assignment.setModalOpen(true)}
+      assignDisabled={assignment.selected.size === 0 || assignment.assigning}
+      assignBusy={assignment.assigning}
       onClose={onClose}
     >
       {!detail && <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
       {detail && (
-        <div className="flex flex-wrap items-start justify-between gap-3 pb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</span>
-            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[row.status] ?? ''}`}>{formatOrderLevelStatus(row.status)}</span>
-          </div>
-          <CatalogOrderKarigarPicker assignment={assignment} />
+        <div className="flex items-center gap-2 pb-3">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</span>
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[row.status] ?? ''}`}>{formatOrderLevelStatus(row.status)}</span>
         </div>
       )}
       {detail && (
