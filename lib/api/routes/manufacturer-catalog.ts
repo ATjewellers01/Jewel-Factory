@@ -96,7 +96,9 @@ const ProductBody = z.object({
   // karigarCode/size below.
   subCategory2: z.string().nullish(),
   description: z.string().optional(),
-  weightGrams: z.number().positive().optional(),
+  // Nullable — switching a design to Studded (or clearing the field) sends
+  // null to wipe a stale value, same reasoning as size/karigarCode below.
+  weightGrams: z.number().positive().nullish(),
   // Only meaningful when subCategory2 = "Studded" — manually entered,
   // independent of each other and of weightGrams. Nullable for the same
   // clear-on-switch-back reason as subCategory2.

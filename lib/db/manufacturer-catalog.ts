@@ -82,7 +82,9 @@ export type CreateProductInput = {
   subCategory?: string; // "Sub-category 1" in the Add Design form
   subCategory2?: string | null; // "Sub-category 2" — Plain | Studded
   description?: string;
-  weightGrams?: number;
+  // Nullable — a Studded design (or clearing the field) sends null to wipe
+  // a stale value, same reasoning as size/karigarCode below.
+  weightGrams?: number | null;
   // Only meaningful when subCategory2 = "Studded" — see the schema comment.
   grossWeightGrams?: number | null;
   netWeightGrams?: number | null;
