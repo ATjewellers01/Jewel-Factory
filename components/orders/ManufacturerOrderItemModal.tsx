@@ -56,7 +56,7 @@ export function ManufacturerOrderItemModal({ product, onClose }: { product: Orde
             </div>
             <div className="overflow-hidden rounded-lg border text-sm">
               {product.purity && <div className="flex justify-between px-4 py-2"><span className="text-muted-foreground">Purity</span><span className="font-medium">{product.purity}</span></div>}
-              {product.subCategory2 === 'Studded' ? (
+              {(product.grossWeightGrams || product.netWeightGrams) ? (
                 <>
                   {formatWeight(product.grossWeightGrams ?? null) && <div className="flex justify-between bg-muted/40 px-4 py-2"><span className="text-muted-foreground">Gross Weight</span><span className="font-medium">{formatWeight(product.grossWeightGrams ?? null)}</span></div>}
                   {formatWeight(product.netWeightGrams ?? null) && <div className="flex justify-between px-4 py-2"><span className="text-muted-foreground">Net Weight</span><span className="font-medium">{formatWeight(product.netWeightGrams ?? null)}</span></div>}

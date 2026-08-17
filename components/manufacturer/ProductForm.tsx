@@ -35,6 +35,21 @@ const CATEGORY_TO_JEWELLERY_TYPE: Record<string, (typeof JEWELLERY_TYPES)[number
 
 // "Sub-category 2" options — displayed as-is, stored as free text (not DB-enforced).
 const SUB_CATEGORY_2_OPTIONS = ['Plain', 'Studded'] as const;
+// Set category has its own Sub-category 2 list instead of Plain/Studded — every
+// value here behaves like "Studded" (Gross/Net Weight instead of Weight), see
+// isStuddedLike() below.
+const SET_SUB_CATEGORY_2_OPTIONS = ['Antique', 'Handmade', 'Casting', 'Turkish', 'Temple Set'] as const;
+
+function subCategory2OptionsFor(category: string): readonly string[] {
+  return category === 'Set' ? SET_SUB_CATEGORY_2_OPTIONS : SUB_CATEGORY_2_OPTIONS;
+}
+
+// True for "Studded" (non-Set categories) and for every Set-specific Sub-category
+// 2 option (Antique/Handmade/Casting/Turkish/Temple Set) — all of them show
+// Gross/Net Weight instead of a single Weight field.
+function isStuddedLike(subCategory2: string): boolean {
+  return subCategory2 === 'Studded' || (SET_SUB_CATEGORY_2_OPTIONS as readonly string[]).includes(subCategory2);
+}
 
 export type ProductFormData = {
   id?: string;
@@ -313,7 +328,11 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
   function onCategoryChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const category = e.target.value;
-    setForm((p) => ({ ...p, category, subCategory: '' })); // reset sub on category change
+    // Reset both sub-categories on category change — Sub-category 2's own
+    // vocabulary differs for Set (Antique/Handmade/Casting/Turkish/Temple Set)
+    // vs every other category (Plain/Studded), so a stale value from the old
+    // category wouldn't be valid in the new one's list.
+    setForm((p) => ({ ...p, category, subCategory: '', subCategory2: '' }));
     setSubCustom(false);
     // Keep the AR "Jewellery type" dropdown in sync with the category so
     // Generate All doesn't silently produce a necklace-shaped try-on for a
@@ -361,7 +380,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   }
 
   function buildPayload() {
-    const studded = form.subCategory2 === 'Studded';
+    const studded = isStuddedLike(form.subCategory2);
     return {
       category: form.category || undefined,
       subCategory: form.subCategory || undefined,
@@ -541,13 +560,13 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
             <label className="text-xs font-medium text-muted-foreground">Sub-category 2<Optional /></label>
             <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.subCategory2} onChange={set('subCategory2')}>
               <option value="">—</option>
-              {SUB_CATEGORY_2_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+              {subCategory2OptionsFor(form.category).map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
             <FieldError errors={toFieldErrors(fieldErrors.subCategory2)} />
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
-          {form.subCategory2 === 'Studded' ? (
+          {isStuddedLike(form.subCategory2) ? (
             <>
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Gross Weight (gm)<Optional /></label>

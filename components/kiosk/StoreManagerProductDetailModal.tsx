@@ -138,7 +138,11 @@ function ProductBlock({
 }) {
   const [imageIndex, setImageIndex] = useState(0);
   const selectedImage = product.images[imageIndex] ?? product.images[0];
-  const studded = product.subCategory2 === 'Studded';
+  // Studded (non-Set categories) and every Set-specific Sub-category 2 value
+  // (Antique/Handmade/Casting/Turkish/Temple Set) both store Gross/Net Weight
+  // instead of a single Weight — detect via the data itself rather than
+  // duplicating ProductForm's Set-options list here.
+  const studded = Boolean(product.grossWeightGrams || product.netWeightGrams);
   const formattedWeight = formatWeight(product.weightGrams);
   const formattedGross = formatWeight(product.grossWeightGrams ?? null);
   const formattedNet = formatWeight(product.netWeightGrams ?? null);

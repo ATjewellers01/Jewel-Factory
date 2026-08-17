@@ -39,8 +39,7 @@ export const CATEGORY_TREE: Record<string, string[]> = {
   'Nath / Nose Ring': [],
   Pendants: ['Dorla Pendants', 'Double Hook Pendants', 'Single Hook Pendants'],
   Rings: ['Couple Ring', 'Gents Ring', 'Ladies Ring'],
-  Set: ['Antique Set', 'Chain Set', 'Choker Set', 'Long Set', 'Pendent Set', 'Short Set', 'Turkish Set'],
-  'Temple Set': ['Long Set', 'Short Set', 'Chokar Set', 'Pendant Set'],
+  Set: ['Long Set', 'Short Set', 'Choker Set', 'Pendent Set'],
   Watch: ['Gents Watch', 'Ladies Watch'],
 };
 
