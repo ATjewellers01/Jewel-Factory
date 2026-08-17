@@ -4,6 +4,7 @@ import { Loader2, Package, BarChart3, Scale, Store as StoreIcon, Trophy } from '
 import { useEffect, useMemo, useState } from 'react';
 
 import { AnalyticsFilterBar } from '@/components/analytics/AnalyticsFilterBar';
+import { useTaxonomy } from '@/hooks/use-taxonomy';
 import { ProductDetailModal, type AnalyticsProduct } from '@/components/analytics/ProductDetailModal';
 import {
   AnalyticsFilters,
@@ -56,6 +57,7 @@ function toProduct(row: FlatRow): FilterableProduct {
 }
 
 export default function ManufacturerIntelligencePage() {
+  const taxonomy = useTaxonomy('/api/manufacturer/taxonomy');
   const [filters, setFilters] = useState<AnalyticsFilters>(DEFAULT_ANALYTICS_FILTERS);
   const [topProducts, setTopProducts] = useState<FilterableProduct[]>([]);
   const [categoryRows, setCategoryRows] = useState<FilterableProduct[]>([]);
@@ -140,7 +142,7 @@ export default function ManufacturerIntelligencePage() {
         <p className="mt-0.5 text-sm text-muted-foreground">Which products, categories and customers are driving orders — system-wide.</p>
       </div>
 
-      <AnalyticsFilterBar filters={filters} onChange={setFilters} unitsLabel="Units ordered" />
+      <AnalyticsFilterBar filters={filters} onChange={setFilters} unitsLabel="Units ordered" categories={taxonomy.categories} subCategoriesFor={taxonomy.subCategories1For} />
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
       {loading && <div className="flex items-center gap-2 py-8 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}

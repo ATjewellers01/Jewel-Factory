@@ -111,6 +111,10 @@ model Manufacturer {
   customOrders         CustomDesignOrder[]
   karigars             Karigar[]
   retailerCustomRequests RetailerCustomRequest[]
+  taxonomyCategories     ManufacturerCategory[]
+  taxonomySubCategories1 ManufacturerSubCategory1[]
+  taxonomySubCategories2 ManufacturerSubCategory2[]
+  taxonomyPurities       ManufacturerPurity[]
 
   @@map("manufacturers")
 }
@@ -292,16 +296,16 @@ model ManufacturerProduct {
   name         String? // deprecated — design name removed per client request; kept nullable for legacy rows
   category     String?
   subCategory  String?       @map("sub_category") // shown as "Sub-category 1" in the Add Design form (display-only rename)
-  // "Sub-category 2" in the Add Design form — Plain or Studded (free text,
-  // not enforced here; the form only offers those two options). Studded
-  // switches the form's single Weight field to separate Gross/Net Weight
-  // inputs below; Plain (or unset) keeps using weightGrams unchanged.
+  // "Sub-category 2" in the Add Design form — free text, manufacturer-editable
+  // per category (see ManufacturerSubCategory2). No longer a fixed Plain/
+  // Studded pair (removed 2026-08-17) — every category now always shows
+  // Gross/Net Weight below, regardless of the Sub-category 2 value picked.
   subCategory2 String?       @map("sub_category_2")
   description  String?
+  // Deprecated 2026-08-17 — every category now captures Gross/Net Weight
+  // instead (see below). Kept nullable for legacy rows that still carry a
+  // single weight value; new products don't write to this column.
   weightGrams  Decimal?      @map("weight_grams") @db.Decimal(8, 3)
-  // Only used when subCategory2 = "Studded" — manually entered, independent
-  // values (no auto-calculation). weightGrams stays the field of record for
-  // "Plain" designs.
   grossWeightGrams Decimal?  @map("gross_weight_grams") @db.Decimal(8, 3)
   netWeightGrams   Decimal?  @map("net_weight_grams") @db.Decimal(8, 3)
   purity       String?
@@ -877,6 +881,80 @@ model Category {
   sortOrder Int    @default(0) @map("sort_order")
 
   @@map("categories")
+}
+
+// Manufacturer-editable catalog taxonomy (2026-08-17) — replaces the old
+// hardcoded lib/categories.ts CATEGORY_TREE/PURITIES as the source of truth
+// for the Add/Edit Design form's Category, Sub-category 1, Sub-category 2 and
+// Purity dropdowns. Every level is scoped per-manufacturer and independently
+// add/removable from its own dropdown. Deleting a row that's still in use by
+// a ManufacturerProduct is blocked at the API layer (not enforced here via a
+// DB constraint, so existing product rows are never touched by a taxonomy
+// edit — same "additive, no destructive edits" precedent as the rest of this
+// schema).
+model ManufacturerCategory {
+  id             String       @id @default(uuid())
+  manufacturerId String       @map("manufacturer_id")
+  manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
+  name           String
+  sortOrder      Int          @default(0) @map("sort_order")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  subCategories1 ManufacturerSubCategory1[]
+  subCategories2 ManufacturerSubCategory2[]
+
+  @@unique([manufacturerId, name])
+  @@map("manufacturer_categories")
+}
+
+// "Sub-category 1" — scoped to one parent ManufacturerCategory (own list per
+// category, e.g. Bangles has different Sub-category 1 options than Set).
+model ManufacturerSubCategory1 {
+  id             String               @id @default(uuid())
+  manufacturerId String               @map("manufacturer_id")
+  manufacturer   Manufacturer         @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
+  categoryId     String               @map("category_id")
+  category       ManufacturerCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name           String
+  sortOrder      Int                  @default(0) @map("sort_order")
+  createdAt      DateTime             @default(now()) @map("created_at")
+
+  @@unique([categoryId, name])
+  @@index([manufacturerId])
+  @@map("manufacturer_sub_categories_1")
+}
+
+// "Sub-category 2" — also scoped to one parent ManufacturerCategory (its own
+// independent list per category — NOT shared/global, and no longer the fixed
+// Plain/Studded pair). Weight fields are now always Gross+Net for every
+// category regardless of which Sub-category 2 value (if any) is picked.
+model ManufacturerSubCategory2 {
+  id             String               @id @default(uuid())
+  manufacturerId String               @map("manufacturer_id")
+  manufacturer   Manufacturer         @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
+  categoryId     String               @map("category_id")
+  category       ManufacturerCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name           String
+  sortOrder      Int                  @default(0) @map("sort_order")
+  createdAt      DateTime             @default(now()) @map("created_at")
+
+  @@unique([categoryId, name])
+  @@index([manufacturerId])
+  @@map("manufacturer_sub_categories_2")
+}
+
+// Purity/melting options — manufacturer-editable (2026-08-17), replaces the
+// old fixed lib/categories.ts PURITIES list.
+model ManufacturerPurity {
+  id             String       @id @default(uuid())
+  manufacturerId String       @map("manufacturer_id")
+  manufacturer   Manufacturer @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
+  name           String
+  sortOrder      Int          @default(0) @map("sort_order")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@unique([manufacturerId, name])
+  @@map("manufacturer_purities")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import { Loader2, TrendingUp, Package, Lightbulb, Store as StoreIcon, BarChart3,
 import { useEffect, useMemo, useState } from 'react';
 
 import { useApi } from '@/hooks/use-api';
+import { useTaxonomy } from '@/hooks/use-taxonomy';
 import { StarRating } from '@/components/ui/StarRating';
 import { AnalyticsFilterBar } from '@/components/analytics/AnalyticsFilterBar';
 import { ProductDetailModal, type AnalyticsProduct } from '@/components/analytics/ProductDetailModal';
@@ -92,6 +93,7 @@ function Stat({ label, value, icon: Icon }: { label: string; value: number; icon
 // branch, category + weight split, fully filterable. Complements the summary
 // above (which is store-wide, not per-branch).
 function BranchBreakdown() {
+  const taxonomy = useTaxonomy('/api/store/taxonomy');
   const [branches, setBranches] = useState<BranchSalesData[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -149,7 +151,7 @@ function BranchBreakdown() {
         <h2 className="text-sm font-semibold">Store-wise sales</h2>
       </div>
 
-      <AnalyticsFilterBar filters={filters} onChange={setFilters} unitsLabel="Units sold" />
+      <AnalyticsFilterBar filters={filters} onChange={setFilters} unitsLabel="Units sold" categories={taxonomy.categories} subCategoriesFor={taxonomy.subCategories1For} />
 
       <div className="flex gap-2 flex-wrap">
         {branches.map((b) => (

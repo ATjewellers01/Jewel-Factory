@@ -2,22 +2,21 @@
 
 import { CheckCircle2, Loader2, PencilLine, Upload, X } from 'lucide-react';
 import Link from 'next/link';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
 import { Optional, Required } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { useKioskStore } from '@/components/kiosk/StoreContext';
-import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
+import { useTaxonomy } from '@/hooks/use-taxonomy';
 import { toFieldErrors } from '@/lib/field-error';
-
-const PURITIES = ['24K', '22K', '18K', '14K', '916', '750', '585'];
 
 export default function CustomDesignPage() {
   const store = useKioskStore();
   const base = `/${store.slug}`;
-  const [form, setForm] = useState({ name: '', phone: '', category: CATEGORIES[0], subCategory: '', weight: '', purity: '', notes: '', imageUrl: '' });
+  const taxonomy = useTaxonomy(`/api/kiosk/taxonomy?store=${encodeURIComponent(store.slug)}`);
+  const [form, setForm] = useState({ name: '', phone: '', category: '', subCategory: '', weight: '', purity: '', notes: '', imageUrl: '' });
   const [subCustom, setSubCustom] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +28,15 @@ export default function CustomDesignPage() {
 
   function set(k: string, v: string) { setForm((p) => ({ ...p, [k]: v })); }
 
-  const subOptions = subCategoriesFor(form.category);
+  const subOptions = taxonomy.subCategories1For(form.category);
+
+  // Default to the manufacturer's first category once the taxonomy loads —
+  // categories are DB-backed now, so no synchronous default is available.
+  useEffect(() => {
+    if (taxonomy.loaded && !form.category && taxonomy.categories.length > 0) {
+      setForm((p) => ({ ...p, category: taxonomy.categories[0]! }));
+    }
+  }, [taxonomy.loaded, taxonomy.categories, form.category]);
   function onCategoryChange(v: string) { setForm((p) => ({ ...p, category: v, subCategory: '' })); setSubCustom(false); }
   function onSubSelectChange(v: string) {
     if (v === '__other__') { setSubCustom(true); set('subCategory', ''); }
@@ -119,7 +126,7 @@ export default function CustomDesignPage() {
           <div>
             <label className="text-xs font-medium text-muted-foreground">Category</label>
             <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.category} onChange={(e) => onCategoryChange(e.target.value)}>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {taxonomy.categories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <FieldError errors={toFieldErrors(fieldErrors.category)} />
           </div>
@@ -147,7 +154,7 @@ export default function CustomDesignPage() {
             <label className="text-xs font-medium text-muted-foreground">Purity<Optional /></label>
             <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.purity} onChange={(e) => set('purity', e.target.value)}>
               <option value="">—</option>
-              {PURITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+              {taxonomy.purities.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
             <FieldError errors={toFieldErrors(fieldErrors.purity)} />
           </div>

@@ -13,10 +13,10 @@ export type OrderSummaryItem = {
   imageUrl: string | null;
   quantity: number;
   status: string; // "Order Stage"
-  // Plain designs have only one Weight field in Add Design, so both Gross
-  // and Net show that same value here. Studded designs collect Gross/Net
-  // Weight as two separate manual fields, so they can differ — see the
-  // schema comment on ManufacturerProduct.grossWeightGrams/netWeightGrams.
+  // Legacy pre-2026-08-17 designs have only the old single Weight field, so
+  // both Gross and Net show that same value here (see the caller's
+  // fallback). Every design since then collects Gross/Net Weight as two
+  // separate manual fields, so they can differ.
   grossWeightGrams: string | number | null;
   netWeightGrams: string | number | null;
   pieces: number | null;

@@ -10,6 +10,7 @@ import { verifyPassword } from '@/lib/password';
 import { KIOSK_COOKIE, issueKioskCookie, verifyKioskCookie, cookieOptions } from '@/lib/auth';
 import { signUpload, storeFolder } from '@/lib/storage';
 import { listActiveProducts, getActiveProductByDesignOrId } from '@/lib/db/manufacturer-catalog';
+import { getTaxonomyForManufacturer } from '@/lib/db/taxonomy';
 import { placeKioskOrder, getKioskOrderPublic } from '@/lib/db/orders';
 import { placeCustomRequest } from '@/lib/db/custom-design';
 import { embedImageBase64, prepareQueryImageForSearch, searchSimilarProducts } from '@/lib/search';
@@ -104,6 +105,16 @@ kioskRoutes.get('/catalog/:idOrDesign', async (c) => {
   const product = await getActiveProductByDesignOrId(c.req.param('idOrDesign'));
   if (!product) return sendError(c, 'not_found', 'Product not found', 404);
   return sendData(c, product);
+});
+
+// Read-only — the manufacturer's current Category/Sub-category 1/2/Purity
+// taxonomy, for kiosk catalog filter dropdowns. Public route: storeSlug (or
+// X-Store-Slug header) resolves which manufacturer, same as the rest of this
+// file (see resolveStore/slugFrom above).
+kioskRoutes.get('/taxonomy', async (c) => {
+  const store = await resolveStore(slugFrom(c));
+  if (!store?.manufacturerId) return sendData(c, { categories: [], purities: [] });
+  return sendData(c, await getTaxonomyForManufacturer(store.manufacturerId));
 });
 
 // ── Try-on products (active, hasTryon) ────────────────────────────────────────

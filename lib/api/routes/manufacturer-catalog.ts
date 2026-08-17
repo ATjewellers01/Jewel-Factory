@@ -91,17 +91,17 @@ manufacturerCatalogRoutes.get('/products/:id', async (c) => {
 const ProductBody = z.object({
   category: z.string().optional(),
   subCategory: z.string().optional(),
-  // "Sub-category 2" — Plain | Studded. Nullable so switching back to Plain
-  // (or clearing it) actually wipes the stored value, same reasoning as
-  // karigarCode/size below.
+  // "Sub-category 2" — manufacturer-editable, own list per category (see
+  // lib/db/taxonomy.ts). Nullable so clearing it actually wipes the stored
+  // value, same reasoning as karigarCode/size below.
   subCategory2: z.string().nullish(),
   description: z.string().optional(),
-  // Nullable — switching a design to Studded (or clearing the field) sends
-  // null to wipe a stale value, same reasoning as size/karigarCode below.
+  // Deprecated (2026-08-17) — every category now always captures Gross/Net
+  // Weight instead (below); kept nullable so it can still be cleared on an
+  // older row.
   weightGrams: z.number().positive().nullish(),
-  // Only meaningful when subCategory2 = "Studded" — manually entered,
-  // independent of each other and of weightGrams. Nullable for the same
-  // clear-on-switch-back reason as subCategory2.
+  // Manually entered, independent of each other. Nullable for the same
+  // clear-on-update reason as subCategory2.
   grossWeightGrams: z.number().positive().nullish(),
   netWeightGrams: z.number().positive().nullish(),
   purity: z.string().optional(),

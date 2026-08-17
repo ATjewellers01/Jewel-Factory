@@ -9,10 +9,10 @@ import { FieldError } from '@/components/ui/field';
 import { Optional } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { uploadToObjectStorage } from '@/lib/upload-client';
-import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 import { toFieldErrors } from '@/lib/field-error';
+import { EditableSelect, type TaxonomyOption } from '@/components/manufacturer/EditableSelect';
+import { apiPost } from '@/hooks/use-api';
 
-const PURITIES = ['24K', '22K', '18K', '14K', '916', '750', '585'];
 const JEWELLERY_TYPES = ['necklace', 'earring_left', 'earring_right', 'ring_index', 'ring_middle', 'bangle'] as const;
 
 // Auto-suggest the AR try-on jewellery type from the selected category — the
@@ -33,33 +33,18 @@ const CATEGORY_TO_JEWELLERY_TYPE: Record<string, (typeof JEWELLERY_TYPES)[number
   Watch: 'bangle',
 };
 
-// "Sub-category 2" options — displayed as-is, stored as free text (not DB-enforced).
-const SUB_CATEGORY_2_OPTIONS = ['Plain', 'Studded'] as const;
-// Set category has its own Sub-category 2 list instead of Plain/Studded — every
-// value here behaves like "Studded" (Gross/Net Weight instead of Weight), see
-// isStuddedLike() below.
-const SET_SUB_CATEGORY_2_OPTIONS = ['Antique', 'Handmade', 'Casting', 'Turkish', 'Temple Set'] as const;
-
-function subCategory2OptionsFor(category: string): readonly string[] {
-  return category === 'Set' ? SET_SUB_CATEGORY_2_OPTIONS : SUB_CATEGORY_2_OPTIONS;
-}
-
-// True for "Studded" (non-Set categories) and for every Set-specific Sub-category
-// 2 option (Antique/Handmade/Casting/Turkish/Temple Set) — all of them show
-// Gross/Net Weight instead of a single Weight field.
-function isStuddedLike(subCategory2: string): boolean {
-  return subCategory2 === 'Studded' || (SET_SUB_CATEGORY_2_OPTIONS as readonly string[]).includes(subCategory2);
-}
-
 export type ProductFormData = {
   id?: string;
   name?: string;
   category: string;
-  subCategory: string; // "Sub-category 1" in the form
-  subCategory2: string; // "Sub-category 2" — Plain | Studded
+  subCategory: string; // "Sub-category 1" in the form — manufacturer-editable, see EditableSelect
+  subCategory2: string; // "Sub-category 2" in the form — manufacturer-editable, own list per category
   description: string;
+  // Deprecated — kept only so an older product's legacy single-weight value
+  // still round-trips through this form's initial state if ever loaded; the
+  // form itself no longer renders or edits this field (every category now
+  // always captures Gross/Net Weight below, see 2026-08-17 rework).
   weightGrams: string;
-  // Only used when subCategory2 === 'Studded' — see SUB_CATEGORY_2_OPTIONS.
   grossWeightGrams: string;
   netWeightGrams: string;
   purity: string;
@@ -96,6 +81,95 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [zoom, setZoom] = useState<{ src: string; checker?: boolean } | null>(null); // click-to-enlarge preview
+
+  // ── Manufacturer-editable taxonomy (Category / Sub-category 1 / Sub-category
+  // 2 / Purity — 2026-08-17) — replaces the old hardcoded lib/categories.ts
+  // list. Loaded once; category/subCategory/subCategory2/purity in `form`
+  // stay NAME strings (that's what ManufacturerProduct's columns store), the
+  // EditableSelect dropdowns below resolve name <-> id against this tree.
+  type TaxonomyCategory = { id: string; name: string; subCategories1: TaxonomyOption[]; subCategories2: TaxonomyOption[] };
+  const [categories, setCategories] = useState<TaxonomyCategory[]>([]);
+  const [purities, setPurities] = useState<TaxonomyOption[]>([]);
+  const [taxonomyLoaded, setTaxonomyLoaded] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/manufacturer/taxonomy', { cache: 'no-store', credentials: 'same-origin' });
+        const json = (await res.json()) as { data?: { categories: TaxonomyCategory[]; purities: TaxonomyOption[] } };
+        setCategories(json.data?.categories ?? []);
+        setPurities(json.data?.purities ?? []);
+      } finally {
+        setTaxonomyLoaded(true);
+      }
+    })();
+  }, []);
+
+  const selectedCategory = categories.find((c) => c.name === form.category) ?? null;
+  const subCategory1Options = selectedCategory?.subCategories1 ?? [];
+  const subCategory2Options = selectedCategory?.subCategories2 ?? [];
+
+  async function addCategory(name: string): Promise<TaxonomyOption> {
+    const created = (await apiPost('/api/manufacturer/taxonomy/categories', { name })) as { id: string; name: string };
+    setCategories((prev) => [...prev, { id: created.id, name: created.name, subCategories1: [], subCategories2: [] }]);
+    return created;
+  }
+  async function removeCategoryOption(option: TaxonomyOption) {
+    const res = await fetch(`/api/manufacturer/taxonomy/categories/${option.id}`, { method: 'DELETE', credentials: 'same-origin' });
+    if (!res.ok) {
+      const json = (await res.json().catch(() => null)) as { error?: { message: string } } | null;
+      return { ok: false, error: json?.error?.message ?? 'Could not remove' };
+    }
+    setCategories((prev) => prev.filter((c) => c.id !== option.id));
+    return { ok: true };
+  }
+
+  async function addSubCategory1(name: string): Promise<TaxonomyOption> {
+    if (!selectedCategory) throw new Error('Select a category first');
+    const created = (await apiPost('/api/manufacturer/taxonomy/sub-categories-1', { categoryId: selectedCategory.id, name })) as TaxonomyOption;
+    setCategories((prev) => prev.map((c) => (c.id === selectedCategory.id ? { ...c, subCategories1: [...c.subCategories1, created] } : c)));
+    return created;
+  }
+  async function removeSubCategory1Option(option: TaxonomyOption) {
+    const res = await fetch(`/api/manufacturer/taxonomy/sub-categories-1/${option.id}`, { method: 'DELETE', credentials: 'same-origin' });
+    if (!res.ok) {
+      const json = (await res.json().catch(() => null)) as { error?: { message: string } } | null;
+      return { ok: false, error: json?.error?.message ?? 'Could not remove' };
+    }
+    setCategories((prev) => prev.map((c) => ({ ...c, subCategories1: c.subCategories1.filter((s) => s.id !== option.id) })));
+    return { ok: true };
+  }
+
+  async function addSubCategory2(name: string): Promise<TaxonomyOption> {
+    if (!selectedCategory) throw new Error('Select a category first');
+    const created = (await apiPost('/api/manufacturer/taxonomy/sub-categories-2', { categoryId: selectedCategory.id, name })) as TaxonomyOption;
+    setCategories((prev) => prev.map((c) => (c.id === selectedCategory.id ? { ...c, subCategories2: [...c.subCategories2, created] } : c)));
+    return created;
+  }
+  async function removeSubCategory2Option(option: TaxonomyOption) {
+    const res = await fetch(`/api/manufacturer/taxonomy/sub-categories-2/${option.id}`, { method: 'DELETE', credentials: 'same-origin' });
+    if (!res.ok) {
+      const json = (await res.json().catch(() => null)) as { error?: { message: string } } | null;
+      return { ok: false, error: json?.error?.message ?? 'Could not remove' };
+    }
+    setCategories((prev) => prev.map((c) => ({ ...c, subCategories2: c.subCategories2.filter((s) => s.id !== option.id) })));
+    return { ok: true };
+  }
+
+  async function addPurity(name: string): Promise<TaxonomyOption> {
+    const created = (await apiPost('/api/manufacturer/taxonomy/purities', { name })) as TaxonomyOption;
+    setPurities((prev) => [...prev, created]);
+    return created;
+  }
+  async function removePurityOption(option: TaxonomyOption) {
+    const res = await fetch(`/api/manufacturer/taxonomy/purities/${option.id}`, { method: 'DELETE', credentials: 'same-origin' });
+    if (!res.ok) {
+      const json = (await res.json().catch(() => null)) as { error?: { message: string } } | null;
+      return { ok: false, error: json?.error?.message ?? 'Could not remove' };
+    }
+    setPurities((prev) => prev.filter((p) => p.id !== option.id));
+    return { ok: true };
+  }
 
   // ── AI generate (raw image -> name/description + catalog + transparent) ──────
   const aiInput = useRef<HTMLInputElement>(null);
@@ -316,36 +390,22 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   const set = (k: keyof ProductFormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((p) => ({ ...p, [k]: e.target.value }));
 
-  // Sub-categories depend on the chosen category. Changing category resets sub-cat.
-  const subOptions = subCategoriesFor(form.category);
   // Size is a bangle-only spec (2.2, 2.4, 2.6 …) — no other category uses it.
   const showSize = form.category === 'Bangles';
-  // "Custom" sub-category mode: no preset list, or an existing value that isn't in
-  // the list (e.g. free text the user typed, or a legacy value). Then show a text box.
-  const [subCustom, setSubCustom] = useState<boolean>(
-    Boolean(initial?.subCategory && !subCategoriesFor(initial.category).includes(initial.subCategory)),
-  );
 
-  function onCategoryChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const category = e.target.value;
-    // Reset both sub-categories on category change — Sub-category 2's own
-    // vocabulary differs for Set (Antique/Handmade/Casting/Turkish/Temple Set)
-    // vs every other category (Plain/Studded), so a stale value from the old
-    // category wouldn't be valid in the new one's list.
+  function onCategoryPick(option: TaxonomyOption | null) {
+    const category = option?.name ?? '';
+    // Reset both sub-categories on category change — Sub-category 1 and
+    // Sub-category 2 are each scoped to their OWN parent category (own list
+    // per category, 2026-08-17), so a stale value from the old category
+    // wouldn't be valid in the new one's list.
     setForm((p) => ({ ...p, category, subCategory: '', subCategory2: '' }));
-    setSubCustom(false);
     // Keep the AR "Jewellery type" dropdown in sync with the category so
     // Generate All doesn't silently produce a necklace-shaped try-on for a
     // bangle (or similar mismatch) just because the manufacturer forgot to
     // switch it manually.
-    const suggested = CATEGORY_TO_JEWELLERY_TYPE[category];
+    const suggested = category ? CATEGORY_TO_JEWELLERY_TYPE[category] : undefined;
     if (suggested) setTryonType(suggested);
-  }
-
-  function onSubSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const v = e.target.value;
-    if (v === '__other__') { setSubCustom(true); setForm((p) => ({ ...p, subCategory: '' })); }
-    else { setSubCustom(false); setForm((p) => ({ ...p, subCategory: v })); }
   }
 
   // Create the product first (needed for image/tryon upload folder), then return its id.
@@ -380,18 +440,17 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   }
 
   function buildPayload() {
-    const studded = isStuddedLike(form.subCategory2);
     return {
       category: form.category || undefined,
       subCategory: form.subCategory || undefined,
       subCategory2: form.subCategory2 || null,
       description: form.description || undefined,
-      // Studded uses Gross/Net Weight instead — weightGrams is nulled out so a
-      // value entered while on Plain doesn't linger unseen after switching,
-      // same reasoning as clearing size off a non-Bangles category below.
-      weightGrams: studded ? null : (form.weightGrams ? Number(form.weightGrams) : null),
-      grossWeightGrams: studded ? (form.grossWeightGrams ? Number(form.grossWeightGrams) : null) : null,
-      netWeightGrams: studded ? (form.netWeightGrams ? Number(form.netWeightGrams) : null) : null,
+      // Every category now always captures Gross/Net Weight (2026-08-17) —
+      // weightGrams (the old single-field value) is never written by this
+      // form anymore, only read back for legacy rows (see the type comment).
+      weightGrams: null,
+      grossWeightGrams: form.grossWeightGrams ? Number(form.grossWeightGrams) : null,
+      netWeightGrams: form.netWeightGrams ? Number(form.netWeightGrams) : null,
       purity: form.purity || undefined,
       minOrderQty: form.minOrderQty ? Number(form.minOrderQty) : 1,
       pieces: form.pieces ? Number(form.pieces) : 1,
@@ -519,98 +578,88 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
       <section className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Category</label>
-            <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.category} onChange={onCategoryChange}>
-              <option value="">Select category</option>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <EditableSelect
+              label="Category"
+              placeholder="Select category"
+              value={selectedCategory?.id ?? ''}
+              options={categories}
+              disabled={!taxonomyLoaded}
+              onPick={onCategoryPick}
+              onAdd={addCategory}
+              onRemove={removeCategoryOption}
+            />
             <FieldError errors={toFieldErrors(fieldErrors.category)} />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Sub-category 1<Optional /></label>
-            {subOptions.length > 0 && !subCustom ? (
-              <select
-                className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                value={form.subCategory}
-                onChange={onSubSelectChange}
-                disabled={!form.category}
-              >
-                <option value="">—</option>
-                {subOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-                <option value="__other__">Other (type your own)…</option>
-              </select>
-            ) : (
-              <div className="mt-1 flex gap-2">
-                <Input
-                  placeholder={form.category ? 'Type a sub-category' : 'Select a category first'}
-                  value={form.subCategory}
-                  onChange={set('subCategory')}
-                  disabled={!form.category}
-                />
-                {subOptions.length > 0 && (
-                  <button type="button" onClick={() => { setSubCustom(false); setForm((p) => ({ ...p, subCategory: '' })); }} className="shrink-0 text-xs text-muted-foreground hover:text-foreground">
-                    List
-                  </button>
-                )}
-              </div>
-            )}
+            <EditableSelect
+              label={<>Sub-category 1<Optional /></>}
+              placeholder="—"
+              value={subCategory1Options.find((s) => s.name === form.subCategory)?.id ?? ''}
+              options={subCategory1Options}
+              disabled={!form.category}
+              onPick={(o) => setForm((p) => ({ ...p, subCategory: o?.name ?? '' }))}
+              onAdd={addSubCategory1}
+              onRemove={removeSubCategory1Option}
+            />
             <FieldError errors={toFieldErrors(fieldErrors.subCategory)} />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Sub-category 2<Optional /></label>
-            <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.subCategory2} onChange={set('subCategory2')}>
-              <option value="">—</option>
-              {subCategory2OptionsFor(form.category).map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <EditableSelect
+              label={<>Sub-category 2<Optional /></>}
+              placeholder="—"
+              value={subCategory2Options.find((s) => s.name === form.subCategory2)?.id ?? ''}
+              options={subCategory2Options}
+              disabled={!form.category}
+              onPick={(o) => setForm((p) => ({ ...p, subCategory2: o?.name ?? '' }))}
+              onAdd={addSubCategory2}
+              onRemove={removeSubCategory2Option}
+            />
             <FieldError errors={toFieldErrors(fieldErrors.subCategory2)} />
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
-          {isStuddedLike(form.subCategory2) ? (
-            <>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Gross Weight (gm)<Optional /></label>
-                <Input className="mt-1" type="number" step="0.001" placeholder="12.5" value={form.grossWeightGrams} onChange={set('grossWeightGrams')} />
-                <FieldError errors={toFieldErrors(fieldErrors.grossWeightGrams)} />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Net Weight (gm)<Optional /></label>
-                <Input className="mt-1" type="number" step="0.001" placeholder="10.2" value={form.netWeightGrams} onChange={set('netWeightGrams')} />
-                <FieldError errors={toFieldErrors(fieldErrors.netWeightGrams)} />
-              </div>
-            </>
-          ) : (
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Weight (gm)<Optional /></label>
-              <Input className="mt-1" type="number" step="0.001" placeholder="12.5" value={form.weightGrams} onChange={set('weightGrams')} />
-              <FieldError errors={toFieldErrors(fieldErrors.weightGrams)} />
-            </div>
-          )}
+          {/* Every category always captures Gross/Net Weight (2026-08-17) —
+              there is no more single Weight field / Plain-Studded switch. */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Purity<Optional /></label>
-            <select className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" value={form.purity} onChange={set('purity')}>
-              <option value="">—</option>
-              {PURITIES.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
+            <label className="text-xs font-medium text-muted-foreground">Gross Weight (gm)<Optional /></label>
+            <Input className="mt-1" type="number" step="0.001" placeholder="12.5" value={form.grossWeightGrams} onChange={set('grossWeightGrams')} />
+            <FieldError errors={toFieldErrors(fieldErrors.grossWeightGrams)} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Net Weight (gm)<Optional /></label>
+            <Input className="mt-1" type="number" step="0.001" placeholder="10.2" value={form.netWeightGrams} onChange={set('netWeightGrams')} />
+            <FieldError errors={toFieldErrors(fieldErrors.netWeightGrams)} />
+          </div>
+          <div>
+            <EditableSelect
+              label={<>Purity<Optional /></>}
+              placeholder="—"
+              value={purities.find((p) => p.name === form.purity)?.id ?? ''}
+              options={purities}
+              disabled={!taxonomyLoaded}
+              onPick={(o) => setForm((p) => ({ ...p, purity: o?.name ?? '' }))}
+              onAdd={addPurity}
+              onRemove={removePurityOption}
+            />
             <FieldError errors={toFieldErrors(fieldErrors.purity)} />
           </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
           <div>
             <label className="text-xs font-medium text-muted-foreground">Pieces<Optional /></label>
             <Input className="mt-1" type="number" min="1" step="1" placeholder="1" value={form.pieces} onChange={set('pieces')} title="How many physical pieces make up the weight above (e.g. a bangle pair = 2)" />
             <FieldError errors={toFieldErrors(fieldErrors.pieces)} />
           </div>
-        </div>
-        {/* Sits directly under Weight — it's a dimension of the piece, and only
-            the Bangles category collects it. */}
-        {showSize && (
-          <div className="grid gap-3 sm:grid-cols-3">
+          {/* Sits alongside Pieces — it's a dimension of the piece, and only
+              the Bangles category collects it. */}
+          {showSize && (
             <div>
               <label className="text-xs font-medium text-muted-foreground">Size<Optional /></label>
               <Input className="mt-1" placeholder="e.g. 2.4" value={form.size} onChange={set('size')} title="Bangle size — free text, e.g. 2.4 or 2.6" />
               <FieldError errors={toFieldErrors(fieldErrors.size)} />
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </section>
 
       {/* Min Order Qty + Status fields */}

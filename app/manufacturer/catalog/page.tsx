@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { WeightRangeSlider } from '@/components/orders/WeightRangeSlider';
-import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
+import { useTaxonomy } from '@/hooks/use-taxonomy';
 import { downloadCataloguePdf } from '@/lib/catalogue-pdf';
 import { SORT_OPTIONS, weightExtent, matchWeightRange, sortProducts, type SortOption } from '@/lib/weight-filter';
 import { formatWeight } from '@/lib/format';
@@ -41,6 +41,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default function ManufacturerCatalogPage() {
+  const taxonomy = useTaxonomy('/api/manufacturer/taxonomy');
   const [products, setProducts] = useState<Product[] | null>(null);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
@@ -197,16 +198,16 @@ export default function ManufacturerCatalogPage() {
           onChange={(e) => { setCategory(e.target.value); setSubCategory(''); }}
         >
           <option value="">All categories</option>
-          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          {taxonomy.categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        {subCategoriesFor(category).length > 0 && (
+        {taxonomy.subCategories1For(category).length > 0 && (
           <select
             className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
             value={subCategory}
             onChange={(e) => setSubCategory(e.target.value)}
           >
             <option value="">All sub-categories</option>
-            {subCategoriesFor(category).map((s) => <option key={s} value={s}>{s}</option>)}
+            {taxonomy.subCategories1For(category).map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         )}
         {karigarOptions.length > 0 && (

@@ -15,7 +15,7 @@ import { StarRating } from '@/components/ui/StarRating';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useStoreManagerKioskCart, useStoreManagerRestockCart } from '@/hooks/use-store-manager-cart';
-import { PURITIES, subCategoriesFor } from '@/lib/categories';
+import { useTaxonomy } from '@/hooks/use-taxonomy';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { formatWeight } from '@/lib/format';
 import { matchesDescriptionQuery, rankSimilar } from '@/lib/product-similarity';
@@ -76,6 +76,7 @@ export function CatalogOrderPanel({
   const restockCart = useStoreManagerRestockCart(manager.branch.id);
   const orderCart = showPopularity ? restockCart : kioskCart;
   const { data, loading, error } = useApi<Product[]>('/api/branch-manager/catalog', '/store-manager/login');
+  const taxonomy = useTaxonomy('/api/branch-manager/taxonomy');
   const favorites = useFavorites('/api/branch-manager/favorites', showPopularity ? 'RESTOCK' : 'KIOSK');
   const [search, setSearch] = useState('');
   const [descQuery, setDescQuery] = useState('');
@@ -261,7 +262,7 @@ export function CatalogOrderPanel({
           </div>
         </div>
 
-        {mobileFilters ? <div className="mb-6 rounded-lg border border-black/10 bg-[#fffdf8] p-4 lg:hidden"><CatalogFilters categories={availableCategories} category={category} subCategory={subCategory} size={size} sizes={availableSizes} weightRange={weightRange} weightBounds={weightBounds} setCategory={setCategory} setSubCategory={setSubCategory} setSize={setSize} setWeightRange={setWeightRange} /></div> : null}
+        {mobileFilters ? <div className="mb-6 rounded-lg border border-black/10 bg-[#fffdf8] p-4 lg:hidden"><CatalogFilters categories={availableCategories} subCategoriesFor={taxonomy.subCategories1For} category={category} subCategory={subCategory} size={size} sizes={availableSizes} weightRange={weightRange} weightBounds={weightBounds} setCategory={setCategory} setSubCategory={setSubCategory} setSize={setSize} setWeightRange={setWeightRange} /></div> : null}
         {error ? <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
 
       {showCart && (
@@ -334,7 +335,7 @@ export function CatalogOrderPanel({
                           className="h-7 rounded-md border border-input bg-transparent px-2 text-xs"
                         >
                           <option value="">—</option>
-                          {PURITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+                          {taxonomy.purities.map((p) => <option key={p} value={p}>{p}</option>)}
                         </select>
                       </div>
                     </div>
@@ -471,7 +472,7 @@ export function CatalogOrderPanel({
 
       <div className="flex items-start gap-8">
         <aside className="sticky top-28 hidden w-60 shrink-0 border-r border-black/10 pr-6 lg:block">
-          <CatalogFilters categories={availableCategories} category={category} subCategory={subCategory} size={size} sizes={availableSizes} weightRange={weightRange} weightBounds={weightBounds} setCategory={setCategory} setSubCategory={setSubCategory} setSize={setSize} setWeightRange={setWeightRange} />
+          <CatalogFilters categories={availableCategories} subCategoriesFor={taxonomy.subCategories1For} category={category} subCategory={subCategory} size={size} sizes={availableSizes} weightRange={weightRange} weightBounds={weightBounds} setCategory={setCategory} setSubCategory={setSubCategory} setSize={setSize} setWeightRange={setWeightRange} />
         </aside>
         <div className="min-w-0 flex-1">
       {loading ? (
@@ -567,6 +568,7 @@ export function CatalogOrderPanel({
 
 function CatalogFilters({
   categories,
+  subCategoriesFor,
   category,
   subCategory,
   size,
@@ -579,6 +581,7 @@ function CatalogFilters({
   setWeightRange,
 }: {
   categories: string[];
+  subCategoriesFor: (category: string) => string[];
   category: string;
   subCategory: string;
   size: string;

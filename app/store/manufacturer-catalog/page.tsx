@@ -15,7 +15,7 @@ import { StarRating } from '@/components/ui/StarRating';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { useB2bCart } from '@/hooks/use-b2b-cart';
 import { useFavorites } from '@/hooks/use-favorites';
-import { CATEGORIES, PURITIES, subCategoriesFor } from '@/lib/categories';
+import { useTaxonomy } from '@/hooks/use-taxonomy';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { formatWeight } from '@/lib/format';
 import { matchesDescriptionQuery, rankSimilar } from '@/lib/product-similarity';
@@ -59,6 +59,7 @@ export default function ManufacturerCatalogBrowsePage() {
 
 function CatalogBrowse() {
   const { data, error, loading } = useApi<Product[]>('/api/store/catalog', '/store/login');
+  const taxonomy = useTaxonomy('/api/store/taxonomy');
   const cart = useB2bCart();
   const favorites = useFavorites('/api/store/favorites');
   const router = useRouter();
@@ -190,12 +191,12 @@ function CatalogBrowse() {
             <Input placeholder="Search designs…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
             <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={category} onChange={(e) => { setCategory(e.target.value); setSubCategory(''); }}>
               <option value="">All categories</option>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {taxonomy.categories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
-            {subCategoriesFor(category).length > 0 && (
+            {taxonomy.subCategories1For(category).length > 0 && (
               <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={subCategory} onChange={(e) => setSubCategory(e.target.value)}>
                 <option value="">All sub-categories</option>
-                {subCategoriesFor(category).map((s) => <option key={s} value={s}>{s}</option>)}
+                {taxonomy.subCategories1For(category).map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             )}
             {sizeOptions.length > 0 && (
@@ -360,7 +361,7 @@ function CatalogBrowse() {
                           className="h-7 rounded-md border border-input bg-transparent px-2 text-xs"
                         >
                           <option value="">—</option>
-                          {PURITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+                          {taxonomy.purities.map((p) => <option key={p} value={p}>{p}</option>)}
                         </select>
                       </div>
                     </div>

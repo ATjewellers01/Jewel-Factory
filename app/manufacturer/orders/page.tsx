@@ -489,8 +489,9 @@ function CatalogOrderDetail({
           imageUrl: it.productImageSnapshot,
           quantity: it.quantity,
           status: it.status,
-          // Plain designs only have one Weight field, so Gross and Net both
-          // show it; Studded designs collect the two separately.
+          // Legacy pre-2026-08-17 designs only have the old single Weight
+          // field (weightGrams) — Gross and Net both fall back to showing
+          // it. Every design since then has separate Gross/Net values.
           grossWeightGrams: it.product?.grossWeightGrams ?? it.product?.weightGrams ?? null,
           netWeightGrams: it.product?.netWeightGrams ?? it.product?.weightGrams ?? null,
           pieces: it.product?.pieces ?? null,

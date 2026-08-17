@@ -3,7 +3,6 @@
 import { Filter, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
 import {
   AnalyticsFilters,
   DATE_PRESETS,
@@ -15,9 +14,11 @@ interface AnalyticsFilterBarProps {
   filters: AnalyticsFilters;
   onChange: (next: AnalyticsFilters) => void;
   unitsLabel?: string; // e.g. "Units sold" vs "Sales"
+  categories: string[];
+  subCategoriesFor: (category: string) => string[];
 }
 
-export function AnalyticsFilterBar({ filters, onChange, unitsLabel = 'Units sold' }: AnalyticsFilterBarProps) {
+export function AnalyticsFilterBar({ filters, onChange, unitsLabel = 'Units sold', categories, subCategoriesFor }: AnalyticsFilterBarProps) {
   const subCategories = subCategoriesFor(filters.category);
   const active = isFiltersActive(filters);
 
@@ -77,7 +78,7 @@ export function AnalyticsFilterBar({ filters, onChange, unitsLabel = 'Units sold
             className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
           >
             <option value="">All</option>
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>

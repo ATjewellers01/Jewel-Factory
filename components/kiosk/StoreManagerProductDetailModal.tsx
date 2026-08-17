@@ -13,9 +13,7 @@ export type StoreManagerProduct = {
   name?: string | null;
   category: string | null;
   subCategory: string | null;
-  // "Sub-category 2" — Plain | Studded. Studded designs show separate Gross/
-  // Net Weight rows instead of the single Weight row (see grossWeightGrams/
-  // netWeightGrams below).
+  // "Sub-category 2" — manufacturer-editable, own list per category.
   subCategory2?: string | null;
   purity?: string | null;
   weightGrams: string | null;

@@ -1,13 +1,16 @@
 'use client';
 
 import { Loader2, Package } from 'lucide-react';
+import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { Input } from '@/components/ui/input';
 import { ProductCard, type KioskProduct } from '@/components/kiosk/ProductCard';
-import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
+import { useTaxonomy } from '@/hooks/use-taxonomy';
 
 export default function KioskCatalogPage() {
+  const params = useParams<{ storeSlug: string }>();
+  const taxonomy = useTaxonomy(`/api/kiosk/taxonomy?store=${encodeURIComponent(params.storeSlug)}`);
   const [products, setProducts] = useState<KioskProduct[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -44,12 +47,12 @@ export default function KioskCatalogPage() {
         <Input placeholder="Search designs…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
         <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={category} onChange={(e) => { setCategory(e.target.value); setSubCategory(''); }}>
           <option value="">All categories</option>
-          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          {taxonomy.categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        {subCategoriesFor(category).length > 0 && (
+        {taxonomy.subCategories1For(category).length > 0 && (
           <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={subCategory} onChange={(e) => setSubCategory(e.target.value)}>
             <option value="">All sub-categories</option>
-            {subCategoriesFor(category).map((s) => <option key={s} value={s}>{s}</option>)}
+            {taxonomy.subCategories1For(category).map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         )}
         <label className="flex items-center gap-2 text-sm">

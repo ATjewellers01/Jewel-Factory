@@ -79,13 +79,12 @@ export async function listActiveProducts(filters: { category?: string; search?: 
 
 export type CreateProductInput = {
   category?: string;
-  subCategory?: string; // "Sub-category 1" in the Add Design form
-  subCategory2?: string | null; // "Sub-category 2" — Plain | Studded
+  subCategory?: string; // "Sub-category 1" in the Add Design form — manufacturer-editable, see lib/db/taxonomy.ts
+  subCategory2?: string | null; // "Sub-category 2" — manufacturer-editable, own list per category
   description?: string;
-  // Nullable — a Studded design (or clearing the field) sends null to wipe
-  // a stale value, same reasoning as size/karigarCode below.
+  // Deprecated (2026-08-17) — every category now always captures Gross/Net
+  // Weight instead (below); the Add Design form no longer writes this.
   weightGrams?: number | null;
-  // Only meaningful when subCategory2 = "Studded" — see the schema comment.
   grossWeightGrams?: number | null;
   netWeightGrams?: number | null;
   purity?: string;

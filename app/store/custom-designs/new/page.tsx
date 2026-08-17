@@ -2,17 +2,16 @@
 
 import { CheckCircle2, Loader2, PencilLine, Upload, X, ShieldCheck, Send, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
 import { Optional, Required } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { apiPost } from '@/hooks/use-api';
-import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
+import { useTaxonomy } from '@/hooks/use-taxonomy';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
 
-const PURITIES = ['24K', '22K', '18K', '14K', '916', '750', '585'];
 const MEENA_OPTIONS = ['Yes', 'No'];
 const SCREW_OPTIONS = ['English', 'Pongli'];
 
@@ -32,13 +31,14 @@ const MAX_IMAGES = 10;
 
 const EMPTY_FORM = {
   orderRef: '', deliveryDate: '',
-  category: CATEGORIES[0], subCategory: '',
+  category: '', subCategory: '',
   quantity: '', weightFrom: '', weightTo: '', purity: '',
   meena: '', length: '', size: '', broadness: '', screw: '',
   notes: '',
 };
 
 export default function StoreCustomDesignNewPage() {
+  const taxonomy = useTaxonomy('/api/store/taxonomy');
   const [form, setForm] = useState(EMPTY_FORM);
   const [images, setImages] = useState<string[]>([]);
   const [subCustom, setSubCustom] = useState(false);
@@ -51,7 +51,16 @@ export default function StoreCustomDesignNewPage() {
   const fileInput = useRef<HTMLInputElement>(null);
 
   function set(k: string, v: string) { setForm((p) => ({ ...p, [k]: v })); }
-  const subOptions = subCategoriesFor(form.category);
+  const subOptions = taxonomy.subCategories1For(form.category);
+
+  // Default to the manufacturer's first category once the taxonomy loads —
+  // mirrors the old EMPTY_FORM default of CATEGORIES[0], which isn't
+  // available synchronously anymore now that categories are DB-backed.
+  useEffect(() => {
+    if (taxonomy.loaded && !form.category && taxonomy.categories.length > 0) {
+      setForm((p) => ({ ...p, category: taxonomy.categories[0]! }));
+    }
+  }, [taxonomy.loaded, taxonomy.categories, form.category]);
 
   async function handleUpload(files: FileList) {
     setError(null); setUploading(true);
@@ -175,7 +184,7 @@ export default function StoreCustomDesignNewPage() {
             <div>
               <label className="text-xs font-medium text-muted-foreground">Category</label>
               <select className="mt-1 h-10 w-full rounded-lg border border-black/15 bg-white/60 px-3 text-sm" value={form.category} onChange={(e) => { set('category', e.target.value); set('subCategory', ''); setSubCustom(false); }}>
-                {CATEGORIES.map((cc) => <option key={cc} value={cc}>{cc}</option>)}
+                {taxonomy.categories.map((cc) => <option key={cc} value={cc}>{cc}</option>)}
               </select>
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'category'))} />
             </div>
@@ -241,7 +250,7 @@ export default function StoreCustomDesignNewPage() {
               <label className="text-xs font-medium text-muted-foreground">Melting / purity<Optional /></label>
               <select className="mt-1 h-10 w-full rounded-lg border border-black/15 bg-white/60 px-3 text-sm" value={form.purity} onChange={(e) => set('purity', e.target.value)}>
                 <option value="">—</option>
-                {PURITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+                {taxonomy.purities.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'purity'))} />
             </div>

@@ -15,6 +15,7 @@ import {
   cookieOptions,
 } from '@/lib/auth';
 import { listActiveProducts, getActiveProductByDesignOrId } from '@/lib/db/manufacturer-catalog';
+import { getTaxonomyForStoreId } from '@/lib/db/taxonomy';
 import {
   placeKioskOrder, placeB2bOrder,
   getKioskOrdersByBranch, getB2bOrdersByBranch, markKioskCompleted, markB2bCompleted,
@@ -132,6 +133,12 @@ branchManagerRoutes.get('/catalog/:id', branchManagerGuard, async (c) => {
   const product = await getActiveProductByDesignOrId(c.req.param('id'));
   if (!product) return sendError(c, 'not_found', 'Product not found', 404);
   return sendData(c, product);
+});
+
+// Read-only — the manufacturer's current Category/Sub-category 1/2/Purity
+// taxonomy, for catalog filter dropdowns (see lib/db/taxonomy.ts).
+branchManagerRoutes.get('/taxonomy', branchManagerGuard, async (c) => {
+  return sendData(c, await getTaxonomyForStoreId(c.get('storeId')));
 });
 
 // ── Favorites (this Store Manager's own — scoped by branchId + kind) ──────────

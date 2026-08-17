@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApi } from '@/hooks/use-api';
 import { useB2bCart } from '@/hooks/use-b2b-cart';
 import { useFavorites } from '@/hooks/use-favorites';
-import { CATEGORIES, subCategoriesFor } from '@/lib/categories';
+import { useTaxonomy } from '@/hooks/use-taxonomy';
 
 type Img = { secureUrl: string; isPrimary: boolean };
 type Product = {
@@ -71,6 +71,7 @@ function interleaveByCategory(products: Product[]): Product[] {
  */
 export default function StoreHomePage() {
   const { data, error, loading } = useApi<Product[]>('/api/store/catalog', '/store/login');
+  const taxonomy = useTaxonomy('/api/store/taxonomy');
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const router = useRouter();
   // StoreLayout's header already shows Favorites/Cart, but its labels get
@@ -118,8 +119,8 @@ export default function StoreHomePage() {
   // retailers only carry a handful, so showing every category padded the grid
   // with empty gold-gradient placeholders that had nothing behind them.
   const stockedCategories = useMemo(
-    () => CATEGORIES.filter((c) => coverByCategory[c]).sort((a, b) => (counts.byCategory[b] ?? 0) - (counts.byCategory[a] ?? 0)),
-    [coverByCategory, counts.byCategory],
+    () => taxonomy.categories.filter((c) => coverByCategory[c]).sort((a, b) => (counts.byCategory[b] ?? 0) - (counts.byCategory[a] ?? 0)),
+    [taxonomy.categories, coverByCategory, counts.byCategory],
   );
 
   function openCatalog(category: string, subCategory?: string) {
@@ -129,7 +130,7 @@ export default function StoreHomePage() {
   }
 
   function handleCategoryClick(category: string) {
-    if (subCategoriesFor(category).length > 0) setOpenCategory(category);
+    if (taxonomy.subCategories1For(category).length > 0) setOpenCategory(category);
     else openCatalog(category);
   }
 
@@ -185,6 +186,7 @@ export default function StoreHomePage() {
             categories={stockedCategories}
             coverByCategory={coverByCategory}
             countByCategory={counts.byCategory}
+            subCategoriesFor={taxonomy.subCategories1For}
             onSelect={handleCategoryClick}
           />
         </>
@@ -196,6 +198,7 @@ export default function StoreHomePage() {
           cover={coverByCategory[openCategory]}
           total={counts.byCategory[openCategory] ?? 0}
           countBySub={counts.bySub}
+          subCategoriesFor={taxonomy.subCategories1For}
           onPick={(sub) => openCatalog(openCategory, sub)}
           onViewAll={() => openCatalog(openCategory)}
           onClose={() => setOpenCategory(null)}
@@ -266,11 +269,12 @@ function CatalogueStrip({ products }: { products: Product[] }) {
  * truncated at different points.
  */
 function CategoryMosaic({
-  categories, coverByCategory, countByCategory, onSelect,
+  categories, coverByCategory, countByCategory, subCategoriesFor, onSelect,
 }: {
   categories: string[];
   coverByCategory: Record<string, string>;
   countByCategory: Record<string, number>;
+  subCategoriesFor: (category: string) => string[];
   onSelect: (category: string) => void;
 }) {
   if (categories.length === 0) return null;
@@ -362,12 +366,13 @@ function CategoryMosaic({
 
 /** Slide-over listing a category's sub-categories. */
 function SubCategoryPanel({
-  category, cover, total, countBySub, onPick, onViewAll, onClose,
+  category, cover, total, countBySub, subCategoriesFor, onPick, onViewAll, onClose,
 }: {
   category: string;
   cover?: string;
   total: number;
   countBySub: Record<string, number>;
+  subCategoriesFor: (category: string) => string[];
   onPick: (sub: string) => void;
   onViewAll: () => void;
   onClose: () => void;

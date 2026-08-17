@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { prisma } from '@/lib/prisma';
 import { listActiveProducts, getActiveProductByDesignOrId } from '@/lib/db/manufacturer-catalog';
+import { getTaxonomyForStoreId } from '@/lib/db/taxonomy';
 import { placeB2bOrder } from '@/lib/db/orders';
 import { formatStoreAddress } from '@/lib/db/stores';
 import { listFavorites, addFavorite, removeFavorite } from '@/lib/db/favorites';
@@ -35,6 +36,12 @@ storeCatalogRoutes.get('/catalog/:id', storeGuard, async (c) => {
   const product = await getActiveProductByDesignOrId(c.req.param('id'));
   if (!product) return sendError(c, 'not_found', 'Product not found', 404);
   return sendData(c, product);
+});
+
+// Read-only — the manufacturer's current Category/Sub-category 1/2/Purity
+// taxonomy, for catalog filter dropdowns (see lib/db/taxonomy.ts).
+storeCatalogRoutes.get('/taxonomy', storeGuard, async (c) => {
+  return sendData(c, await getTaxonomyForStoreId(c.get('storeId')));
 });
 
 // ── Favorites (Retailer's own — branchId is always null here) ─────────────────
