@@ -17,13 +17,19 @@ export class ApiError extends Error {
   }
 }
 
-/** Fetch a GET endpoint returning the { data } envelope. Redirects to loginPath on 401. */
+/**
+ * Fetch a GET endpoint returning the { data } envelope. Redirects to loginPath on 401.
+ * Pass an empty string as `path` to skip fetching entirely (data stays null,
+ * loading stays false) — for a request that's conditionally not applicable yet
+ * (e.g. an optional integration's endpoint, gated on a feature-flag response).
+ */
 export function useApi<T>(path: string, loginPath?: string) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!!path);
 
   const load = useCallback(async () => {
+    if (!path) { setLoading(false); return; }
     setLoading(true);
     try {
       const res = await fetch(path, { cache: 'no-store', credentials: 'same-origin' });

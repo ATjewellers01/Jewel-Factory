@@ -27,6 +27,10 @@ export type OrderSummaryItem = {
   // instead of a checkbox.
   customisedOrderId: string | null;
   customisedOrderNo: string | null;
+  // True once this item's Customised Order has been sent to O2D -- status
+  // then updates automatically (see lib/db/o2d-sync.ts's check-on-view
+  // sync), so the dropdown below is hidden in favor of read-only text.
+  o2dLinked?: boolean;
   canOpenProduct: boolean; // whether Design Code is clickable (has a linked product)
 };
 
@@ -193,7 +197,7 @@ export function OrderSummaryModal({
                       ) : <span className="text-muted-foreground">—</span>}
                     </td>
                     <td className="px-2 py-2 align-middle">
-                      {statusOptions && onStatusChange ? (
+                      {statusOptions && onStatusChange && !it.o2dLinked ? (
                         <select
                           value={it.status}
                           disabled={itemBusy === it.id}

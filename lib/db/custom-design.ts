@@ -242,6 +242,7 @@ export async function listCustomOrdersByManufacturer(manufacturerId: string) {
       karigarId: true, karigar: { select: { id: true, code: true } },
       karigarDeliveryDate: true, narration1: true, narration2: true, qc: true,
       orderType: true, orderStage: true, urgent: true,
+      o2dOrderId: true, o2dOrderNo: true, o2dSyncError: true,
     },
   });
 }
@@ -323,6 +324,47 @@ export async function getCustomOrderItemsForManufacturer(manufacturerId: string,
       manufacturerProduct: i.manufacturerProductId ? kioskProductById.get(i.manufacturerProductId) ?? null : null,
     })),
   ];
+}
+
+// Resolves the JFA-#### number of the source Catalog/Kiosk order, server-side
+// -- the same lookup app/manufacturer/custom-designs/page.tsx already does
+// client-side (by cross-referencing already-loaded order lists) for its own
+// "Reference Order No." display. The send-to-o2d route needs this server-side
+// since it has no such list already loaded. Returns null for a bespoke-request
+// origin (neither FK set) -- there's no Catalog/Kiosk order to reference.
+export async function resolveSourceOrderNumber(order: {
+  sourceB2bOrderId: string | null;
+  sourceKioskOrderId: string | null;
+}): Promise<string | null> {
+  if (order.sourceB2bOrderId) {
+    const o = await prisma.b2bOrder.findUnique({ where: { id: order.sourceB2bOrderId }, select: { orderNumber: true } });
+    return o?.orderNumber ?? null;
+  }
+  if (order.sourceKioskOrderId) {
+    const o = await prisma.kioskOrder.findUnique({ where: { id: order.sourceKioskOrderId }, select: { orderNumber: true } });
+    return o?.orderNumber ?? null;
+  }
+  return null;
+}
+
+// Records the outcome of sending this Customised Order to O2D (see
+// lib/integrations/o2d.ts and the send-to-o2d route in manufacturer-orders.ts).
+// Success clears any prior o2dSyncError; failure clears any prior success
+// fields so a retry's UI state isn't stale.
+export async function setCustomOrderO2dSync(
+  manufacturerId: string,
+  id: string,
+  result: { o2dOrderId: string; o2dOrderNo: string } | { error: string },
+) {
+  const o = await prisma.customDesignOrder.findFirst({ where: { id, manufacturerId }, select: { id: true } });
+  if (!o) return false;
+  await prisma.customDesignOrder.update({
+    where: { id },
+    data: 'error' in result
+      ? { o2dSyncError: result.error }
+      : { o2dOrderId: result.o2dOrderId, o2dOrderNo: result.o2dOrderNo, o2dSyncedAt: new Date(), o2dSyncError: null },
+  });
+  return true;
 }
 
 export async function advanceCustomOrderStatus(

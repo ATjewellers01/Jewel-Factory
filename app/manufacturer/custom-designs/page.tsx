@@ -9,7 +9,7 @@ import { KarigarOrderForm } from '@/components/orders/KarigarOrderForm';
 import { ManufacturerOrderItemModal, type OrderItemProduct } from '@/components/orders/ManufacturerOrderItemModal';
 import { OrderFilters } from '@/components/orders/OrderFilters';
 import { Button } from '@/components/ui/button';
-import { apiSend } from '@/hooks/use-api';
+import { apiPost, apiSend } from '@/hooks/use-api';
 import { formatOrderStatus, formatOrderLevelStatus } from '@/lib/format';
 import { KIOSK_B2B_STATUS_OPTIONS, matchOrder, uniqueBranchOptions } from '@/lib/order-filters';
 
@@ -40,6 +40,8 @@ type CustomOrder = {
   narration1?: string | null; narration2?: string | null; qc?: string | null;
   orderType?: string | null; orderStage?: string | null; urgent?: boolean;
   referenceOrderNumber?: string | null; // JFA-#### of the source order, resolved client-side
+  o2dOrderNo?: string | null;
+  o2dSyncError?: string | null;
 };
 
 type Item = {
@@ -83,6 +85,10 @@ export default function ManufacturerCustomDesignsPage() {
 
   async function loadList() {
     setLoading(true);
+    // Best-effort check-on-view sync (lib/db/o2d-sync.ts) — see the matching
+    // comment in app/manufacturer/orders/page.tsx. Isolated from the
+    // try/catch below so an unreachable O2D never blocks this page's load.
+    try { await apiPost('/api/manufacturer/o2d/sync-statuses'); } catch { /* best-effort */ }
     try {
       const [customRes, b2bRes, kioskRes] = await Promise.all([
         fetch('/api/manufacturer/custom-designs', { cache: 'no-store', credentials: 'same-origin' }),
@@ -132,6 +138,12 @@ export default function ManufacturerCustomDesignsPage() {
   async function toggle(order: CustomOrder) {
     if (expanded === order.id) { setExpanded(null); setItems(null); return; }
     setExpanded(order.id); setItems(null);
+    // Best-effort check-on-view sync (lib/db/o2d-sync.ts) — this items fetch
+    // reads straight from Jewel Factory's own DB, so without this the
+    // expanded card could show a stale item status until the next full
+    // page reload re-runs loadList()'s own sync. Must complete before the
+    // fetch below, not run in parallel with it.
+    try { await apiPost('/api/manufacturer/o2d/sync-statuses'); } catch { /* best-effort */ }
     const res = await fetch(`/api/manufacturer/custom-designs/${order.id}/items`, { cache: 'no-store', credentials: 'same-origin' });
     const json = (await res.json()) as { data?: Array<Record<string, unknown>> };
     setItems((json.data ?? []).map((i) => ({
@@ -314,15 +326,21 @@ export default function ManufacturerCustomDesignsPage() {
                             </button>
                             <div className="flex shrink-0 flex-col items-end gap-1">
                               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS[it.status] ?? ''}`}>{formatOrderStatus(it.status)}</span>
-                              <select
-                                value={it.status}
-                                disabled={itemBusy === it.id}
-                                onChange={(e) => { e.stopPropagation(); void setItemStatus(it, e.target.value); }}
-                                onClick={(e) => e.stopPropagation()}
-                                className="h-6 rounded border border-input bg-transparent px-1 text-[10px] disabled:opacity-50"
-                              >
-                                {ALL_ITEM_STATUSES.map((s) => <option key={s} value={s}>{formatOrderStatus(s)}</option>)}
-                              </select>
+                              {/* Once sent to O2D, status is driven automatically by the
+                                  o2d-sync check-on-view mechanism (In Process -> Ready for
+                                  Delivery -> Completed) -- a manual edit here would just get
+                                  overwritten on the next page load, so don't offer it. */}
+                              {!o.o2dOrderNo && (
+                                <select
+                                  value={it.status}
+                                  disabled={itemBusy === it.id}
+                                  onChange={(e) => { e.stopPropagation(); void setItemStatus(it, e.target.value); }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="h-6 rounded border border-input bg-transparent px-1 text-[10px] disabled:opacity-50"
+                                >
+                                  {ALL_ITEM_STATUSES.map((s) => <option key={s} value={s}>{formatOrderStatus(s)}</option>)}
+                                </select>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -363,6 +381,8 @@ export default function ManufacturerCustomDesignsPage() {
                       designNotes: o.designNotes,
                       imageUrl: o.referenceImageUrls[0] ?? o.referenceImageUrl,
                       createdAt: o.createdAt,
+                      o2dOrderNo: o.o2dOrderNo ?? null,
+                      o2dSyncError: o.o2dSyncError ?? null,
                     }}
                     items={(items ?? []).map((it) => ({
                       designNumber: it.product?.designNumber ?? it.productNameSnapshot,

@@ -150,6 +150,12 @@ export default function ManufacturerOrdersPage() {
 
   async function loadList() {
     setLoading(true);
+    // Best-effort check-on-view sync (lib/db/o2d-sync.ts) — reflects any
+    // O2D-driven item status change (In Process -> Ready for Delivery ->
+    // Completed) before the list below is fetched. Deliberately isolated
+    // from the try/catch below: if O2D is unreachable this must never
+    // block or fail the page's own load.
+    try { await apiPost('/api/manufacturer/o2d/sync-statuses'); } catch { /* best-effort */ }
     try {
       // Customised Orders (JFC-####) are deliberately NOT merged into this
       // list (2026-08-11 reversal of the 2026-08-05 merge) — once a Karigar
@@ -220,6 +226,12 @@ export default function ManufacturerOrdersPage() {
     // Retailer-custom requests have no separate detail endpoint needed here
     // — the list response already carries the full spec.
     if (row.source === 'retailer-custom') return;
+    // Best-effort check-on-view sync (lib/db/o2d-sync.ts) — this detail
+    // fetch reads straight from Jewel Factory's own DB, so without this the
+    // popup could show a stale item status until the next full page
+    // reload re-runs loadList()'s own sync. Must complete before the fetch
+    // below, not run in parallel with it.
+    try { await apiPost('/api/manufacturer/o2d/sync-statuses'); } catch { /* best-effort */ }
     const res = await fetch(endpointFor(row.source, row.id), { cache: 'no-store', credentials: 'same-origin' });
     const json = (await res.json()) as { data?: Record<string, unknown> };
     if (!json.data) return;
@@ -497,7 +509,8 @@ function CatalogOrderDetail({
           pieces: it.product?.pieces ?? null,
           karigarCode: it.product?.karigarCode ?? null,
           customisedOrderId: it.customisedOrderId ?? null,
-          customisedOrderNo: customisedOrderNumberFor(it.customisedOrderId),
+          customisedOrderNo: customisedOrderNumberFor(it.customisedOrderId)?.display ?? null,
+          o2dLinked: customisedOrderNumberFor(it.customisedOrderId)?.o2dLinked ?? false,
           canOpenProduct: !!it.product,
         })),
       }}
