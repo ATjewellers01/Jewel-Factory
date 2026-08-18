@@ -174,7 +174,22 @@ login credentials + step-by-step workflows: `docs/USER_MANUAL.md`.
 | Migrations | manual (`pnpm render-start` or Docker) | **auto-applied on container start** (`prisma migrate deploy` runs before `next start` — confirmed via container boot log: "Applying database migrations... No pending migrations to apply.") |
 | SSH | — | `ssh -i jewel-factory-prod-<date>.pem ec2-user@13.126.65.154` (Amazon Linux 2023, passwordless `sudo`, app runs in Docker — `sudo docker logs jewel-factory`, `sudo docker exec jewel-factory ...`) |
 
-**To redeploy AWS after a code fix:** the running container is tagged to a specific commit — merging to `master` alone does NOT update it. Rebuild the Docker image at the new commit and restart the container on the EC2 host (ask whoever owns the deploy script/CI for the exact rebuild command — not yet documented here as of 2026-07-24).
+**To redeploy AWS after a code fix:** the running container is tagged to a specific commit — merging to `master` alone does NOT update it. Rebuild the Docker image at the new commit and restart the container on the EC2 host:
+```bash
+cd /opt/jewel-factory-staging && \
+sudo git pull origin master && \
+JF_IMAGE="jewel-factory-prod:$(sudo git rev-parse --short HEAD)" && \
+echo "Building $JF_IMAGE" && \
+sudo docker build -t "$JF_IMAGE" . 2>&1 | tail -100 && \
+sudo docker rm -f jewel-factory && \
+sudo docker run -d --name jewel-factory --restart unless-stopped --env-file /opt/jewel-factory-staging/.env.production -p 127.0.0.1:3000:3000 "$JF_IMAGE" && \
+sleep 5 && \
+sudo docker logs jewel-factory --tail 50 && \
+sudo docker image prune -f && \
+sudo docker ps && \
+curl -sI https://13-126-65-154.sslip.io/api/health
+```
+Accepts a brief window where the old container is down before the new one is up (a 504 may show briefly during that window) — this is the accepted tradeoff for keeping the deploy simple. A zero-downtime blue/green variant was tried (2026-08-18) but reverted at the owner's request in favor of this simpler sequence.
 
 Whether Render is still actively used alongside AWS EC2, or AWS is now the sole production target, was **not confirmed this session** — check with the team before assuming Render is retired.
 
