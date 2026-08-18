@@ -10,8 +10,15 @@ import {
   listCustomOrdersByManufacturer, advanceCustomOrderStatus, setCustomOrderKarigarCode,
   updateCustomOrderKarigarForm, getCustomOrderForManufacturer, getCustomOrderItemsForManufacturer,
   listRetailerCustomRequestsByManufacturer, getRetailerCustomRequestForManufacturer,
+  setCustomOrderO2dSync, resolveSourceOrderNumber,
 } from '@/lib/db/custom-design';
 import { getStoreById } from '@/lib/db/store-read';
+import { syncO2dStatusesForManufacturer } from '@/lib/db/o2d-sync';
+import {
+  listO2dCompanies, listO2dKarigars, listO2dMeltings, listO2dDeliveryLocations, listO2dOrderStages, listO2dCategories,
+  createO2dOrder, isO2dIntegrationConfigured,
+  type O2dDesignSourceItem, type CreateO2dOrderInput,
+} from '@/lib/integrations/o2d';
 import { sendData, sendError } from '../envelope';
 import { manufacturerGuard, type AppEnv } from '../guards';
 import type { OrderStatus, CustomOrderStatus } from '@prisma/client';
@@ -198,4 +205,211 @@ manufacturerOrderRoutes.patch('/custom-designs/:id/karigar-form', jsonValidator(
   });
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, { ok: true });
+});
+
+// ── O2D order-creation integration ─────────────────────────────────────────────
+// Lets the "Assign items" flow also create a real order in O2D
+// (o2d.zold.in), server-to-server, with no manufacturer login into O2D. See
+// lib/integrations/o2d.ts. Disabled (404-free "not configured" errors)
+// until O2D_INTEGRATION_BASE_URL/SECRET are set.
+
+manufacturerOrderRoutes.get('/o2d/status', (c) => {
+  return sendData(c, { enabled: isO2dIntegrationConfigured() });
+});
+
+manufacturerOrderRoutes.get('/o2d/companies', async (c) => {
+  if (!isO2dIntegrationConfigured()) return sendError(c, 'upstream_failed', 'O2D integration is not configured.', 503);
+  try {
+    return sendData(c, await listO2dCompanies());
+  } catch (e) {
+    return sendError(c, 'upstream_failed', e instanceof Error ? e.message : 'Failed to load O2D companies', 502);
+  }
+});
+
+manufacturerOrderRoutes.get('/o2d/karigars', async (c) => {
+  if (!isO2dIntegrationConfigured()) return sendError(c, 'upstream_failed', 'O2D integration is not configured.', 503);
+  try {
+    return sendData(c, await listO2dKarigars());
+  } catch (e) {
+    return sendError(c, 'upstream_failed', e instanceof Error ? e.message : 'Failed to load O2D karigars', 502);
+  }
+});
+
+manufacturerOrderRoutes.get('/o2d/meltings', async (c) => {
+  if (!isO2dIntegrationConfigured()) return sendError(c, 'upstream_failed', 'O2D integration is not configured.', 503);
+  try {
+    return sendData(c, await listO2dMeltings());
+  } catch (e) {
+    return sendError(c, 'upstream_failed', e instanceof Error ? e.message : 'Failed to load O2D meltings', 502);
+  }
+});
+
+manufacturerOrderRoutes.get('/o2d/delivery-locations', async (c) => {
+  if (!isO2dIntegrationConfigured()) return sendError(c, 'upstream_failed', 'O2D integration is not configured.', 503);
+  try {
+    return sendData(c, await listO2dDeliveryLocations());
+  } catch (e) {
+    return sendError(c, 'upstream_failed', e instanceof Error ? e.message : 'Failed to load O2D delivery locations', 502);
+  }
+});
+
+manufacturerOrderRoutes.get('/o2d/order-stages', async (c) => {
+  if (!isO2dIntegrationConfigured()) return sendError(c, 'upstream_failed', 'O2D integration is not configured.', 503);
+  try {
+    return sendData(c, await listO2dOrderStages());
+  } catch (e) {
+    return sendError(c, 'upstream_failed', e instanceof Error ? e.message : 'Failed to load O2D order stages', 502);
+  }
+});
+
+manufacturerOrderRoutes.get('/o2d/categories', async (c) => {
+  if (!isO2dIntegrationConfigured()) return sendError(c, 'upstream_failed', 'O2D integration is not configured.', 503);
+  try {
+    return sendData(c, await listO2dCategories());
+  } catch (e) {
+    return sendError(c, 'upstream_failed', e instanceof Error ? e.message : 'Failed to load O2D categories', 502);
+  }
+});
+
+// Check-on-view sync (see lib/db/o2d-sync.ts) -- the frontend fires this on
+// page load for /manufacturer/orders and /manufacturer/custom-designs so
+// item status reflects O2D's real production stage. Deliberately tolerant:
+// returns a soft {checked:0,...} result instead of a 500 on any unexpected
+// failure (including O2D being unconfigured/unreachable), since a page must
+// never fail to load just because this best-effort sync didn't work.
+manufacturerOrderRoutes.post('/o2d/sync-statuses', async (c) => {
+  if (!isO2dIntegrationConfigured()) return sendData(c, { checked: 0, updated: 0, failed: 0 });
+  try {
+    return sendData(c, await syncO2dStatusesForManufacturer(c.get('manufacturerId')));
+  } catch {
+    return sendData(c, { checked: 0, updated: 0, failed: 0 });
+  }
+});
+
+type CustomOrderItemRow = NonNullable<Awaited<ReturnType<typeof getCustomOrderItemsForManufacturer>>>[number];
+
+function toO2dDesignSourceItem(item: CustomOrderItemRow): O2dDesignSourceItem {
+  const product = item.manufacturerProduct;
+  const snapshot = item as unknown as {
+    productNameSnapshot?: string | null;
+    productImageSnapshot?: string | null;
+    productDesignSnapshot?: string | null;
+    categorySnapshot?: string | null;
+  };
+  return {
+    designNumber: product?.designNumber ?? snapshot.productDesignSnapshot ?? snapshot.productNameSnapshot ?? 'Unknown',
+    imageUrl: product?.images?.[0]?.secureUrl ?? snapshot.productImageSnapshot ?? null,
+    category: product?.category ?? snapshot.categorySnapshot ?? null,
+    subCategory: product?.subCategory ?? null,
+    purity: product?.purity ?? item.purity ?? null,
+    weightGrams: product?.weightGrams != null ? Number(product.weightGrams) : null,
+    description: product?.description ?? null,
+    pieces: null,
+  };
+}
+
+const SendToO2dBody = z.object({
+  companyId: z.string().min(1),
+  o2dKarigarId: z.string().min(1),
+  deliveryLocation: z.string().min(1),
+  melting: z.string().min(1),
+  orderStage: z.string().min(1),
+  orderType: z.enum(['NORMAL', 'URGENT', 'STOCK']),
+  // Picked explicitly from O2D's own category master list / a Yes-No select
+  // in the "Send to O2D" section -- replaces the old pass-through of this
+  // project's own free-text category/meena fields, which weren't guaranteed
+  // to match a value O2D actually recognizes.
+  category: z.string().min(1),
+  meena: z.enum(['Yes', 'No']),
+});
+
+manufacturerOrderRoutes.post('/custom-designs/:id/send-to-o2d', jsonValidator(SendToO2dBody), async (c) => {
+  if (!isO2dIntegrationConfigured()) return sendError(c, 'upstream_failed', 'O2D integration is not configured.', 503);
+  const manufacturerId = c.get('manufacturerId');
+  const id = c.req.param('id');
+  const { companyId, o2dKarigarId, deliveryLocation, melting, orderStage, orderType, category, meena } = c.req.valid('json');
+
+  const order = await getCustomOrderForManufacturer(manufacturerId, id);
+  if (!order) return sendError(c, 'not_found', 'Order not found', 404);
+
+  // Mirrors O2D's own Add New Order form's required fields -- server-side
+  // backstop behind AssignKarigarModal's client-side check, so a request
+  // that skips the UI (or hits a stale client) can't create a nonsense
+  // (zero-weight, no dates) order in O2D either. category/meena are now
+  // zod-enforced above via the body, not checked against `order` here.
+  const missing: string[] = [];
+  if (!order.quantity?.trim()) missing.push('Quantity');
+  if (order.weightGramsMin == null || Number(order.weightGramsMin) <= 0) missing.push('From Weight');
+  if (order.weightGramsMax == null || Number(order.weightGramsMax) <= 0) missing.push('To Weight');
+  if (order.totalWeightGrams == null || Number(order.totalWeightGrams) <= 0) missing.push('Total Weight');
+  if (!order.deliveryDate) missing.push('Client Delivery Date');
+  if (!order.karigarDeliveryDate) missing.push('Karigar Delivery Date');
+  if (missing.length > 0) {
+    return sendError(c, 'bad_request', `Required before sending to O2D: ${missing.join(', ')}.`, 400);
+  }
+  // Narrows for TS below -- unreachable given the missing[] check above.
+  if (!order.deliveryDate || !order.karigarDeliveryDate) {
+    return sendError(c, 'bad_request', 'Delivery dates are required.', 400);
+  }
+
+  const items = await getCustomOrderItemsForManufacturer(manufacturerId, id);
+  const designSourceItems = (items ?? []).map(toO2dDesignSourceItem);
+  const images = [...new Set(designSourceItems.map((i) => i.imageUrl).filter((u): u is string => !!u))];
+  const sourceOrderRef = await resolveSourceOrderNumber(order);
+
+  const payload: CreateO2dOrderInput = {
+    companyId,
+    karigarId: o2dKarigarId,
+    // category/meena come from the "Send to O2D" section's own pickers
+    // (validated above), not this project's own category/meena fields on
+    // `order` -- see the SendToO2dBody comment.
+    category,
+    quantityText: order.quantity ?? undefined,
+    fromWeight: order.weightGramsMin != null ? Number(order.weightGramsMin) : 0,
+    toWeight: order.weightGramsMax != null ? Number(order.weightGramsMax) : 0,
+    totalWeight: order.totalWeightGrams != null ? Number(order.totalWeightGrams) : undefined,
+    sampleWeight: order.sampleWeightGrams != null ? Number(order.sampleWeightGrams) : undefined,
+    meena,
+    length: order.length ?? undefined,
+    size: order.size ?? undefined,
+    broadness: order.broadness ?? undefined,
+    screw: order.screw ?? undefined,
+    karigarNotes: order.karigarNotes ?? undefined,
+    narration1: order.narration1 ?? undefined,
+    narration2: order.narration2 ?? undefined,
+    qc: order.qc ?? undefined,
+    // melting/orderStage/orderType are picked explicitly in the "Send to
+    // O2D" section from O2D's own master lists / enum (not this project's
+    // own free-text orderType/orderStage fields, which keep serving their
+    // existing internal/PDF purposes untouched) -- see AssignKarigarModal.tsx.
+    orderType,
+    melting,
+    orderStage,
+    expectedDeliveryDate: order.deliveryDate.toISOString(),
+    karigarDeliveryDate: order.karigarDeliveryDate.toISOString(),
+    // O2D's own Add Order form sets dueDate to the same picked date as
+    // expectedDeliveryDate -- without this, O2D's own "Delivery Date"
+    // table column stays blank for every order created via this integration.
+    dueDate: order.deliveryDate.toISOString(),
+    deliveryLocation,
+    // O2D's existing "Order No. Reference" field (its own description
+    // column, relabeled in O2D's Edit dialog) -- the JFA-#### of the
+    // Catalog/Kiosk order these items came from, so it's visible in O2D
+    // without any new O2D-side field.
+    description: sourceOrderRef ?? undefined,
+    images,
+    designSourceItems,
+  };
+
+  try {
+    const result = await createO2dOrder(payload);
+    await setCustomOrderO2dSync(manufacturerId, id, { o2dOrderId: result.id, o2dOrderNo: result.orderNo });
+    return sendData(c, { o2dOrderId: result.id, o2dOrderNo: result.orderNo });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Failed to create O2D order';
+    // Don't swallow this — a "sent" order that wasn't actually sent has
+    // burned this codebase before (see submitAssignment's 2026-08-11 fix).
+    await setCustomOrderO2dSync(manufacturerId, id, { error: message });
+    return sendError(c, 'upstream_failed', message, 502);
+  }
 });

@@ -12,24 +12,33 @@ import type { OrderItemProduct } from '@/components/orders/ManufacturerOrderItem
  * Order: JFC-####" badge on an assigned item (2026-08-11) — the Customised
  * Orders list itself no longer merges into this page, so this fetches each
  * one lazily and caches it (a module-level cache since the same order can
- * be assigned to from multiple item rows/orders in one session).
+ * be assigned to from multiple item rows/orders in one session). Also
+ * exposes whether it's been sent to O2D, so the caller can make its item
+ * status read-only there (driven automatically by the o2d-sync
+ * check-on-view mechanism, see lib/db/o2d-sync.ts).
  */
-const orderNumberCache = new Map<string, string>();
+type CustomisedOrderInfo = { display: string; o2dLinked: boolean };
+const orderInfoCache = new Map<string, CustomisedOrderInfo>();
 
 export function useCustomisedOrderNumbers(customisedOrderIds: string[]) {
   const [, forceRender] = useState(0);
   const fetchingRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    const toFetch = customisedOrderIds.filter((id) => !orderNumberCache.has(id) && !fetchingRef.current.has(id));
+    const toFetch = customisedOrderIds.filter((id) => !orderInfoCache.has(id) && !fetchingRef.current.has(id));
     if (toFetch.length === 0) return;
     toFetch.forEach((id) => fetchingRef.current.add(id));
     (async () => {
       await Promise.all(toFetch.map(async (id) => {
         try {
           const res = await fetch(`/api/manufacturer/custom-designs/${id}`, { credentials: 'same-origin', cache: 'no-store' });
-          const json = (await res.json()) as { data?: { orderNumber?: string } };
-          if (json.data?.orderNumber) orderNumberCache.set(id, json.data.orderNumber);
+          const json = (await res.json()) as { data?: { orderNumber?: string; o2dOrderNo?: string | null } };
+          // Once sent to O2D, that's the number the manufacturer actually
+          // needs to cross-reference against O2D's own order list -- show
+          // it instead of the internal JFC-#### (still the fallback for an
+          // order that hasn't been sent, or wasn't sent successfully).
+          const display = json.data?.o2dOrderNo || json.data?.orderNumber;
+          if (display) orderInfoCache.set(id, { display, o2dLinked: !!json.data?.o2dOrderNo });
         } catch {
           // best-effort — badge falls back to "Assigned" if this fails
         } finally {
@@ -40,7 +49,7 @@ export function useCustomisedOrderNumbers(customisedOrderIds: string[]) {
     })();
   }, [customisedOrderIds]);
 
-  return (id: string | null | undefined) => (id ? orderNumberCache.get(id) ?? null : null);
+  return (id: string | null | undefined): CustomisedOrderInfo | null => (id ? orderInfoCache.get(id) ?? null : null);
 }
 
 export type CatalogOrderItem = {
@@ -68,6 +77,15 @@ export function useCatalogOrderAssignment(orderId: string, source: 'b2b' | 'kios
   const [pickedKarigar, setPickedKarigar] = useState<Karigar | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  // Set once assign-karigar + karigar-form succeed, so a retry after a
+  // failed send-to-o2d call (see submitAssignment below) doesn't redo them
+  // and create a second CustomDesignOrder for the same items. Cleared
+  // whenever the modal closes, success or cancel, so the next "Assign
+  // items" click on a fresh selection always starts clean.
+  const createdOrderIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!modalOpen) createdOrderIdRef.current = null;
+  }, [modalOpen]);
 
   const { filteredCodes, allCodes } = useKarigarCodes(orderId, source, /* filtered */ true);
   const unassigned = useMemo(() => items.filter((i) => !i.customisedOrderId), [items]);
@@ -93,32 +111,59 @@ export function useCatalogOrderAssignment(orderId: string, source: 'b2b' | 'kios
   async function submitAssignment(fields: AssignKarigarManualFields, onAssigned: () => void) {
     setAssigning(true);
     try {
-      const created = (await apiPost(`${endpointBase}/${orderId}/assign-karigar`, {
-        itemIds: [...selected],
-        karigarId: pickedKarigar?.id ?? null,
-        karigarCode: pickedKarigar?.code ?? null,
-      })) as { id: string };
-      // NOT best-effort — if this fails, the manufacturer's manually-entered
-      // fields (Meena, Screw, Narration, etc.) are silently lost even though
-      // the order itself was created. Surface the error instead (2026-08-11
-      // fix — a silent .catch(() => {}) here previously masked real PATCH
-      // failures, so the order existed but every manual field stayed null).
-      await apiSend('PATCH', `/api/manufacturer/custom-designs/${created.id}/karigar-form`, {
-        category: fields.category || undefined,
-        quantity: fields.quantity || null,
-        purity: fields.purity || null,
-        weightGramsMin: fields.weightFrom ? Number(fields.weightFrom) : null,
-        weightGramsMax: fields.weightTo ? Number(fields.weightTo) : null,
-        size: fields.size || null,
-        sampleWeightGrams: fields.sampleWeight ? Number(fields.sampleWeight) : null,
-        totalWeightGrams: fields.totalWeight ? Number(fields.totalWeight) : null,
-        deliveryDate: fields.deliveryDate || null,
-        karigarDeliveryDate: fields.karigarDeliveryDate || null,
-        meena: fields.meena || null, length: fields.length || null, broadness: fields.broadness || null, screw: fields.screw || null,
-        karigarNotes: fields.karigarNotes || null,
-        narration1: fields.narration1 || null, narration2: fields.narration2 || null, qc: fields.qc || null,
-        orderType: fields.orderType || null, orderStage: fields.orderStage || null, urgent: fields.urgent,
-      });
+      // Skip re-creating the internal CustomDesignOrder on a retry (see
+      // createdOrderIdRef above) — only happens when a prior attempt got
+      // this far but then failed sending to O2D below.
+      let createdId = createdOrderIdRef.current;
+      if (!createdId) {
+        const created = (await apiPost(`${endpointBase}/${orderId}/assign-karigar`, {
+          itemIds: [...selected],
+          // pickedKarigar is only ever set via the modal's OWN internal
+          // Karigar picker, which is hidden once O2D sending is in play (the
+          // O2D Karigar picker takes over that job) -- fields.o2dKarigarCode
+          // is the fallback in that case, see AssignKarigarModal.tsx.
+          karigarId: pickedKarigar?.id ?? null,
+          karigarCode: pickedKarigar?.code ?? (fields.o2dKarigarCode || null),
+        })) as { id: string };
+        createdId = created.id;
+        createdOrderIdRef.current = createdId;
+        // NOT best-effort — if this fails, the manufacturer's manually-entered
+        // fields (Meena, Screw, Narration, etc.) are silently lost even though
+        // the order itself was created. Surface the error instead (2026-08-11
+        // fix — a silent .catch(() => {}) here previously masked real PATCH
+        // failures, so the order existed but every manual field stayed null).
+        await apiSend('PATCH', `/api/manufacturer/custom-designs/${createdId}/karigar-form`, {
+          category: fields.category || undefined,
+          quantity: fields.quantity || null,
+          purity: fields.purity || null,
+          weightGramsMin: fields.weightFrom ? Number(fields.weightFrom) : null,
+          weightGramsMax: fields.weightTo ? Number(fields.weightTo) : null,
+          size: fields.size || null,
+          sampleWeightGrams: fields.sampleWeight ? Number(fields.sampleWeight) : null,
+          totalWeightGrams: fields.totalWeight ? Number(fields.totalWeight) : null,
+          deliveryDate: fields.deliveryDate || null,
+          karigarDeliveryDate: fields.karigarDeliveryDate || null,
+          meena: fields.meena || null, length: fields.length || null, broadness: fields.broadness || null, screw: fields.screw || null,
+          karigarNotes: fields.karigarNotes || null,
+          narration1: fields.narration1 || null, narration2: fields.narration2 || null, qc: fields.qc || null,
+          orderType: fields.orderType || null, orderStage: fields.orderStage || null, urgent: fields.urgent,
+        });
+      }
+      // Also not best-effort, same reasoning — if O2D creation fails, keep
+      // the modal open (createdOrderIdRef stays set) so Submit retries just
+      // this step instead of silently leaving the order un-synced.
+      if (fields.o2dCompanyId && fields.o2dKarigarId && fields.deliveryLocation && fields.o2dMelting && fields.o2dOrderStage && fields.o2dOrderType && fields.o2dCategory && fields.o2dMeena) {
+        await apiPost(`/api/manufacturer/custom-designs/${createdId}/send-to-o2d`, {
+          companyId: fields.o2dCompanyId,
+          o2dKarigarId: fields.o2dKarigarId,
+          deliveryLocation: fields.deliveryLocation,
+          melting: fields.o2dMelting,
+          orderStage: fields.o2dOrderStage,
+          orderType: fields.o2dOrderType,
+          category: fields.o2dCategory,
+          meena: fields.o2dMeena,
+        });
+      }
       setSelected(new Set());
       setPickedKarigar(null);
       setModalOpen(false);
@@ -195,6 +240,7 @@ export function CatalogOrderAssignModal({
         subCategory: it.product?.subCategory ?? null,
         weightGrams: it.product?.weightGrams ?? null,
         purity: it.purity,
+        description: it.product?.description ?? null,
       }))}
       onSubmit={(fields) => assignment.submitAssignment(fields, onAssigned)}
       onClose={() => assignment.setModalOpen(false)}

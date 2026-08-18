@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 import { AssignKarigarModal, type AssignKarigarManualFields } from '@/components/orders/AssignKarigarModal';
 import { Button } from '@/components/ui/button';
-import { apiSend } from '@/hooks/use-api';
+import { apiPost, apiSend } from '@/hooks/use-api';
 import { downloadKarigarOrderPdf, type KarigarPdfOrder } from '@/lib/karigar-pdf';
 
 export type KarigarOrderFormData = {
@@ -41,6 +41,8 @@ export type KarigarOrderFormData = {
   designNotes: string | null;
   imageUrl: string | null;
   createdAt?: string | null;
+  o2dOrderNo?: string | null;
+  o2dSyncError?: string | null;
 };
 
 export type KarigarOrderFormItem = {
@@ -82,6 +84,23 @@ export function KarigarOrderForm({ order, items, onSaved }: { order: KarigarOrde
       narration1: fields.narration1 || null, narration2: fields.narration2 || null, qc: fields.qc || null,
       orderType: fields.orderType || null, orderStage: fields.orderStage || null, urgent: fields.urgent,
     });
+    // Only for a Customised Order that was never successfully sent to O2D
+    // (AssignKarigarModal hides these fields once o2dOrderNo is set, so
+    // fields.o2dCompanyId etc. only ever arrive here for that case) — this
+    // is what lets an old, pre-integration JFC-#### (or one whose earlier
+    // send failed) be sent/retried from this Edit screen.
+    if (fields.o2dCompanyId && fields.o2dKarigarId && fields.deliveryLocation && fields.o2dMelting && fields.o2dOrderStage && fields.o2dOrderType && fields.o2dCategory && fields.o2dMeena) {
+      await apiPost(`/api/manufacturer/custom-designs/${order.id}/send-to-o2d`, {
+        companyId: fields.o2dCompanyId,
+        o2dKarigarId: fields.o2dKarigarId,
+        deliveryLocation: fields.deliveryLocation,
+        melting: fields.o2dMelting,
+        orderStage: fields.o2dOrderStage,
+        orderType: fields.o2dOrderType,
+        category: fields.o2dCategory,
+        meena: fields.o2dMeena,
+      });
+    }
     setEditing(false);
     onSaved();
   }
@@ -124,25 +143,32 @@ export function KarigarOrderForm({ order, items, onSaved }: { order: KarigarOrde
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)}>Edit</Button>
-      <div className="relative">
-        <Button type="button" size="sm" variant="outline" disabled={pdfBusy !== null} onClick={() => setPdfMenuOpen((v) => !v)}>
-          {pdfBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'PDF ▾'}
-        </Button>
-        {pdfMenuOpen && (
-          <div className="absolute left-0 top-full z-10 mt-1 w-40 rounded-md border bg-card shadow-lg">
-            <button type="button" onClick={() => void generatePdf('customer')} className="block w-full px-3 py-2 text-left text-sm hover:bg-muted/50">Customer PDF</button>
-            <button type="button" onClick={() => void generatePdf('karigar')} className="block w-full px-3 py-2 text-left text-sm hover:bg-muted/50">Karigar PDF</button>
-          </div>
-        )}
-      </div>
+    <div className="space-y-2">
+      {order.o2dOrderNo ? (
+        <p className="text-xs font-semibold text-emerald-700">O2D Order No.: {order.o2dOrderNo}</p>
+      ) : order.o2dSyncError ? (
+        <p className="text-xs text-red-600">Not sent to O2D — last attempt failed: {order.o2dSyncError}</p>
+      ) : null}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)}>Edit</Button>
+        <div className="relative">
+          <Button type="button" size="sm" variant="outline" disabled={pdfBusy !== null} onClick={() => setPdfMenuOpen((v) => !v)}>
+            {pdfBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'PDF ▾'}
+          </Button>
+          {pdfMenuOpen && (
+            <div className="absolute left-0 top-full z-10 mt-1 w-40 rounded-md border bg-card shadow-lg">
+              <button type="button" onClick={() => void generatePdf('customer')} className="block w-full px-3 py-2 text-left text-sm hover:bg-muted/50">Customer PDF</button>
+              <button type="button" onClick={() => void generatePdf('karigar')} className="block w-full px-3 py-2 text-left text-sm hover:bg-muted/50">Karigar PDF</button>
+            </div>
+          )}
+        </div>
 
-      {editing && (
+        {editing && (
         <AssignKarigarModal
           title={`Edit ${order.orderNumber}`}
           submitLabel="Save"
           karigarLabel={order.karigarCode}
+          o2dSyncStatus={{ orderNo: order.o2dOrderNo ?? null, error: order.o2dSyncError ?? null }}
           autoFill={{
             category: order.category, subCategory: order.subCategory, quantity: order.quantity,
             purity: order.purity, weightGramsMin: order.weightGramsMin, weightGramsMax: order.weightGramsMax,
@@ -166,11 +192,13 @@ export function KarigarOrderForm({ order, items, onSaved }: { order: KarigarOrde
             subCategory: it.subCategory,
             weightGrams: it.weightGrams,
             purity: it.purity,
+            description: it.description,
           }))}
           onSubmit={saveEdit}
           onClose={() => setEditing(false)}
         />
-      )}
+        )}
+      </div>
     </div>
   );
 }

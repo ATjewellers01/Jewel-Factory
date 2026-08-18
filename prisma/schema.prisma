@@ -782,6 +782,16 @@ model CustomDesignOrder {
   karigarCode    String?           @map("karigar_code")
   karigarId      String?           @map("karigar_id")
   karigar        Karigar?          @relation(fields: [karigarId], references: [id])
+
+  // O2D integration linkage (see lib/integrations/o2d.ts) — set once this
+  // assignment has also been created as a real order in O2D. Null means
+  // either the order predates the integration or the sync attempt failed
+  // (see o2dSyncError, which drives a retry affordance).
+  o2dOrderId    String?   @map("o2d_order_id")
+  o2dOrderNo    String?   @map("o2d_order_no")
+  o2dSyncedAt   DateTime? @map("o2d_synced_at")
+  o2dSyncError  String?   @map("o2d_sync_error")
+
   createdAt      DateTime          @default(now()) @map("created_at")
   updatedAt      DateTime          @updatedAt @map("updated_at")
 

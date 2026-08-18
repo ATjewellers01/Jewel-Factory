@@ -38,6 +38,12 @@ const ServerEnvSchema = z.object({
   AI_FEATURES_URL: z.string().optional(),
   AI_FEATURES_API_KEY: z.string().optional(),
 
+  // O2D order-creation integration (lib/integrations/o2d.ts) -- server-to-server,
+  // shared secret, no manufacturer login. Optional: if unset, "Assign items" keeps
+  // working exactly as before (internal Customised Order only, no O2D order).
+  O2D_INTEGRATION_BASE_URL: z.string().optional(),
+  O2D_INTEGRATION_SECRET: z.string().optional(),
+
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().optional(),
   SMTP_USER: z.string().optional(),
