@@ -18,6 +18,7 @@
     "db:studio": "prisma studio",
     "migrate:categories": "tsx prisma/migrate-categories.ts",
     "migrate:branches": "tsx prisma/migrate-branches.ts",
+    "backfill:set-subcategory2": "tsx prisma/backfill-set-subcategory2.ts",
     "migrate:cloudinary-to-s3": "tsx scripts/migrate_cloudinary_to_s3.ts",
     "migrate:qdrant-to-pgvector": "tsx scripts/migrate_qdrant_to_pgvector.ts"
   },
