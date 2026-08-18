@@ -88,7 +88,8 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   // list. Loaded once; category/subCategory/subCategory2/purity in `form`
   // stay NAME strings (that's what ManufacturerProduct's columns store), the
   // EditableSelect dropdowns below resolve name <-> id against this tree.
-  type TaxonomyCategory = { id: string; name: string; subCategories1: TaxonomyOption[]; subCategories2: TaxonomyOption[] };
+  type TaxonomySubCategory1 = TaxonomyOption & { subCategories2: TaxonomyOption[] };
+  type TaxonomyCategory = { id: string; name: string; subCategories1: TaxonomySubCategory1[] };
   const [categories, setCategories] = useState<TaxonomyCategory[]>([]);
   const [purities, setPurities] = useState<TaxonomyOption[]>([]);
   const [taxonomyLoaded, setTaxonomyLoaded] = useState(false);
@@ -108,11 +109,12 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
 
   const selectedCategory = categories.find((c) => c.name === form.category) ?? null;
   const subCategory1Options = selectedCategory?.subCategories1 ?? [];
-  const subCategory2Options = selectedCategory?.subCategories2 ?? [];
+  const selectedSubCategory1 = subCategory1Options.find((s) => s.name === form.subCategory) ?? null;
+  const subCategory2Options = selectedSubCategory1?.subCategories2 ?? [];
 
   async function addCategory(name: string): Promise<TaxonomyOption> {
     const created = (await apiPost('/api/manufacturer/taxonomy/categories', { name })) as { id: string; name: string };
-    setCategories((prev) => [...prev, { id: created.id, name: created.name, subCategories1: [], subCategories2: [] }]);
+    setCategories((prev) => [...prev, { id: created.id, name: created.name, subCategories1: [] }]);
     return created;
   }
   async function removeCategoryOption(option: TaxonomyOption) {
@@ -128,7 +130,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   async function addSubCategory1(name: string): Promise<TaxonomyOption> {
     if (!selectedCategory) throw new Error('Select a category first');
     const created = (await apiPost('/api/manufacturer/taxonomy/sub-categories-1', { categoryId: selectedCategory.id, name })) as TaxonomyOption;
-    setCategories((prev) => prev.map((c) => (c.id === selectedCategory.id ? { ...c, subCategories1: [...c.subCategories1, created] } : c)));
+    setCategories((prev) => prev.map((c) => (c.id === selectedCategory.id ? { ...c, subCategories1: [...c.subCategories1, { ...created, subCategories2: [] }] } : c)));
     return created;
   }
   async function removeSubCategory1Option(option: TaxonomyOption) {
@@ -141,10 +143,15 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
     return { ok: true };
   }
 
+  // Sub-category 2 is scoped to a Sub-category 1 (2026-08-18) — e.g. Set's
+  // "Long Set" and "Short Set" each keep their own independent list.
   async function addSubCategory2(name: string): Promise<TaxonomyOption> {
-    if (!selectedCategory) throw new Error('Select a category first');
-    const created = (await apiPost('/api/manufacturer/taxonomy/sub-categories-2', { categoryId: selectedCategory.id, name })) as TaxonomyOption;
-    setCategories((prev) => prev.map((c) => (c.id === selectedCategory.id ? { ...c, subCategories2: [...c.subCategories2, created] } : c)));
+    if (!selectedSubCategory1) throw new Error('Select a sub-category 1 first');
+    const created = (await apiPost('/api/manufacturer/taxonomy/sub-categories-2', { subCategory1Id: selectedSubCategory1.id, name })) as TaxonomyOption;
+    setCategories((prev) => prev.map((c) => ({
+      ...c,
+      subCategories1: c.subCategories1.map((s) => (s.id === selectedSubCategory1.id ? { ...s, subCategories2: [...s.subCategories2, created] } : s)),
+    })));
     return created;
   }
   async function removeSubCategory2Option(option: TaxonomyOption) {
@@ -153,7 +160,10 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
       const json = (await res.json().catch(() => null)) as { error?: { message: string } } | null;
       return { ok: false, error: json?.error?.message ?? 'Could not remove' };
     }
-    setCategories((prev) => prev.map((c) => ({ ...c, subCategories2: c.subCategories2.filter((s) => s.id !== option.id) })));
+    setCategories((prev) => prev.map((c) => ({
+      ...c,
+      subCategories1: c.subCategories1.map((s) => ({ ...s, subCategories2: s.subCategories2.filter((s2) => s2.id !== option.id) })),
+    })));
     return { ok: true };
   }
 
@@ -598,7 +608,10 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
               value={subCategory1Options.find((s) => s.name === form.subCategory)?.id ?? ''}
               options={subCategory1Options}
               disabled={!form.category}
-              onPick={(o) => setForm((p) => ({ ...p, subCategory: o?.name ?? '' }))}
+              // Sub-category 2's list depends on which Sub-category 1 is
+              // selected, so a stale subCategory2 value from the previous
+              // Sub-category 1 wouldn't be valid in the new one's list.
+              onPick={(o) => setForm((p) => ({ ...p, subCategory: o?.name ?? '', subCategory2: '' }))}
               onAdd={addSubCategory1}
               onRemove={removeSubCategory1Option}
             />
@@ -610,7 +623,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
               placeholder="—"
               value={subCategory2Options.find((s) => s.name === form.subCategory2)?.id ?? ''}
               options={subCategory2Options}
-              disabled={!form.category}
+              disabled={!form.subCategory}
               onPick={(o) => setForm((p) => ({ ...p, subCategory2: o?.name ?? '' }))}
               onAdd={addSubCategory2}
               onRemove={removeSubCategory2Option}

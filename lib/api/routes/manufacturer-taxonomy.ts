@@ -64,11 +64,13 @@ manufacturerTaxonomyRoutes.delete('/taxonomy/sub-categories-1/:id', async (c) =>
   return sendData(c, { ok: true });
 });
 
-// ── Sub-category 2 (scoped to a category, its own independent list) ─────────
-manufacturerTaxonomyRoutes.post('/taxonomy/sub-categories-2', jsonValidator(SubCategoryBody), async (c) => {
-  const { categoryId, name } = c.req.valid('json');
+// ── Sub-category 2 (scoped to a Sub-category 1, its own independent list) ───
+const SubCategory2Body = z.object({ subCategory1Id: z.string().uuid(), name: z.string().min(1).max(80) });
+
+manufacturerTaxonomyRoutes.post('/taxonomy/sub-categories-2', jsonValidator(SubCategory2Body), async (c) => {
+  const { subCategory1Id, name } = c.req.valid('json');
   try {
-    return sendData(c, await addManufacturerSubCategory2(c.get('manufacturerId'), categoryId, name), 201);
+    return sendData(c, await addManufacturerSubCategory2(c.get('manufacturerId'), subCategory1Id, name), 201);
   } catch (e) {
     return sendError(c, 'bad_request', e instanceof Error ? e.message : 'Could not add sub-category', 400);
   }

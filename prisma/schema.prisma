@@ -901,7 +901,6 @@ model ManufacturerCategory {
   createdAt      DateTime     @default(now()) @map("created_at")
 
   subCategories1 ManufacturerSubCategory1[]
-  subCategories2 ManufacturerSubCategory2[]
 
   @@unique([manufacturerId, name])
   @@map("manufacturer_categories")
@@ -919,26 +918,30 @@ model ManufacturerSubCategory1 {
   sortOrder      Int                  @default(0) @map("sort_order")
   createdAt      DateTime             @default(now()) @map("created_at")
 
+  subCategories2 ManufacturerSubCategory2[]
+
   @@unique([categoryId, name])
   @@index([manufacturerId])
   @@map("manufacturer_sub_categories_1")
 }
 
-// "Sub-category 2" — also scoped to one parent ManufacturerCategory (its own
-// independent list per category — NOT shared/global, and no longer the fixed
-// Plain/Studded pair). Weight fields are now always Gross+Net for every
-// category regardless of which Sub-category 2 value (if any) is picked.
+// "Sub-category 2" — scoped to one parent ManufacturerSubCategory1 (2026-08-18:
+// moved from category-level to sub-category-1-level — e.g. Set's "Long Set" and
+// "Short Set" each get their own independent Sub-category 2 list, not a shared
+// one). NOT the fixed Plain/Studded pair anymore. Weight fields are always
+// Gross+Net for every category regardless of which Sub-category 2 value (if
+// any) is picked.
 model ManufacturerSubCategory2 {
-  id             String               @id @default(uuid())
-  manufacturerId String               @map("manufacturer_id")
-  manufacturer   Manufacturer         @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
-  categoryId     String               @map("category_id")
-  category       ManufacturerCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  name           String
-  sortOrder      Int                  @default(0) @map("sort_order")
-  createdAt      DateTime             @default(now()) @map("created_at")
+  id              String                   @id @default(uuid())
+  manufacturerId  String                   @map("manufacturer_id")
+  manufacturer    Manufacturer             @relation(fields: [manufacturerId], references: [id], onDelete: Cascade)
+  subCategory1Id  String                   @map("sub_category_1_id")
+  subCategory1    ManufacturerSubCategory1 @relation(fields: [subCategory1Id], references: [id], onDelete: Cascade)
+  name            String
+  sortOrder       Int                      @default(0) @map("sort_order")
+  createdAt       DateTime                 @default(now()) @map("created_at")
 
-  @@unique([categoryId, name])
+  @@unique([subCategory1Id, name])
   @@index([manufacturerId])
   @@map("manufacturer_sub_categories_2")
 }
