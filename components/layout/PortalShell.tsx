@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 import { LogOut, Menu, X } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -143,10 +144,10 @@ function NavItems({ items, pathname }: { items: PortalNavItem[]; pathname: strin
 }
 
 function BrandLogo({ src, fallback, name }: { src: string; fallback: string; name: string }) {
+  const [errored, setErrored] = useState(false);
   return (
-    <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#eadfca] bg-[#fbf6ea] p-1.5 shadow-sm">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src || fallback} alt={`${name} logo`} className="h-full w-full object-contain" onError={(event) => { event.currentTarget.src = fallback; }} />
+    <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#eadfca] bg-[#fbf6ea] p-1.5 shadow-sm">
+      <Image src={errored ? fallback : (src || fallback)} alt={`${name} logo`} fill className="object-contain" onError={() => setErrored(true)} />
     </span>
   );
 }

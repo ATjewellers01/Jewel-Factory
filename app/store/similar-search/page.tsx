@@ -82,8 +82,10 @@ export default function RetailerSimilarSearchPage() {
           className={`group flex flex-col items-center justify-center rounded-3xl border-2 border-dashed px-5 py-10 text-center transition-colors sm:px-6 sm:py-12 ${dragOver ? 'border-[#c9a84c] bg-[#c9a84c]/5' : 'border-[#c9a84c]/40 bg-[#fffdf8]'}`}
         >
           {preview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="query" className="h-28 w-28 rounded-2xl border object-cover shadow-sm" />
+            <div className="relative h-28 w-28 overflow-hidden rounded-2xl border shadow-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element -- data: URI (FileReader.readAsDataURL), next/image doesn't optimize data URIs */}
+              <img src={preview} alt="query" className="h-full w-full object-cover" />
+            </div>
           ) : (
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-transform group-hover:scale-105">
               <Camera className="h-7 w-7" />

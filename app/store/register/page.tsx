@@ -9,6 +9,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
@@ -330,9 +331,8 @@ export default function StoreRegisterPage() {
                     </div>
 
                     {form.logoUrl && logoMode === 'upload' ? (
-                      <div className="relative inline-block w-fit">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={form.logoUrl} alt="Store logo" className="h-24 w-24 rounded-xl border border-[#ded5ca] bg-white object-contain p-1.5" />
+                      <div className="relative h-24 w-24">
+                        <Image src={form.logoUrl} alt="Store logo" width={96} height={96} className="h-24 w-24 rounded-xl border border-[#ded5ca] bg-white object-contain p-1.5" />
                         <button type="button" onClick={() => setForm((prev) => ({ ...prev, logoUrl: '' }))}
                           className="absolute -right-2 -top-2 rounded-full bg-black/70 p-1 text-white transition-colors hover:bg-black" aria-label="Remove logo">
                           <X className="h-3 w-3" />

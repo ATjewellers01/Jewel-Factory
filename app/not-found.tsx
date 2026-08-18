@@ -1,4 +1,5 @@
 import { ArrowRight, Home, Search } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { PublicFooter } from '@/components/landing/PublicFooter';
@@ -13,8 +14,7 @@ export default function NotFound() {
 
       <main className="relative flex flex-1 items-center overflow-hidden">
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(56rem_36rem_at_50%_-10%,rgba(201,168,76,0.16),transparent_60%)]" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/JF.avif" alt="" aria-hidden className="pointer-events-none absolute right-[-6%] top-1/2 -z-10 hidden w-[34rem] max-w-none -translate-y-1/2 opacity-[0.05] lg:block" />
+        <Image src="/JF.avif" alt="" aria-hidden width={544} height={544} className="pointer-events-none absolute right-[-6%] top-1/2 -z-10 hidden w-[34rem] max-w-none -translate-y-1/2 opacity-[0.05] lg:block" />
 
         <div className="mx-auto w-full max-w-3xl px-4 py-20 text-center sm:px-6 sm:py-28">
           <p className="font-display text-7xl font-normal tracking-tight text-[#c9a84c] sm:text-8xl">404</p>

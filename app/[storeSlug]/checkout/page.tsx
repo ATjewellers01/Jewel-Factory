@@ -1,6 +1,7 @@
 'use client';
 
 import { CheckCircle2, Loader2, MapPin, Minus, Plus, ShoppingBag, Store, Trash2 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -90,8 +91,7 @@ export default function KioskCheckoutPage() {
             {cart.items.map((i) => (
               <div key={i.productId} className="flex items-center gap-3 px-4 py-3">
                 {i.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={i.imageUrl} alt={i.name} className="h-12 w-12 flex-shrink-0 rounded-lg border object-cover" />
+                  <Image src={i.imageUrl} alt={i.name} width={48} height={48} className="h-12 w-12 flex-shrink-0 rounded-lg border object-cover" />
                 ) : <div className="h-12 w-12 flex-shrink-0 rounded-lg border bg-muted" />}
                 <div className="flex-1 min-w-0">
                   <p className="truncate text-sm font-medium">{i.name}</p>

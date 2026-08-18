@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 /**
@@ -23,13 +24,13 @@ export function Wordmark({
   className?: string;
 }) {
   const mark = size === 'lg' ? 'h-10 w-10' : size === 'sm' ? 'h-7 w-7' : 'h-8 w-8';
+  const markPx = size === 'lg' ? 40 : size === 'sm' ? 28 : 32;
   const text = size === 'lg' ? 'text-2xl' : size === 'sm' ? 'text-base' : 'text-lg sm:text-xl';
   const factory = tone === 'dark' ? 'text-white' : 'text-foreground';
 
   const inner = (
     <span className={`flex items-center gap-1.5 ${className}`}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/JF.avif" alt="Jewel Factory" className={`${mark} object-contain`} />
+      <Image src="/JF.avif" alt="Jewel Factory" width={markPx} height={markPx} className={`${mark} object-contain`} />
       <span className={`font-display font-medium uppercase tracking-[0.12em] ${text}`}>
         <span className="text-[#c9a84c]">Jewel</span> <span className={factory}>Factory</span>
       </span>

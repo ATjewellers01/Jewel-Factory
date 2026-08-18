@@ -1,6 +1,7 @@
 'use client';
 
 import { Gem, X } from 'lucide-react';
+import Image from 'next/image';
 import { useEffect } from 'react';
 
 import { StarRating } from '@/components/ui/StarRating';
@@ -53,10 +54,9 @@ export function ProductDetailModal({ product, onClose }: { product: AnalyticsPro
         </button>
 
         <div className="bg-[#ece5da] p-4 rounded-t-2xl">
-          <div className="aspect-square overflow-hidden rounded-xl bg-white">
+          <div className="relative aspect-square overflow-hidden rounded-xl bg-white">
             {product.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={product.imageUrl} alt={product.designNumber ?? ''} className="h-full w-full object-contain" />
+              <Image src={product.imageUrl} alt={product.designNumber ?? ''} fill className="object-contain" />
             ) : (
               <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-10 w-10" /></div>
             )}

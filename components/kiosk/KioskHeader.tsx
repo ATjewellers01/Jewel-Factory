@@ -1,6 +1,7 @@
 'use client';
 
 import { Search, Sparkles, ShoppingBag, Menu, X, Gem, PencilLine, Home } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -32,8 +33,7 @@ export function KioskHeader() {
       <div className="flex items-center justify-between gap-2 bg-[#191511] px-3 py-1.5 text-[10px] sm:px-4 sm:text-[11px]">
         <div className="flex min-w-0 items-center gap-2 text-[#e4cf8f]">
           {store.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={store.logoUrl} alt={store.name} className="h-5 w-auto object-contain" />
+            <Image src={store.logoUrl} alt={store.name} width={80} height={20} className="h-5 w-auto object-contain" />
           ) : null}
           <span className="truncate font-semibold text-[#f8e7af]">{store.name}</span>
           {store.city && <span className="hidden text-[#c9b98b] sm:inline">· {store.city}</span>}

@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus, Loader2, Package, Sparkles, Check, CheckSquare, Square, FileDown } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -319,8 +320,7 @@ export default function ManufacturerCatalogPage() {
                 <div className={`group overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md ${isSelected ? 'border-primary ring-2 ring-primary/30' : ''}`}>
                   <div className="relative aspect-[3/4] bg-[#ece5da]">
                     {img ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={img.secureUrl} alt={p.designNumber} className="h-full w-full object-cover" />
+                      <Image src={img.secureUrl} alt={p.designNumber} fill className="object-cover" />
                     ) : (
                       <div className="flex h-full items-center justify-center text-muted-foreground/40">
                         <Package className="h-8 w-8" />

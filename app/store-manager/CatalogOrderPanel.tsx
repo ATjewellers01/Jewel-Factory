@@ -2,6 +2,7 @@
 
 import { Award, Check, ChevronDown, Gem, Heart, Loader2, Minus, Plus, Search, ShoppingCart, SlidersHorizontal, SortAsc, Trash2, X } from 'lucide-react';
 import { motion } from 'motion/react';
+import Image from 'next/image';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { StoreManagerProductDetailModal, type StoreManagerProduct } from '@/components/kiosk/StoreManagerProductDetailModal';
@@ -296,8 +297,9 @@ export function CatalogOrderPanel({
                           className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
                         >
                           {l.imageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={l.imageUrl} alt="" className="h-16 w-16 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
+                            <div className="relative h-16 w-16 shrink-0 rounded-lg border bg-white p-0.5">
+                              <Image src={l.imageUrl} alt="" fill className="object-contain" />
+                            </div>
                           ) : <div className="h-16 w-16 shrink-0 rounded-lg border bg-muted" />}
                           <span className="min-w-0">
                             <span className={`block truncate text-base font-medium ${fullProduct ? 'hover:text-[#b68a3e]' : ''}`}>{l.designNumber ?? l.name}</span>
@@ -364,10 +366,9 @@ export function CatalogOrderPanel({
                             onClick={() => setDetail(p)}
                             className="overflow-hidden rounded-lg border border-black/10 bg-white text-left transition-shadow hover:shadow-md"
                           >
-                            <div className="aspect-square bg-[#ece5da]">
+                            <div className="relative aspect-square bg-[#ece5da]">
                               {img ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={img.secureUrl} alt={p.designNumber} className="h-full w-full object-cover" />
+                                <Image src={img.secureUrl} alt={p.designNumber} fill className="object-cover" />
                               ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-6 w-6" /></div>}
                             </div>
                             <p className="truncate px-2 py-1.5 text-xs font-medium">{p.designNumber}</p>
@@ -420,8 +421,9 @@ export function CatalogOrderPanel({
                         className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
                       >
                         {img ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={img.secureUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
+                          <div className="relative h-12 w-12 shrink-0 rounded-lg border bg-white p-0.5">
+                            <Image src={img.secureUrl} alt="" fill className="object-contain" />
+                          </div>
                         ) : <div className="h-12 w-12 shrink-0 rounded-lg border bg-muted" />}
                         <span className="min-w-0">
                           <span className={`block truncate text-sm font-medium ${fullProduct ? 'hover:text-[#b68a3e]' : ''}`}>{f.manufacturerProduct.designNumber}</span>
@@ -486,8 +488,7 @@ export function CatalogOrderPanel({
               <motion.article key={p.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="group">
                 <button type="button" onClick={() => setDetail(p)} className="relative block aspect-[3/4] w-full overflow-hidden rounded-lg bg-[#ece5da] shadow-[0_1px_0_rgba(25,21,17,0.08)] ring-1 ring-black/5 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_18px_40px_rgba(31,24,15,0.16)]" title="View details">
                   {img ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={img.secureUrl} alt={p.designNumber} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                    <Image src={img.secureUrl} alt={p.designNumber} fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
                   ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-8 w-8" /></div>}
                   <span className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
                   {p.hasTryon && <span className="metal-sheen absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-semibold text-[#17120b]">AR</span>}

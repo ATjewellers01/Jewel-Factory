@@ -1,6 +1,7 @@
 'use client';
 
 import { CheckCircle2, Loader2, PencilLine, Upload, X, ShieldCheck, Send, Sparkles } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 
@@ -299,9 +300,8 @@ export default function StoreCustomDesignNewPage() {
             </div>
             <div className="flex flex-wrap gap-3">
               {images.map((url) => (
-                <div key={url} className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="reference" className="h-28 w-28 rounded-xl border object-cover" />
+                <div key={url} className="relative h-28 w-28">
+                  <Image src={url} alt="reference" fill className="rounded-xl border object-cover" />
                   <button type="button" onClick={() => removeImage(url)} className="absolute -right-2 -top-2 rounded-full bg-black/70 p-1 text-white hover:bg-black" aria-label="Remove">
                     <X className="h-3 w-3" />
                   </button>

@@ -2,6 +2,7 @@
 
 import { ArrowLeft, Camera, ChevronDown, ChevronUp, Loader2, RotateCcw, Sparkles, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
@@ -167,10 +168,9 @@ function TryOnInner() {
               className={`flex w-[68px] flex-shrink-0 flex-col items-center gap-1 rounded-xl border p-1.5 text-left transition sm:w-20 ${activeId === p.id ? 'border-[#c9a84c] bg-white/10' : 'border-white/10 bg-white/5 hover:border-white/30'}`}
               title={p.designNumber}
             >
-              <div className="h-12 w-full overflow-hidden rounded-md bg-black/40 sm:h-14">
+              <div className="relative h-12 w-full overflow-hidden rounded-md bg-black/40 sm:h-14">
                 {p.primaryImageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.primaryImageUrl} alt={p.designNumber} className="h-full w-full object-cover" />
+                  <Image src={p.primaryImageUrl} alt={p.designNumber} fill className="object-cover" />
                 ) : null}
               </div>
               <span className="w-full truncate text-[9px] leading-tight text-white/85">{p.designNumber}</span>

@@ -13,6 +13,7 @@ import {
   Truck,
   Users,
 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
@@ -196,8 +197,14 @@ export function PortalLoginScreen({
         <section className="relative hidden h-full min-h-0 flex-col justify-between overflow-hidden border-r border-[#ded6ca] bg-[#211c17] p-8 text-[#faf7f0] md:flex lg:p-12">
           <div aria-hidden className="absolute -bottom-20 -right-20 h-80 w-80 rotate-12 border border-[#d0a84e]/15" />
           <div aria-hidden className="absolute -bottom-5 -right-5 h-52 w-52 rotate-12 border border-[#d0a84e]/15" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/JF.avif" alt="" aria-hidden className="pointer-events-none absolute -right-16 top-1/2 w-72 -translate-y-1/2 opacity-[0.045] lg:w-96" />
+          <Image
+            src="/JF.avif"
+            alt=""
+            aria-hidden
+            width={384}
+            height={384}
+            className="pointer-events-none absolute -right-16 top-1/2 h-auto w-72 -translate-y-1/2 opacity-[0.045] lg:w-96"
+          />
 
           <Wordmark href="/" size="md" tone="dark" className="relative z-10" />
 

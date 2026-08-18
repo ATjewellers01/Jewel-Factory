@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowRight, ArrowUpRight, Heart, Loader2, ShoppingCart, Sparkles, X } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -241,12 +242,12 @@ function CatalogueStrip({ products }: { products: Product[] }) {
                   (not real scroll events), so the browser's lazy-load
                   viewport heuristic doesn't reliably fire before an item
                   slides into view — it was showing blank white cards mid-scroll. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={primaryImage(p)!}
                 alt={p.designNumber}
+                fill
                 loading="eager"
-                className="h-full w-full object-cover transition-transform duration-500 group-hover/card:scale-105"
+                className="object-cover transition-transform duration-500 group-hover/card:scale-105"
               />
               <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-4 pb-3 pt-9 text-sm font-semibold tabular-nums text-white sm:px-5 sm:text-base">
                 {p.designNumber}
@@ -334,12 +335,12 @@ function CategoryMosaic({
               onClick={() => onSelect(category)}
               className={`group relative ${span} ${height} overflow-hidden rounded-2xl bg-[#efe7da] text-left ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_44px_rgba(31,24,15,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a84c]`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={cover}
+              <Image
+                src={cover!}
                 alt=""
+                fill
                 loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.06]"
+                className="object-cover transition-transform duration-700 group-hover:scale-[1.06]"
               />
 
               {/* Scrim keeps the label readable over any photo. */}
@@ -387,8 +388,7 @@ function SubCategoryPanel({
       <aside className="absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-3xl bg-[#fffdfa] shadow-2xl sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[min(92vw,460px)] sm:rounded-none">
         <div className="relative h-32 shrink-0 overflow-hidden sm:h-44">
           {cover ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={cover} alt="" className="h-full w-full object-cover" />
+            <Image src={cover} alt="" fill className="object-cover" />
           ) : (
             <div className="h-full w-full bg-[#efe7da]" />
           )}

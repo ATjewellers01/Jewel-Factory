@@ -1,6 +1,7 @@
 'use client';
 
 import { Loader2, Gem, Heart, ShoppingCart, Minus, Plus, Trash2, Sparkles } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 
@@ -252,8 +253,7 @@ function CatalogBrowse() {
                       className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
                     >
                       {img ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={img.secureUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
+                        <Image src={img.secureUrl} alt="" width={48} height={48} className="h-12 w-12 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
                       ) : <div className="h-12 w-12 shrink-0 rounded-lg border bg-muted" />}
                       <span className="min-w-0">
                         <span className={`block truncate text-sm ${fullProduct ? 'hover:text-primary' : ''}`}>{f.manufacturerProduct.designNumber}</span>
@@ -326,8 +326,7 @@ function CatalogBrowse() {
                           className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
                         >
                           {i.imageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={i.imageUrl} alt="" className="h-16 w-16 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
+                            <Image src={i.imageUrl} alt="" width={64} height={64} className="h-16 w-16 shrink-0 rounded-lg border bg-white object-contain p-0.5" />
                           ) : <div className="h-16 w-16 shrink-0 rounded-lg border bg-muted" />}
                           <span className="min-w-0">
                             <span className={`block truncate text-base font-medium ${fullProduct ? 'hover:text-primary' : ''}`}>{i.name}</span>
@@ -508,8 +507,7 @@ function ProductGrid({
           <div key={p.id} className="overflow-hidden rounded-xl border bg-card">
             <button type="button" onClick={() => onOpen(p)} className="relative block aspect-[3/4] w-full bg-[#ece5da]" title="View details">
               {img ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={img.secureUrl} alt={p.designNumber} className="h-full w-full object-cover" />
+                <Image src={img.secureUrl} alt={p.designNumber} fill className="object-cover" />
               ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-8 w-8" /></div>}
               {p.hasTryon && <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]"><Sparkles className="mr-0.5 inline h-2.5 w-2.5" />AR</span>}
               <span

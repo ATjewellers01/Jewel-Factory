@@ -1,6 +1,7 @@
 'use client';
 
 import { Loader2, Sparkles, ShoppingBag, Award, ArrowLeft, Minus, Plus } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -59,18 +60,16 @@ export default function KioskProductDetailPage() {
       <div className="grid gap-8 md:grid-cols-2">
         {/* Gallery */}
         <div>
-          <div className="aspect-square overflow-hidden rounded-xl bg-[#ece5da]">
+          <div className="relative aspect-square overflow-hidden rounded-xl bg-[#ece5da]">
             {imgs[activeImg] ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={imgs[activeImg].secureUrl} alt={product.designNumber} className="h-full w-full object-cover" />
+              <Image src={imgs[activeImg].secureUrl} alt={product.designNumber} fill className="object-cover" />
             ) : null}
           </div>
           {imgs.length > 1 && (
             <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
               {imgs.map((im, i) => (
-                <button key={i} onClick={() => setActiveImg(i)} className={`h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border-2 ${i === activeImg ? 'border-primary' : 'border-transparent'}`}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={im.secureUrl} alt="" className="h-full w-full object-cover" />
+                <button key={i} onClick={() => setActiveImg(i)} className={`relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border-2 ${i === activeImg ? 'border-primary' : 'border-transparent'}`}>
+                  <Image src={im.secureUrl} alt="" fill className="object-cover" />
                 </button>
               ))}
             </div>

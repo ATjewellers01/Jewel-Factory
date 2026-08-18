@@ -1,6 +1,7 @@
 'use client';
 
 import { Loader2, TrendingUp, Package, Lightbulb, Store as StoreIcon, BarChart3, Scale } from 'lucide-react';
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 
 import { useApi } from '@/hooks/use-api';
@@ -56,8 +57,7 @@ export default function IntelligencePage() {
             {recs.data.map((r) => (
               <div key={r.productId} className="flex items-center gap-3 px-4 py-3">
                 {r.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={r.imageUrl} alt="" className="h-10 w-10 rounded-lg border object-cover" />
+                  <Image src={r.imageUrl} alt="" width={40} height={40} className="h-10 w-10 rounded-lg border object-cover" />
                 ) : <div className="h-10 w-10 rounded-lg border bg-muted" />}
                 <div className="flex-1 min-w-0">
                   <p className="truncate text-sm font-medium">{r.name}</p>

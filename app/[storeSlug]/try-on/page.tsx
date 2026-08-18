@@ -2,6 +2,7 @@
 
 import { Loader2, Sparkles } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 
@@ -77,10 +78,9 @@ function TryOnInner() {
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-2 lg:max-h-[420px] lg:overflow-y-auto lg:pr-1">
               {products.map((p) => (
                 <button key={p.id} onClick={() => select(p)} className={`overflow-hidden rounded-lg border-2 transition-colors ${activeId === p.id ? 'border-primary' : 'border-transparent hover:border-primary/40'}`}>
-                  <div className="aspect-square bg-[#ece5da]">
+                  <div className="relative aspect-square bg-[#ece5da]">
                     {p.primaryImageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.primaryImageUrl} alt={p.designNumber} className="h-full w-full object-cover" />
+                      <Image src={p.primaryImageUrl} alt={p.designNumber} fill className="object-cover" />
                     ) : null}
                   </div>
                   <p className="truncate p-1 text-[10px]">{p.designNumber}</p>

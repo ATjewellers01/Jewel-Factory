@@ -1,8 +1,9 @@
 'use client';
 
 import { X, ArrowRight, Gem, Camera, Search } from 'lucide-react';
-import Link from 'next/link';
 import { motion } from 'motion/react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 const SEEN_KEY = 'jf_register_prompt_seen';
@@ -62,9 +63,8 @@ export function RegisterPromptModal() {
 
         <div className="relative px-6 pb-6 pt-9 text-center sm:px-8 sm:pt-10">
           {/* Jewel Factory monogram */}
-          <span className="mx-auto block h-14 w-14">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/JF.avif" alt="Jewel Factory" className="h-14 w-14 object-contain" />
+          <span className="relative mx-auto block h-14 w-14">
+            <Image src="/JF.avif" alt="Jewel Factory" fill className="object-contain" />
           </span>
 
           <p className="mt-4 font-display text-xs font-medium uppercase tracking-[0.2em]">

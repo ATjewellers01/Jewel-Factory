@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowLeft, CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
@@ -65,8 +66,14 @@ export function ResetPasswordForm({
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(52rem_32rem_at_50%_-10%,rgba(201,168,76,0.16),transparent_60%)]" />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/JF.avif" alt="" aria-hidden className="pointer-events-none absolute -right-16 top-10 hidden w-[28rem] max-w-none opacity-[0.04] lg:block" />
+      <Image
+        src="/JF.avif"
+        alt=""
+        aria-hidden
+        width={448}
+        height={448}
+        className="pointer-events-none absolute -right-16 top-10 hidden w-[28rem] max-w-none opacity-[0.04] lg:block"
+      />
 
       {/* Top bar */}
       <div className="relative z-10 flex items-center justify-between px-4 py-4 sm:px-6">

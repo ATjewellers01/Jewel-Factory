@@ -1,4 +1,5 @@
 import { Gem, ShieldCheck, Sparkles, Building2, Factory, Store, Users, Search, Award, Camera, ArrowRight } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { PublicFooter } from '@/components/landing/PublicFooter';
@@ -44,8 +45,7 @@ export default function AboutPage() {
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-black/5">
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(56rem_36rem_at_12%_-10%,rgba(201,168,76,0.16),transparent_60%)]" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/JF.avif" alt="" aria-hidden className="pointer-events-none absolute right-[-3%] top-[8%] -z-10 hidden w-[32rem] max-w-none opacity-[0.05] lg:block" />
+        <Image src="/JF.avif" alt="" aria-hidden width={512} height={512} className="pointer-events-none absolute right-[-3%] top-[8%] -z-10 hidden w-[32rem] max-w-none opacity-[0.05] lg:block" />
         <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-24">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#a0824a]">About</p>
           <h1 className="mt-3 max-w-3xl font-display text-3xl font-normal leading-[1.08] tracking-tight text-balance sm:text-5xl">

@@ -17,6 +17,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -149,8 +150,7 @@ function Shell({ children }: { children: ReactNode }) {
           <div className="border-b border-black/10 bg-[#fbf8f1]/95 backdrop-blur-xl">
             <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12">
               <Link href="/store-manager" className="group flex min-w-0 shrink items-center gap-2.5 lg:max-w-[190px] xl:max-w-[230px]" aria-label={`${data.retailer.name} — home`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={data.retailer.logoUrl || FALLBACK_STORE_LOGO} alt={data.retailer.name} className="h-9 w-9 shrink-0 rounded-full object-contain ring-1 ring-[#c9a84c]/30 transition-shadow group-hover:ring-[#c9a84c]/60" />
+                <Image src={data.retailer.logoUrl || FALLBACK_STORE_LOGO} alt={data.retailer.name} width={36} height={36} className="h-9 w-9 shrink-0 rounded-full object-contain ring-1 ring-[#c9a84c]/30 transition-shadow group-hover:ring-[#c9a84c]/60" />
                 <span className="min-w-0">
                   <span className="block truncate font-display text-[17px] font-medium leading-tight tracking-[0.02em] text-[#211c17] sm:text-lg">
                     {data.retailer.name}
@@ -244,8 +244,7 @@ function Shell({ children }: { children: ReactNode }) {
             <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
               <div>
                 <div className="flex items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={data.retailer.logoUrl || FALLBACK_STORE_LOGO} alt="" className="h-11 w-11 rounded-full object-contain ring-1 ring-[#c9a84c]/30" />
+                  <Image src={data.retailer.logoUrl || FALLBACK_STORE_LOGO} alt="" width={44} height={44} className="h-11 w-11 rounded-full object-contain ring-1 ring-[#c9a84c]/30" />
                   <div>
                     <p className="font-display text-lg text-white/90">{data.retailer.name}</p>
                     <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.17em] text-[#c9a84c]">{data.branch.name}</p>
@@ -292,8 +291,7 @@ function Shell({ children }: { children: ReactNode }) {
             <aside className="absolute right-0 top-0 flex h-full w-[min(90vw,380px)] animate-in flex-col bg-[#fbf8f1] shadow-2xl duration-300 slide-in-from-right">
               <div className="flex items-center justify-between border-b border-black/10 px-5 py-5">
                 <div className="flex min-w-0 items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={data.retailer.logoUrl || FALLBACK_STORE_LOGO} alt="" className="h-10 w-10 shrink-0 rounded-full object-contain ring-1 ring-[#c9a84c]/30" />
+                  <Image src={data.retailer.logoUrl || FALLBACK_STORE_LOGO} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full object-contain ring-1 ring-[#c9a84c]/30" />
                   <div className="min-w-0"><p className="truncate font-display text-lg">{data.retailer.name}</p><p className="mt-0.5 truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9b7a3c]">{data.branch.name}</p></div>
                 </div>
                 <button onClick={() => setMobileOpen(false)} className="ml-3 rounded-full border border-black/10 bg-white/60 p-2 hover:bg-white" aria-label="Close menu"><X className="h-5 w-5" /></button>

@@ -1,6 +1,7 @@
 'use client';
 
 import { Gem, X } from 'lucide-react';
+import Image from 'next/image';
 import { useEffect } from 'react';
 
 import { formatWeight } from '@/lib/format';
@@ -39,10 +40,9 @@ export function OrderItemDetailModal({ product, onClose }: { product: OrderItemP
         <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 z-20 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80"><X className="h-4 w-4" /></button>
         <div className="grid sm:grid-cols-2">
           <div className="bg-[#ece5da] p-4 sm:rounded-l-2xl">
-            <div className="aspect-square overflow-hidden rounded-xl bg-white">
+            <div className="relative aspect-square overflow-hidden rounded-xl bg-white">
               {img ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={img.secureUrl} alt={product.designNumber} className="h-full w-full object-contain" />
+                <Image src={img.secureUrl} alt={product.designNumber} fill className="object-contain" />
               ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-10 w-10" /></div>}
             </div>
           </div>

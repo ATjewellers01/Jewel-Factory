@@ -1,8 +1,9 @@
 'use client';
 
 import { ArrowRight, Award, Camera, Sparkles, X } from 'lucide-react';
-import Link from 'next/link';
 import { motion } from 'motion/react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 
 import { productMetaParts } from '@/lib/format';
@@ -64,8 +65,7 @@ export default function StoreManagerHome() {
   return (
     <div className="min-h-screen overflow-hidden">
       <section className="relative overflow-hidden bg-[#211711]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="https://images.unsplash.com/photo-1599643478524-fb66f7ca2b6e?w=1800&q=90" alt="Premium jewellery showroom" className="absolute inset-0 h-full w-full object-cover object-center opacity-[0.2]" />
+        <Image src="https://images.unsplash.com/photo-1599643478524-fb66f7ca2b6e?w=1800&q=90" alt="Premium jewellery showroom" fill className="object-cover object-center opacity-[0.2]" />
         {/* Copy-side scrim: vertical on small screens (text sits below the image),
             horizontal from lg up (text sits beside it). */}
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,14,10,0.35)_0%,rgba(20,14,10,0.85)_58%,rgba(20,14,10,0.95)_100%)] lg:bg-[linear-gradient(90deg,rgba(20,14,10,0.94)_0%,rgba(20,14,10,0.76)_48%,rgba(20,14,10,0.28)_78%,rgba(20,14,10,0.5)_100%)]" />
@@ -94,7 +94,7 @@ export default function StoreManagerHome() {
         <motion.aside initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18, duration: 0.45 }} className="fixed bottom-5 right-5 z-40 hidden w-[350px] rounded-xl border border-black/10 bg-[#fbf8f1]/95 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.24)] ring-1 ring-black/5 backdrop-blur-xl md:block">
           <div className="mb-3 flex items-center justify-between gap-3 border-b border-black/10 pb-2"><span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#9b762f]">Featured piece</span><button onClick={() => setDismissed(true)} className="flex h-7 w-7 items-center justify-center rounded-full text-[#5f574f] hover:bg-black/5" aria-label="Dismiss featured piece"><X className="h-3.5 w-3.5" /></button></div>
           <Link href="/store-manager/kiosk" className="group flex items-center gap-4">
-            <span className="h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-[#e9e2d7] ring-1 ring-black/10"><ProductImage product={featured} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" /></span>
+            <span className="relative h-20 w-16 shrink-0 overflow-hidden rounded-lg bg-[#e9e2d7] ring-1 ring-black/10"><ProductImage product={featured} fill className="object-cover transition-transform duration-500 group-hover:scale-105" /></span>
             <span className="min-w-0"><span className="line-clamp-1 text-sm font-semibold text-[#1f1a14]">{featured.designNumber}</span><span className="mt-1 block text-xs text-[#6f675e]">{featured.category ?? 'Jewellery'}</span><span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-[#b68a3e]">View in catalogue <ArrowRight className="h-3 w-3" /></span></span>
           </Link>
         </motion.aside>
@@ -126,7 +126,7 @@ export default function StoreManagerHome() {
             { title: 'Custom Design', href: '/store-manager/custom-design', image: products[5] ?? products[2], label: 'Made to request' },
           ].map((item, index) => item.image ? (
             <motion.div key={item.title} initial={{ opacity: 0, x: 16 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: index * 0.06 }} className="group relative h-[250px] w-[210px] shrink-0 snap-start overflow-hidden rounded-lg sm:w-[250px]">
-              <ProductImage product={item.image} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              <ProductImage product={item.image} fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
               <Link href={item.href} className="absolute inset-0 flex flex-col justify-end p-5"><span className="mb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#e4cf8f]">{item.label}</span><span className="font-display text-2xl text-white">{item.title}</span></Link>
             </motion.div>
@@ -137,7 +137,7 @@ export default function StoreManagerHome() {
       <section className="mx-auto max-w-[1400px] px-4 pb-8 md:px-6 lg:px-12">
         <div className="grid overflow-hidden rounded-lg bg-[#211913] text-white md:grid-cols-[1.1fr_0.9fr]">
           <div className="px-6 py-10 md:px-10 md:py-14"><p className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-[#e4cf8f]">Virtual try-on</p><h2 className="font-display max-w-xl text-3xl font-normal leading-tight md:text-5xl">Bring the piece closer before you decide.</h2><p className="mt-5 max-w-md text-sm leading-6 text-white/68">Preview eligible pieces live on the kiosk, then add the chosen design to the customer order.</p><Link href="/store-manager/try-on" className="metal-sheen mt-8 inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#17120b] transition-transform hover:scale-[1.02]"><Sparkles className="h-4 w-4" /> Open Try-On</Link></div>
-          <div className="relative aspect-[16/10] overflow-hidden sm:aspect-[16/9] md:aspect-auto md:min-h-[320px]">{(products.find((product) => product.hasTryon) ?? products[0]) ? <ProductImage product={(products.find((product) => product.hasTryon) ?? products[0])!} className="absolute inset-0 h-full w-full object-cover" /> : <div className="h-full min-h-72 bg-[#2a1f15]" />}</div>
+          <div className="relative aspect-[16/10] overflow-hidden sm:aspect-[16/9] md:aspect-auto md:min-h-[320px]">{(products.find((product) => product.hasTryon) ?? products[0]) ? <ProductImage product={(products.find((product) => product.hasTryon) ?? products[0])!} fill className="object-cover" /> : <div className="h-full min-h-72 bg-[#2a1f15]" />}</div>
         </div>
       </section>
 
@@ -153,16 +153,18 @@ function SectionHeading({ eyebrow, title, action, href, dark }: { eyebrow: strin
 }
 
 function CollectionTile({ product, large, index }: { product: Product; large?: boolean; index: number }) {
-  return <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ delay: index * 0.08, duration: 0.5 }} className={`group relative cursor-pointer overflow-hidden rounded-lg ${large ? 'min-h-[420px] md:col-span-3' : 'min-h-[200px]'}`}><ProductImage product={product} className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" /><div className="absolute inset-0 bg-black/40" /><Link href={`/store-manager/kiosk?category=${encodeURIComponent(product.category ?? '')}`} className="absolute inset-0 flex flex-col justify-end p-6 md:p-8"><span className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-[#e4cf8f]">{large ? 'Featured' : 'Collection'}</span><span className={`font-display font-normal text-white ${large ? 'text-3xl md:text-4xl' : 'text-2xl'}`}>{product.category}</span><span className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-[#e4cf8f] opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100">Explore <ArrowRight className="h-3 w-3" /></span></Link></motion.div>;
+  return <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-80px' }} transition={{ delay: index * 0.08, duration: 0.5 }} className={`group relative cursor-pointer overflow-hidden rounded-lg ${large ? 'min-h-[420px] md:col-span-3' : 'min-h-[200px]'}`}><ProductImage product={product} fill className="object-cover transition-transform duration-700 group-hover:scale-105" /><div className="absolute inset-0 bg-black/40" /><Link href={`/store-manager/kiosk?category=${encodeURIComponent(product.category ?? '')}`} className="absolute inset-0 flex flex-col justify-end p-6 md:p-8"><span className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-[#e4cf8f]">{large ? 'Featured' : 'Collection'}</span><span className={`font-display font-normal text-white ${large ? 'text-3xl md:text-4xl' : 'text-2xl'}`}>{product.category}</span><span className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-[#e4cf8f] opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100">Explore <ArrowRight className="h-3 w-3" /></span></Link></motion.div>;
 }
 
 function ProductCard({ product, index, dark }: { product: Product; index: number; dark?: boolean }) {
-  return <motion.article initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ delay: index * 0.04, duration: 0.4 }} className="group"><Link href="/store-manager/kiosk" className="block"><div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-[#ece5da] shadow-[0_1px_0_rgba(25,21,17,0.08)] ring-1 ring-black/5 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_18px_40px_rgba(31,24,15,0.16)]"><ProductImage product={product} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" /><div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/50 to-transparent" />{product.hasTryon ? <span className="metal-sheen absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-semibold text-[#1a1208]">AR</span> : null}<span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-[#f7fff8]/90 px-1.5 py-0.5 text-[9px] font-semibold text-[#15803d]"><Award className="h-2.5 w-2.5" /> BIS</span></div><div className="mt-3 space-y-1"><p className={`line-clamp-1 text-sm font-semibold ${dark ? 'text-white' : 'text-[#211c17]'}`}>{product.designNumber}</p>{(() => { const meta = productMetaParts({ category: product.category, subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams, size: product.size }); return (<><p className={`truncate text-xs ${dark ? 'text-white/60' : 'text-[#746b62]'}`}>{meta.descriptor}</p>{meta.weight ? <p className={`text-xs font-medium ${dark ? 'text-white/70' : 'text-[#746b62]'}`}>{meta.weight}</p> : null}</>); })()}</div></Link></motion.article>;
+  return <motion.article initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: '-40px' }} transition={{ delay: index * 0.04, duration: 0.4 }} className="group"><Link href="/store-manager/kiosk" className="block"><div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-[#ece5da] shadow-[0_1px_0_rgba(25,21,17,0.08)] ring-1 ring-black/5 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_18px_40px_rgba(31,24,15,0.16)]"><ProductImage product={product} fill className="object-cover transition-transform duration-700 group-hover:scale-105" /><div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/50 to-transparent" />{product.hasTryon ? <span className="metal-sheen absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-semibold text-[#1a1208]">AR</span> : null}<span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-[#f7fff8]/90 px-1.5 py-0.5 text-[9px] font-semibold text-[#15803d]"><Award className="h-2.5 w-2.5" /> BIS</span></div><div className="mt-3 space-y-1"><p className={`line-clamp-1 text-sm font-semibold ${dark ? 'text-white' : 'text-[#211c17]'}`}>{product.designNumber}</p>{(() => { const meta = productMetaParts({ category: product.category, subCategory: product.subCategory, purity: product.purity, weight: product.weightGrams, size: product.size }); return (<><p className={`truncate text-xs ${dark ? 'text-white/60' : 'text-[#746b62]'}`}>{meta.descriptor}</p>{meta.weight ? <p className={`text-xs font-medium ${dark ? 'text-white/70' : 'text-[#746b62]'}`}>{meta.weight}</p> : null}</>); })()}</div></Link></motion.article>;
 }
 
-function ProductImage({ product, className }: { product: Product; className: string }) {
+function ProductImage({ product, className, fill }: { product: Product; className: string; fill?: boolean }) {
   const source = primary(product);
-  return source ? <img src={source} alt={product.designNumber} className={className} /> : null; // eslint-disable-line @next/next/no-img-element
+  if (!source) return null;
+  if (fill) return <Image src={source} alt={product.designNumber} fill className={className} />;
+  return <Image src={source} alt={product.designNumber} width={400} height={400} className={className} />;
 }
 
 function HeroProduct({ product }: { product: Product }) {
@@ -180,7 +182,8 @@ function HeroProduct({ product }: { product: Product }) {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(201,168,76,0.22),transparent_68%)] blur-2xl" />
       <ProductImage
         product={product}
-        className="absolute inset-0 h-full w-full object-cover object-center opacity-90 lg:opacity-95"
+        fill
+        className="object-cover object-center opacity-90 lg:opacity-95"
       />
       {/* Soft edge blend into the section background, direction-aware per breakpoint. */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#211711]/10 via-transparent to-[#211711]/45 lg:bg-gradient-to-r lg:from-[#211711]/28 lg:via-transparent lg:to-transparent" />

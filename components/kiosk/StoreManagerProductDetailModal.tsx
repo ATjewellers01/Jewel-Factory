@@ -1,6 +1,7 @@
 'use client';
 
 import { ChevronDown, Gem, Sparkles, X } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 
@@ -113,8 +114,9 @@ export function StoreManagerProductDetailModal({
       {zoom ? (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4 sm:p-6" onClick={() => setZoom(null)} role="dialog" aria-modal="true" aria-label="Enlarged product image">
           <button type="button" onClick={() => setZoom(null)} aria-label="Close enlarged image" className="absolute right-4 top-4 rounded-full bg-white/15 p-2 text-white hover:bg-white/25"><X className="h-5 w-5" /></button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={zoom} alt="" onClick={(event) => event.stopPropagation()} className="max-h-[90dvh] max-w-[92vw] rounded-lg object-contain" />
+          <div className="relative h-[90dvh] w-[92vw]" onClick={(event) => event.stopPropagation()}>
+            <Image src={zoom} alt="" fill className="rounded-lg object-contain" />
+          </div>
         </div>
       ) : null}
     </>
@@ -150,17 +152,15 @@ function ProductBlock({
       <div className="flex h-[50%] min-h-56 shrink-0 flex-col bg-[#ede5d8] p-1.5 sm:h-full sm:min-h-0 sm:border-r sm:border-[#d8c8aa]/55 sm:p-3.5 lg:p-4">
         <div className="relative min-h-0 flex-1 overflow-hidden rounded-[1.1rem] bg-white shadow-[inset_0_0_0_1px_rgba(122,91,39,0.08)]">
           {selectedImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={selectedImage.secureUrl} alt={product.designNumber} onClick={() => onZoom(selectedImage.secureUrl)} className="h-full w-full cursor-zoom-in object-contain transition duration-500 hover:scale-[1.015]" title="Click to enlarge" />
+            <Image src={selectedImage.secureUrl} alt={product.designNumber} fill onClick={() => onZoom(selectedImage.secureUrl)} className="cursor-zoom-in object-contain transition duration-500 hover:scale-[1.015]" title="Click to enlarge" />
           ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-10 w-10" /></div>}
           <span className="pointer-events-none absolute bottom-2.5 left-2.5 rounded-full border border-white/40 bg-white/80 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.15em] text-[#6f5731] shadow-sm backdrop-blur-md">Tap to enlarge</span>
         </div>
         {product.images.length > 1 ? (
           <div className="mt-2 flex shrink-0 justify-center gap-2 overflow-x-auto pb-0.5">
             {product.images.map((image, index) => (
-              <button key={image.secureUrl} type="button" onClick={() => setImageIndex(index)} aria-label={`View image ${index + 1}`} className={`h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-colors sm:h-12 sm:w-12 ${index === imageIndex ? 'border-primary' : 'border-transparent hover:border-primary/40'}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={image.secureUrl} alt="" className="h-full w-full object-cover" />
+              <button key={image.secureUrl} type="button" onClick={() => setImageIndex(index)} aria-label={`View image ${index + 1}`} className={`relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-colors sm:h-12 sm:w-12 ${index === imageIndex ? 'border-primary' : 'border-transparent hover:border-primary/40'}`}>
+                <Image src={image.secureUrl} alt="" fill className="object-cover" />
               </button>
             ))}
           </div>

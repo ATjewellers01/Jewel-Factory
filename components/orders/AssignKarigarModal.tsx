@@ -1,6 +1,7 @@
 'use client';
 
 import { Loader2, X } from 'lucide-react';
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 
 import { KarigarSelect, type Karigar } from '@/components/orders/KarigarAssignPanel';
@@ -303,8 +304,9 @@ export function AssignKarigarModal({
                 {items.map((it) => (
                   <div key={it.id} className="flex items-center gap-3">
                     {it.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={it.imageUrl} alt={it.designNumber} className="h-14 w-14 shrink-0 rounded-lg border bg-white object-contain p-1" />
+                      <div className="relative h-14 w-14 shrink-0 rounded-lg border bg-white p-1">
+                        <Image src={it.imageUrl} alt={it.designNumber} fill className="object-contain" />
+                      </div>
                     ) : <div className="h-14 w-14 shrink-0 rounded-lg border bg-muted" />}
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{it.designNumber}</p>

@@ -1,6 +1,7 @@
 'use client';
 
 import { Loader2, Upload, X, Trash2, Sparkles, RefreshCw, Wand2 } from 'lucide-react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
@@ -707,7 +708,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
             {/* Raw photo (only after a category is chosen) */}
             {aiRawPreview ? (
               <div className="relative h-24 w-24 overflow-hidden rounded-lg border cursor-pointer group" onClick={() => setAiRawZoom(aiRawPreview)}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- blob: URL (URL.createObjectURL), next/image can't optimize local file previews */}
                 <img src={aiRawPreview} alt="raw" className="h-full w-full object-cover group-hover:opacity-75 transition-opacity" title="Click to zoom" />
                 <button type="button" onClick={(e) => { e.stopPropagation(); setAiRaw(null); setAiRawPreview(null); }} className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"><X className="h-3 w-3" /></button>
               </div>
@@ -751,8 +752,8 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
           {aiRawZoom && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setAiRawZoom(null)}>
               <div className="relative max-h-[80vh] max-w-2xl overflow-auto" onClick={(e) => e.stopPropagation()}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={aiRawZoom} alt="zoomed raw" className="max-w-full" />
+                {/* eslint-disable-next-line @next/next/no-img-element -- blob: URL (URL.createObjectURL), next/image can't optimize local file previews */}
+                <img src={aiRawZoom} alt="zoomed raw" className="max-w-full h-auto" />
                 <button type="button" onClick={() => setAiRawZoom(null)} className="absolute right-2 top-2 rounded-full bg-black/60 p-2 text-white hover:bg-black/80"><X className="h-5 w-5" /></button>
               </div>
             </div>
@@ -767,8 +768,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
           {images.map((img) => (
             <div key={img.id} className="flex flex-col gap-2">
               <div className="relative h-24 w-24 overflow-hidden rounded-lg border">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img.secureUrl} alt="" onClick={() => setZoom({ src: img.secureUrl })} className="h-full w-full cursor-zoom-in object-cover" title="Click to enlarge" />
+                <Image src={img.secureUrl} alt="" fill onClick={() => setZoom({ src: img.secureUrl })} className="cursor-zoom-in object-cover" title="Click to enlarge" />
                 <button type="button" onClick={() => removeImage(img.id)} className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80">
                   <X className="h-3 w-3" />
                 </button>
@@ -796,8 +796,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         <section className="space-y-2 rounded-xl border p-4">
           <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">AR Try-On (transparent PNG)</label>
           <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={tryon.assetUrl} alt="try-on" onClick={() => setZoom({ src: tryon.assetUrl, checker: true })} title="Click to enlarge" className="h-20 w-20 cursor-zoom-in rounded-lg border object-contain bg-[repeating-conic-gradient(#eee_0_25%,#fff_0_50%)] bg-[length:16px_16px]" />
+            <Image src={tryon.assetUrl} alt="try-on" width={80} height={80} onClick={() => setZoom({ src: tryon.assetUrl, checker: true })} title="Click to enlarge" className="cursor-zoom-in rounded-lg border object-contain bg-[repeating-conic-gradient(#eee_0_25%,#fff_0_50%)] bg-[length:16px_16px]" />
             <div className="flex-1">
               <p className="text-sm">{tryon.jewelleryType}</p>
               <button type="button" onClick={removeTryon} className="mt-1 inline-flex items-center gap-1 text-xs text-red-600 hover:underline">
@@ -844,10 +843,11 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
           >
             <X className="h-5 w-5" />
           </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={zoom.src}
             alt="preview"
+            width={1200}
+            height={1200}
             onClick={(e) => e.stopPropagation()}
             className={`max-h-[85vh] max-w-[85vw] rounded-lg object-contain ${zoom.checker ? 'bg-[repeating-conic-gradient(#eee_0_25%,#fff_0_50%)] bg-[length:24px_24px]' : ''}`}
           />

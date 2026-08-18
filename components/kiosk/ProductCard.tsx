@@ -1,6 +1,7 @@
 'use client';
 
 import { Sparkles, Check, Plus, Award } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -40,8 +41,7 @@ export function ProductCard({ product }: { product: KioskProduct }) {
       <div className="group overflow-hidden rounded-lg bg-[#FBF9F5] ring-1 ring-black/5 transition-all hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(31,24,15,0.16)]">
         <div className="relative aspect-[3/4] overflow-hidden bg-[#ece5da]">
           {img ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={img.secureUrl} alt={product.designNumber} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+            <Image src={img.secureUrl} alt={product.designNumber} fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
           ) : <div className="h-full w-full" />}
           {product.hasTryon && (
             <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]">

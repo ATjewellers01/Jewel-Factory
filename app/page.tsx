@@ -2,6 +2,7 @@
 
 import { ArrowRight, Gem, Sparkles, ShieldCheck, Building2, Search, X, Award, Camera } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
@@ -101,8 +102,7 @@ export default function LandingPage() {
         {/* Soft gold radial glow */}
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60rem_40rem_at_15%_-10%,rgba(201,168,76,0.16),transparent_60%),radial-gradient(50rem_30rem_at_100%_10%,rgba(201,168,76,0.10),transparent_55%)]" />
         {/* Faint JF monogram watermark (desktop) */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/JF.avif" alt="" aria-hidden className="pointer-events-none absolute right-[-4%] top-[6%] -z-10 hidden w-[38rem] max-w-none opacity-[0.05] lg:block" />
+        <Image src="/JF.avif" alt="" aria-hidden width={608} height={608} className="pointer-events-none absolute right-[-4%] top-[6%] -z-10 hidden w-[38rem] max-w-none opacity-[0.05] lg:block" />
 
         <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:py-28">
           {/* Copy */}
@@ -142,8 +142,7 @@ export default function LandingPage() {
                 onClick={() => { setDetail(floats[0]!); setDetailImg(0); }}
                 className="group absolute left-[6%] top-0 h-[62%] w-[46%] overflow-hidden rounded-2xl bg-[#ece5da] shadow-[0_34px_70px_rgba(31,24,15,0.28)] ring-1 ring-black/5"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={primaryImg(floats[0])} alt={floats[0].designNumber ?? ''} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                <Image src={primaryImg(floats[0])!} alt={floats[0].designNumber ?? ''} fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
               </motion.button>
             )}
             {floats[1] && (
@@ -152,8 +151,7 @@ export default function LandingPage() {
                 onClick={() => { setDetail(floats[1]!); setDetailImg(0); }}
                 className="group absolute right-[4%] top-[14%] h-[52%] w-[40%] overflow-hidden rounded-2xl bg-[#ece5da] shadow-[0_28px_56px_rgba(31,24,15,0.24)] ring-1 ring-black/5"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={primaryImg(floats[1])} alt={floats[1].designNumber ?? ''} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                <Image src={primaryImg(floats[1])!} alt={floats[1].designNumber ?? ''} fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
               </motion.button>
             )}
             {floats[2] && (
@@ -162,8 +160,7 @@ export default function LandingPage() {
                 onClick={() => { setDetail(floats[2]!); setDetailImg(0); }}
                 className="group absolute bottom-0 left-[26%] h-[46%] w-[44%] overflow-hidden rounded-2xl bg-[#ece5da] shadow-[0_28px_56px_rgba(31,24,15,0.24)] ring-1 ring-black/5"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={primaryImg(floats[2])} alt={floats[2].designNumber ?? ''} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                <Image src={primaryImg(floats[2])!} alt={floats[2].designNumber ?? ''} fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
               </motion.button>
             )}
             {floats.length === 0 && (
@@ -231,8 +228,9 @@ export default function LandingPage() {
                         className="overflow-hidden rounded-lg border bg-[#ece5da] ring-2 ring-offset-2 ring-primary/30"
                       >
                         {img ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={img} alt={p.designNumber ?? ''} className="aspect-square h-full w-full object-cover" />
+                          <div className="relative aspect-square">
+                            <Image src={img} alt={p.designNumber ?? ''} fill className="object-cover" />
+                          </div>
                         ) : <div className="aspect-square flex items-center justify-center"><Gem className="h-5 w-5 text-muted-foreground/30" /></div>}
                       </motion.div>
                     );
@@ -275,8 +273,7 @@ export default function LandingPage() {
                   >
                     <div className="relative aspect-[3/4] overflow-hidden bg-[#ece5da]">
                       {img ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={img} alt={p.designNumber ?? ''} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        <Image src={img} alt={p.designNumber ?? ''} fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
                       ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-8 w-8" /></div>}
                       {p.hasTryon && (
                         <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]">
@@ -343,18 +340,16 @@ export default function LandingPage() {
             <div className="grid md:grid-cols-2">
               {/* Gallery */}
               <div className="bg-[#ece5da] p-3 sm:p-4">
-                <div className="aspect-square overflow-hidden rounded-xl bg-white">
+                <div className="relative aspect-square overflow-hidden rounded-xl bg-white">
                   {detail.images[detailImg] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={detail.images[detailImg].secureUrl} alt={detail.designNumber ?? ''} onClick={() => setZoom(detail.images[detailImg].secureUrl)} className="h-full w-full cursor-zoom-in object-contain" title="Click to enlarge" />
+                    <Image src={detail.images[detailImg].secureUrl} alt={detail.designNumber ?? ''} onClick={() => setZoom(detail.images[detailImg].secureUrl)} fill className="cursor-zoom-in object-contain" title="Click to enlarge" />
                   ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-10 w-10" /></div>}
                 </div>
                 {detail.images.length > 1 && (
                   <div className="mt-3 flex gap-2 overflow-x-auto">
                     {detail.images.map((im, i) => (
-                      <button key={i} onClick={() => setDetailImg(i)} className={`h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border-2 ${i === detailImg ? 'border-primary' : 'border-transparent'}`}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={im.secureUrl} alt="" className="h-full w-full object-cover" />
+                      <button key={i} onClick={() => setDetailImg(i)} className={`relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border-2 ${i === detailImg ? 'border-primary' : 'border-transparent'}`}>
+                        <Image src={im.secureUrl} alt="" fill className="object-cover" />
                       </button>
                     ))}
                   </div>
@@ -392,8 +387,9 @@ export default function LandingPage() {
       {zoom && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-6" onClick={() => setZoom(null)} role="dialog" aria-modal="true">
           <button type="button" onClick={() => setZoom(null)} aria-label="Close" className="absolute right-4 top-4 rounded-full bg-white/15 p-2 text-white hover:bg-white/25"><X className="h-5 w-5" /></button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={zoom} alt="preview" onClick={(e) => e.stopPropagation()} className="max-h-[85vh] max-w-[85vw] rounded-lg object-contain" />
+          <div className="relative h-[85vh] w-[85vw]" onClick={(e) => e.stopPropagation()}>
+            <Image src={zoom} alt="preview" fill className="rounded-lg object-contain" />
+          </div>
         </div>
       )}
 
