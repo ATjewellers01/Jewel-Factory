@@ -43,6 +43,7 @@ export function useGuestCart() {
   const remove = useCallback((productId: string) => write(read().filter((i) => i.productId !== productId)), []);
   const clear = useCallback(() => write([]), []);
 
-  const count = items.reduce((s, i) => s + i.quantity, 0);
+  // Number of distinct designs in the cart, not total quantity (2026-08-24).
+  const count = items.length;
   return { items, add, setQty, setPurity, remove, clear, count };
 }

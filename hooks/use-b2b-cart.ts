@@ -124,6 +124,8 @@ export function useB2bCart() {
     void apiSend('PUT', `${BASE}/note`, { note: value }).catch(() => void load());
   }, [load]);
 
-  const count = items.reduce((s, i) => s + i.quantity, 0);
+  // Number of distinct designs in the cart, not total quantity (2026-08-24) —
+  // e.g. one design at qty 2 shows "Cart (1)", not "Cart (2)".
+  const count = items.length;
   return { items, note, setNote, add, setQty, setPurity, setSize, remove, clear, count, loading };
 }

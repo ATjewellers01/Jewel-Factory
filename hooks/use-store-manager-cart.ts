@@ -102,7 +102,8 @@ function useStoreManagerCart(kind: 'kiosk' | 'restock', branchId: string) {
     void apiSend('DELETE', listUrl).catch(() => void load());
   }, [listUrl, load]);
 
-  const count = items.reduce((total, line) => total + line.quantity, 0);
+  // Number of distinct designs in the cart, not total quantity (2026-08-24).
+  const count = items.length;
 
   return {
     items, note,
