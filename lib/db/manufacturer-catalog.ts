@@ -177,16 +177,7 @@ export async function updateManufacturerProduct(
 export async function deleteManufacturerProduct(manufacturerId: string, id: string) {
   const existing = await prisma.manufacturerProduct.findFirst({ where: { id, manufacturerId }, select: { id: true } });
   if (!existing) return false;
-  // B2bOrderItem.manufacturerProduct has no onDelete policy (defaults to
-  // RESTRICT) -- a product referenced by any order-history line item would
-  // otherwise 500 on delete with a raw FK-violation. Drop just those line
-  // items (not the whole order) before deleting the product itself, same
-  // scope as every other cascade-safe delete in this codebase (see
-  // deleteStoreByManufacturer in lib/db/stores.ts for the precedent).
-  await prisma.$transaction([
-    prisma.b2bOrderItem.deleteMany({ where: { manufacturerProductId: id } }),
-    prisma.manufacturerProduct.delete({ where: { id } }),
-  ]);
+  await prisma.manufacturerProduct.delete({ where: { id } });
   return true;
 }
 
