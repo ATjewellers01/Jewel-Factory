@@ -8,7 +8,7 @@ import { getTaxonomyForStoreId } from '@/lib/db/taxonomy';
 import { placeB2bOrder } from '@/lib/db/orders';
 import { formatStoreAddress } from '@/lib/db/stores';
 import { listFavorites, addFavorite, removeFavorite } from '@/lib/db/favorites';
-import { listCart, addToCart, setCartQuantity, setCartItemPurity, clearCart, getCartNote, setCartNote } from '@/lib/db/cart';
+import { listCart, addToCart, setCartQuantity, setCartItemPurity, setCartItemSize, clearCart, getCartNote, setCartNote } from '@/lib/db/cart';
 import { sendData, sendError } from '../envelope';
 import { storeGuard, type AppEnv } from '../guards';
 
@@ -89,6 +89,14 @@ const CartPurityBody = z.object({ purity: z.string().max(40) });
 storeCatalogRoutes.patch('/cart/:productId/purity', storeGuard, jsonValidator(CartPurityBody), async (c) => {
   const { purity } = c.req.valid('json');
   await setCartItemPurity(c.get('storeId'), null, 'B2B', c.req.param('productId'), purity);
+  return sendData(c, { ok: true });
+});
+
+const CartSizeBody = z.object({ size: z.string().max(40) });
+
+storeCatalogRoutes.patch('/cart/:productId/size', storeGuard, jsonValidator(CartSizeBody), async (c) => {
+  const { size } = c.req.valid('json');
+  await setCartItemSize(c.get('storeId'), null, 'B2B', c.req.param('productId'), size);
   return sendData(c, { ok: true });
 });
 

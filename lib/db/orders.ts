@@ -297,7 +297,7 @@ export async function placeB2bOrder(input: {
   // it to approve, so its route passes false — pre-approved, goes straight to
   // the manufacturer queue.
   pendingManagerApproval?: boolean;
-  items: { manufacturerProductId: string; quantity: number; productNameSnapshot?: string; productImageSnapshot?: string; productDesignSnapshot?: string; purity?: string | null }[];
+  items: { manufacturerProductId: string; quantity: number; productNameSnapshot?: string; productImageSnapshot?: string; productDesignSnapshot?: string; purity?: string | null; size?: string | null }[];
 }) {
   const totalItems = input.items.reduce((s, i) => s + i.quantity, 0);
   const preApproved = input.pendingManagerApproval === false;
@@ -323,6 +323,7 @@ export async function placeB2bOrder(input: {
           productImageSnapshot: i.productImageSnapshot ?? null,
           productDesignSnapshot: i.productDesignSnapshot ?? null,
           purity: i.purity ?? null,
+          size: i.size ?? null,
         })),
       },
       history: { create: { status: 'PENDING', note: preApproved ? 'Order placed (auto-approved — placed directly by Retailer)' : 'Order placed' } },

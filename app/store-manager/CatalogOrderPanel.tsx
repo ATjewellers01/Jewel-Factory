@@ -83,6 +83,7 @@ export function CatalogOrderPanel({
   const [descQuery, setDescQuery] = useState('');
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
+  const [subCategory2, setSubCategory2] = useState('');
   const [size, setSize] = useState('');
   const [sort, setSort] = useState<Sort>(showPopularity ? 'popularity' : '');
   const [weightRange, setWeightRange] = useState<[number, number] | null>(null);
@@ -155,9 +156,10 @@ export function CatalogOrderPanel({
       matchesDescriptionQuery(p, descQuery) &&
       (!category || p.category === category) &&
       (!subCategory || p.subCategory === subCategory) &&
+      (!subCategory2 || p.subCategory2 === subCategory2) &&
       (!size || p.size === size),
     ),
-    [category, data, descQuery, search, size, subCategory],
+    [category, data, descQuery, search, size, subCategory, subCategory2],
   );
 
   const weightBounds = useMemo(
@@ -263,7 +265,7 @@ export function CatalogOrderPanel({
           </div>
         </div>
 
-        {mobileFilters ? <div className="mb-6 rounded-lg border border-black/10 bg-[#fffdf8] p-4 lg:hidden"><CatalogFilters categories={availableCategories} subCategoriesFor={taxonomy.subCategories1For} category={category} subCategory={subCategory} size={size} sizes={availableSizes} weightRange={weightRange} weightBounds={weightBounds} setCategory={setCategory} setSubCategory={setSubCategory} setSize={setSize} setWeightRange={setWeightRange} /></div> : null}
+        {mobileFilters ? <div className="mb-6 rounded-lg border border-black/10 bg-[#fffdf8] p-4 lg:hidden"><CatalogFilters categories={availableCategories} subCategoriesFor={taxonomy.subCategories1For} subCategories2For={taxonomy.subCategories2For} category={category} subCategory={subCategory} subCategory2={subCategory2} size={size} sizes={availableSizes} weightRange={weightRange} weightBounds={weightBounds} setCategory={setCategory} setSubCategory={setSubCategory} setSubCategory2={setSubCategory2} setSize={setSize} setWeightRange={setWeightRange} /></div> : null}
         {error ? <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
 
       {showCart && (
@@ -474,7 +476,7 @@ export function CatalogOrderPanel({
 
       <div className="flex items-start gap-8">
         <aside className="sticky top-28 hidden w-60 shrink-0 border-r border-black/10 pr-6 lg:block">
-          <CatalogFilters categories={availableCategories} subCategoriesFor={taxonomy.subCategories1For} category={category} subCategory={subCategory} size={size} sizes={availableSizes} weightRange={weightRange} weightBounds={weightBounds} setCategory={setCategory} setSubCategory={setSubCategory} setSize={setSize} setWeightRange={setWeightRange} />
+          <CatalogFilters categories={availableCategories} subCategoriesFor={taxonomy.subCategories1For} subCategories2For={taxonomy.subCategories2For} category={category} subCategory={subCategory} subCategory2={subCategory2} size={size} sizes={availableSizes} weightRange={weightRange} weightBounds={weightBounds} setCategory={setCategory} setSubCategory={setSubCategory} setSubCategory2={setSubCategory2} setSize={setSize} setWeightRange={setWeightRange} />
         </aside>
         <div className="min-w-0 flex-1">
       {loading ? (
@@ -570,53 +572,67 @@ export function CatalogOrderPanel({
 function CatalogFilters({
   categories,
   subCategoriesFor,
+  subCategories2For,
   category,
   subCategory,
+  subCategory2,
   size,
   sizes,
   weightRange,
   weightBounds,
   setCategory,
   setSubCategory,
+  setSubCategory2,
   setSize,
   setWeightRange,
 }: {
   categories: string[];
   subCategoriesFor: (category: string) => string[];
+  subCategories2For: (category: string, subCategory1: string) => string[];
   category: string;
   subCategory: string;
+  subCategory2: string;
   size: string;
   sizes: string[];
   weightRange: [number, number] | null;
   weightBounds: [number, number] | null;
   setCategory: (value: string) => void;
   setSubCategory: (value: string) => void;
+  setSubCategory2: (value: string) => void;
   setSize: (value: string) => void;
   setWeightRange: (value: [number, number] | null) => void;
 }) {
   const [categoriesOpen, setCategoriesOpen] = useState(true);
   const [subCategoriesOpen, setSubCategoriesOpen] = useState(true);
+  const [subCategories2Open, setSubCategories2Open] = useState(true);
   const [sizesOpen, setSizesOpen] = useState(true);
   const [weightsOpen, setWeightsOpen] = useState(true);
   const subCategories = subCategoriesFor(category);
+  const subCategories2 = subCategories2For(category, subCategory);
 
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between border-b border-black/10 pb-3">
         <span className="text-sm font-semibold">Filters</span>
-        {(category || subCategory || size || weightRange) ? <button onClick={() => { setCategory(''); setSubCategory(''); setSize(''); setWeightRange(null); }} className="text-xs font-medium text-[#b68a3e] hover:underline">Clear all</button> : null}
+        {(category || subCategory || subCategory2 || size || weightRange) ? <button onClick={() => { setCategory(''); setSubCategory(''); setSubCategory2(''); setSize(''); setWeightRange(null); }} className="text-xs font-medium text-[#b68a3e] hover:underline">Clear all</button> : null}
       </div>
       <button onClick={() => setCategoriesOpen((value) => !value)} className="flex w-full items-center justify-between py-3 text-sm font-semibold">Category <ChevronDown className={`h-4 w-4 text-[#8d8174] transition-transform ${categoriesOpen ? 'rotate-180' : ''}`} /></button>
       {categoriesOpen ? (
         <div className="space-y-1 pb-4">
-          <button onClick={() => { setCategory(''); setSubCategory(''); }} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${!category ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>All categories</button>
-          {categories.map((value) => <button key={value} onClick={() => { setCategory(value); setSubCategory(''); }} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${category === value ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>{value}</button>)}
+          <button onClick={() => { setCategory(''); setSubCategory(''); setSubCategory2(''); }} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${!category ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>All categories</button>
+          {categories.map((value) => <button key={value} onClick={() => { setCategory(value); setSubCategory(''); setSubCategory2(''); }} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${category === value ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>{value}</button>)}
         </div>
       ) : null}
       {subCategories.length > 0 ? (
         <div className="border-t border-black/10">
           <button onClick={() => setSubCategoriesOpen((value) => !value)} className="flex w-full items-center justify-between py-3 text-sm font-semibold">Sub-category <ChevronDown className={`h-4 w-4 text-[#8d8174] transition-transform ${subCategoriesOpen ? 'rotate-180' : ''}`} /></button>
-          {subCategoriesOpen ? <div className="space-y-1 pb-4"><button onClick={() => setSubCategory('')} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${!subCategory ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>All</button>{subCategories.map((value) => <button key={value} onClick={() => setSubCategory(value)} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${subCategory === value ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>{value}</button>)}</div> : null}
+          {subCategoriesOpen ? <div className="space-y-1 pb-4"><button onClick={() => { setSubCategory(''); setSubCategory2(''); }} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${!subCategory ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>All</button>{subCategories.map((value) => <button key={value} onClick={() => { setSubCategory(value); setSubCategory2(''); }} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${subCategory === value ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>{value}</button>)}</div> : null}
+        </div>
+      ) : null}
+      {subCategories2.length > 0 ? (
+        <div className="border-t border-black/10">
+          <button onClick={() => setSubCategories2Open((value) => !value)} className="flex w-full items-center justify-between py-3 text-sm font-semibold">Sub-category 2 <ChevronDown className={`h-4 w-4 text-[#8d8174] transition-transform ${subCategories2Open ? 'rotate-180' : ''}`} /></button>
+          {subCategories2Open ? <div className="space-y-1 pb-4"><button onClick={() => setSubCategory2('')} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${!subCategory2 ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>All</button>{subCategories2.map((value) => <button key={value} onClick={() => setSubCategory2(value)} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${subCategory2 === value ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>{value}</button>)}</div> : null}
         </div>
       ) : null}
       {sizes.length > 0 ? (

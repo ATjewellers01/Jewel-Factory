@@ -209,7 +209,10 @@
 }
 
 .jf-marquee-track {
-  animation: jf-marquee 240s linear infinite;
+  /* Slowed 240s -> 400s per loop (2026-08-24) — still felt too fast with a
+     small product count, since a short track covers the same -50% distance
+     in the same fixed duration regardless of how many images are in it. */
+  animation: jf-marquee 400s linear infinite;
   width: max-content;
 }
 

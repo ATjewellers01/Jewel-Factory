@@ -516,6 +516,9 @@ model B2bOrderItem {
   // in the UI, but overridable per order since the same design is sometimes
   // wanted in a different melting. Null on older rows placed before this field.
   purity                String?
+  // Size chosen for THIS line (2026-08-24) — same overridable-per-order
+  // pattern as purity above, defaults to the product's own size in the UI.
+  size                  String?
   // Per-line status — see the matching note on KioskOrderItem.status. Includes
   // CANCELLED, directly selectable by the manufacturer (not just a byproduct
   // of some other flow) for an item that was rejected/never made.
@@ -1035,6 +1038,10 @@ model CartItem {
   manufacturerProduct   ManufacturerProduct @relation(fields: [manufacturerProductId], references: [id], onDelete: Cascade)
   quantity              Int                 @default(1)
   purity                String?
+  // Editable per-line size override (2026-08-24) — defaults to the product's
+  // own size (Bangles only) but the retailer can change it before ordering,
+  // same pattern as `purity` above. Free text, matches ManufacturerProduct.size.
+  size                  String?
   createdAt             DateTime            @default(now()) @map("created_at")
   updatedAt             DateTime            @updatedAt @map("updated_at")
 

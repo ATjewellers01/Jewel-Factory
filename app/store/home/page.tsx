@@ -188,6 +188,7 @@ export default function StoreHomePage() {
             coverByCategory={coverByCategory}
             countByCategory={counts.byCategory}
             subCategoriesFor={taxonomy.subCategories1For}
+            countBySub={counts.bySub}
             onSelect={handleCategoryClick}
           />
         </>
@@ -270,12 +271,13 @@ function CatalogueStrip({ products }: { products: Product[] }) {
  * truncated at different points.
  */
 function CategoryMosaic({
-  categories, coverByCategory, countByCategory, subCategoriesFor, onSelect,
+  categories, coverByCategory, countByCategory, subCategoriesFor, countBySub, onSelect,
 }: {
   categories: string[];
   coverByCategory: Record<string, string>;
   countByCategory: Record<string, number>;
   subCategoriesFor: (category: string) => string[];
+  countBySub: Record<string, number>;
   onSelect: (category: string) => void;
 }) {
   if (categories.length === 0) return null;
@@ -324,7 +326,10 @@ function CategoryMosaic({
         {categories.map((category, i) => {
           const { span, height } = layout[i]!;
           const cover = coverByCategory[category];
-          const subs = subCategoriesFor(category);
+          // Only sub-categories with at least one design in stock — an empty
+          // collection isn't worth advertising here (2026-08-24, reverses the
+          // earlier "show 0s dimmed" decision in the slide-over below).
+          const subs = subCategoriesFor(category).filter((sub) => (countBySub[`${category}|${sub}`] ?? 0) > 0);
           const total = countByCategory[category] ?? 0;
           const meta = `${total} ${total === 1 ? 'design' : 'designs'}${subs.length > 0 ? ` · ${subs.length} collections` : ''}`;
 
@@ -378,7 +383,9 @@ function SubCategoryPanel({
   onViewAll: () => void;
   onClose: () => void;
 }) {
-  const subs = subCategoriesFor(category);
+  // Only sub-categories with at least one design in stock (2026-08-24) — see
+  // the matching filter in CategoryMosaic above.
+  const subs = subCategoriesFor(category).filter((sub) => (countBySub[`${category}|${sub}`] ?? 0) > 0);
 
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={`${category} collections`}>

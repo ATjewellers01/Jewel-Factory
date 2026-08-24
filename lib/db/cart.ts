@@ -67,6 +67,16 @@ export async function setCartItemPurity(
   return prisma.cartItem.updateMany({ where: { storeId, branchId, kind, manufacturerProductId }, data: { purity } });
 }
 
+export async function setCartItemSize(
+  storeId: string,
+  branchId: string | null,
+  kind: CartKind,
+  manufacturerProductId: string,
+  size: string,
+) {
+  return prisma.cartItem.updateMany({ where: { storeId, branchId, kind, manufacturerProductId }, data: { size } });
+}
+
 export async function removeFromCart(
   storeId: string,
   branchId: string | null,

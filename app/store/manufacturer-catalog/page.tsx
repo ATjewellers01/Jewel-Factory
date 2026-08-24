@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Gem, Heart, ShoppingCart, Minus, Plus, Trash2, Sparkles } from 'lucide-react';
+import { Loader2, Gem, Heart, ShoppingCart, Minus, Plus, Trash2, Sparkles, CheckCircle2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
@@ -71,6 +71,7 @@ function CatalogBrowse() {
   const [descQuery, setDescQuery] = useState('');
   const [category, setCategory] = useState(params.get('category') ?? '');
   const [subCategory, setSubCategory] = useState(params.get('subCategory') ?? '');
+  const [subCategory2, setSubCategory2] = useState('');
   const [size, setSize] = useState('');
   const [weightRange, setWeightRange] = useState<[number, number] | null>(null);
   const [sort, setSort] = useState<SortOption>('');
@@ -82,6 +83,9 @@ function CatalogBrowse() {
   const [deliveryDate, setDeliveryDate] = useState('');
   const [placing, setPlacing] = useState(false);
   const [submitErr, setSubmitErr] = useState<unknown>(null);
+  // Shows a success confirmation instead of silently navigating away —
+  // previously the cart just cleared with no feedback at all (2026-08-24).
+  const [orderPlaced, setOrderPlaced] = useState(false);
   const [salesMap, setSalesMap] = useState<Record<string, SalesInfo>>({});
   const [detail, setDetail] = useState<Product | null>(null);
   const [mobileCols, setMobileCols] = useState<MobileCols>(2);
@@ -122,8 +126,9 @@ function CatalogBrowse() {
     const matchDesc = matchesDescriptionQuery(p, descQuery);
     const matchCat = !category || p.category === category;
     const matchSub = !subCategory || p.subCategory === subCategory;
+    const matchSub2 = !subCategory2 || p.subCategory2 === subCategory2;
     const matchSize = !size || p.size === size;
-    return matchSearch && matchDesc && matchCat && matchSub && matchSize;
+    return matchSearch && matchDesc && matchCat && matchSub && matchSub2 && matchSize;
   });
 
   const weightBounds = weightExtent(preWeight.map((p) => p.weightGrams));
@@ -145,11 +150,11 @@ function CatalogBrowse() {
       const order = (await apiPost('/api/store/orders', {
         notes: notes || undefined,
         deliveryDate: deliveryDate || undefined,
-        items: cart.items.map((i) => ({ manufacturerProductId: i.productId, quantity: i.quantity, purity: i.purity || undefined })),
+        items: cart.items.map((i) => ({ manufacturerProductId: i.productId, quantity: i.quantity, purity: i.purity || undefined, size: i.size || undefined })),
       })) as { id: string };
       cart.clear();
       setDeliveryDate('');
-      router.push(`/store/b2b-orders`);
+      setOrderPlaced(true);
       void order;
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Could not place order');
@@ -190,14 +195,20 @@ function CatalogBrowse() {
         <>
           <div className="flex flex-wrap gap-2">
             <Input placeholder="Search designs…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={category} onChange={(e) => { setCategory(e.target.value); setSubCategory(''); }}>
+            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={category} onChange={(e) => { setCategory(e.target.value); setSubCategory(''); setSubCategory2(''); }}>
               <option value="">All categories</option>
               {taxonomy.categories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             {taxonomy.subCategories1For(category).length > 0 && (
-              <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={subCategory} onChange={(e) => setSubCategory(e.target.value)}>
+              <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={subCategory} onChange={(e) => { setSubCategory(e.target.value); setSubCategory2(''); }}>
                 <option value="">All sub-categories</option>
                 {taxonomy.subCategories1For(category).map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            )}
+            {taxonomy.subCategories2For(category, subCategory).length > 0 && (
+              <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={subCategory2} onChange={(e) => setSubCategory2(e.target.value)} aria-label="Filter by sub-category 2">
+                <option value="">All {subCategory ? 'types' : 'sub-categories 2'}</option>
+                {taxonomy.subCategories2For(category, subCategory).map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             )}
             {sizeOptions.length > 0 && (
@@ -209,8 +220,8 @@ function CatalogBrowse() {
             <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={sort} onChange={(e) => setSort(e.target.value as SortOption)} aria-label="Sort by">
               {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            {(category || subCategory || search || descQuery || size || sort || weightRange) && (
-              <button type="button" onClick={() => { setSearch(''); setDescQuery(''); setCategory(''); setSubCategory(''); setSize(''); setWeightRange(null); setSort(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+            {(category || subCategory || subCategory2 || search || descQuery || size || sort || weightRange) && (
+              <button type="button" onClick={() => { setSearch(''); setDescQuery(''); setCategory(''); setSubCategory(''); setSubCategory2(''); setSize(''); setWeightRange(null); setSort(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
             )}
             {/* Items per row — 1 or 2 on phones, 2–4 from tablet up. Each set is
                 only rendered at the size it applies to, so the choice is unambiguous. */}
@@ -301,7 +312,19 @@ function CatalogBrowse() {
         </div>
       )}
 
-      {showCart && (
+      {showCart && orderPlaced ? (
+        <div className="flex flex-col items-center gap-3 rounded-xl border bg-card p-8 text-center">
+          <CheckCircle2 className="h-12 w-12 text-emerald-600" />
+          <div>
+            <p className="text-base font-semibold">Order Placed Successfully!</p>
+            <p className="mt-1 text-sm text-muted-foreground">We&apos;ve notified the manufacturer — you can track its status in Order History.</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => { setOrderPlaced(false); setShowCart(false); }}>Continue browsing</Button>
+            <Button onClick={() => router.push('/store/b2b-orders')} className="metal-sheen text-[#17120b] font-semibold">View Order History</Button>
+          </div>
+        </div>
+      ) : showCart && (
         <div className="rounded-xl border bg-card p-4 space-y-3">
           <h2 className="text-sm font-semibold">Your Catalogue Cart</h2>
           {cart.items.length === 0 ? (
@@ -352,7 +375,7 @@ function CatalogBrowse() {
                       </div>
                       {/* Melting/purity — defaults to the product's own purity but
                           overridable per line, travels with the order. */}
-                      <div className="flex items-center gap-2 pl-[76px]">
+                      <div className="flex flex-wrap items-center gap-2 pl-[76px]">
                         <span className="text-[11px] text-muted-foreground">Melting/Purity:</span>
                         <select
                           value={i.purity ?? ''}
@@ -362,6 +385,21 @@ function CatalogBrowse() {
                           <option value="">—</option>
                           {taxonomy.purities.map((p) => <option key={p} value={p}>{p}</option>)}
                         </select>
+                        {/* Size override — editable per cart line (2026-08-24), same
+                            pattern as purity above. Only relevant for Bangles, same
+                            gating as the Add Design form's own Size field. */}
+                        {fullProduct?.category === 'Bangles' && (
+                          <>
+                            <span className="text-[11px] text-muted-foreground">Size:</span>
+                            <input
+                              type="text"
+                              value={i.size ?? fullProduct?.size ?? ''}
+                              onChange={(e) => cart.setSize(i.productId, e.target.value)}
+                              placeholder="e.g. 2.4"
+                              className="h-7 w-16 rounded-md border border-input bg-transparent px-2 text-xs"
+                            />
+                          </>
+                        )}
                       </div>
                     </div>
                   );
@@ -375,10 +413,10 @@ function CatalogBrowse() {
                   value={deliveryDate}
                   min={new Date().toISOString().slice(0, 10)}
                   onChange={(e) => setDeliveryDate(e.target.value)}
-                  className="mt-1"
+                  className="mt-1 w-auto max-w-[180px]"
                 />
               </div>
-              <textarea placeholder="Notes for manufacturer (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[60px]" />
+              <textarea placeholder="Remark (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[60px]" />
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'notes'))} />
               <p className="text-xs text-muted-foreground">Ships to your fixed store address.</p>
               <Button onClick={placeOrder} disabled={placing} className="metal-sheen text-[#17120b] font-semibold w-full">
