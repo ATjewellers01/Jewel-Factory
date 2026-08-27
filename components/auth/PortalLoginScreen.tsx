@@ -235,7 +235,12 @@ export function PortalLoginScreen({
           </p>
         </section>
 
-        <section className="relative flex min-h-0 flex-col rounded-[22px] bg-[#fffdf9] sm:rounded-[26px] md:h-full md:rounded-none md:overflow-hidden">
+        {/* md:overflow-y-auto (not hidden) — on a wide-but-short viewport
+            (e.g. an iPad in landscape) the form + footer can be taller than
+            the available height, and hidden would clip the Sign in button
+            with no way to reach it. Auto is a no-op wherever content already
+            fits, so this doesn't change anything on a normal desktop. */}
+        <section className="relative flex min-h-0 flex-col rounded-[22px] bg-[#fffdf9] sm:rounded-[26px] md:h-full md:overflow-y-auto md:rounded-none">
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#ebe5dc] px-4 py-3.5 sm:px-5 sm:py-4 md:justify-end md:px-8">
             <Wordmark href="/" size="sm" className="md:hidden" />
             <Link href={backHref} className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-2 text-xs font-medium text-[#71685f] transition-colors hover:bg-[#f4efe6] hover:text-[#29231e] sm:gap-2 sm:px-3 sm:text-sm">
