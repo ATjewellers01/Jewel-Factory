@@ -7,42 +7,49 @@ Follow karo top se bottom, ek-ek step.
 
 > **Naye client ko handover** kar rahe ho? → **`HANDOVER.md`** use karo (accounts +
 > env + DB + deploy + first-login + secret-rotation, ek jagah). Database ka poora
-> naksha → **`DATABASE.md`**. System flow → **`flow.md`**.
+> naksha → **`DATABASE.md`**. System flow → **`flow.md`**. Production AWS setup →
+> **`AWS_MIGRATION.md`**.
 >
-> **Migrations:** `pnpm db:deploy` saari 5 migrations ek command me apply karta hai
-> (init · kiosk_pin · b2b_item_image · branch_hierarchy · order_messages) — fresh DB
-> pe kuch manual SQL nahi. `db:seed` = 1 manufacturer + 14 categories.
+> **Migrations:** `pnpm db:deploy` saari **24 migrations** ek command me apply karta hai
+> (init, kiosk_pin, b2b_item_image, branch_hierarchy, order_messages, ... poori list
+> `DATABASE.md` me hai) — fresh DB pe kuch manual SQL nahi. `db:seed` = 1 manufacturer
+> + 14 categories.
 
 ---
 
 ## 📋 Kya-kya chahiye (accounts)
 
-Ye 4 free accounts banane padenge (jo already hai to skip):
+Ye accounts banane padenge (jo already hai to skip):
 
-| Service                       | Kis liye                         | Free?                 |
-| ----------------------------- | -------------------------------- | --------------------- |
-| **Supabase**            | Database (Postgres)              | ✅ Free tier          |
-| **Cloudinary**          | Images store karne ke liye       | ✅ Free tier          |
-| **Qdrant Cloud**        | Similar-image search (vector DB) | ✅ Free tier          |
-| **Gmail** (ya koi SMTP) | Password reset emails            | ✅ Gmail app password |
+| Service | Kis liye | Free? |
+|---|---|---|
+| **Supabase** (dev) / **AWS RDS** (production) | Database (Postgres) | ✅ Supabase free tier; RDS paid |
+| **AWS S3 + CloudFront** | Images store karne ke liye | Paid (usage-based, cheap) |
+| **AI-Features service** (HF Docker Space) | Similar-image search (embedder) + "Generate with AI" | ✅ HF free tier for the Space; OpenAI usage paid |
+| **Gmail** (ya koi SMTP) | Password reset emails | ✅ Gmail app password |
 
-**Embedder** (OpenCLIP) — ye ek Python service hai. Iske bina similar-image
-search kaam nahi karega, baaki sab chalega. (Optional — abhi skip kar sakte ho.)
+> **pgvector** (vector search) ek alag service NAHI hai — ye Postgres ka hi ek
+> extension hai, `pgvector` migration se apne aap enable ho jaata hai jab tum
+> `pnpm db:deploy` chalate ho. Koi account/signup nahi chahiye.
+>
+> **Cloudinary aur Qdrant is app me use NAHI hote** (migrated away 2026-07-22 — S3+CloudFront
+> aur pgvector ne le li hai jagah). Agar kahin purani checklist me `CLOUDINARY_*`/`QDRANT_*`
+> dikhe, wo legacy hai — set karne ki zaroorat nahi.
 
 ---
 
 ## STEP 0 — Terminal khol lo
 
 ```bash
-cd "C:\Users\prabh\Desktop\Jewel Factory"
+cd "path/to/Jewel Factory"
 pnpm install        # dependencies install (agar pehle nahi kiya)
 ```
 
 ---
 
-## STEP 1 — Supabase (Database) 🗄️
+## STEP 1 — Database: Supabase (dev) ya AWS RDS (production) 🗄️
 
-### 1a. Naya project banao
+### Dev / local — Supabase
 
 1. Jao: **https://supabase.com** → Sign in (GitHub se easy hai)
 2. **"New Project"** click karo
@@ -52,32 +59,26 @@ pnpm install        # dependencies install (agar pehle nahi kiya)
    - **Region:** apne paas ka (e.g. Mumbai / Singapore)
 4. **"Create new project"** → 1-2 min wait (database ban raha hai)
 
-### 1b. Connection strings lo (DATABASE_URL + DIRECT_URL)
+Connection strings lo:
 
 1. Project ke andar → left sidebar **⚙️ Project Settings** → **Database**
 2. Neeche scroll karo → **"Connection string"** section
 3. Do connection strings chahiye:
 
 **DATABASE_URL** (pooled — app ke liye):
-
 - Tab select karo: **"Transaction"** mode (ya "Connection pooling")
 - Port dikhega **6543**
-- String copy karo — kuch aisa dikhega:
+- String copy karo:
   ```
   postgresql://postgres.abcdxyz:[YOUR-PASSWORD]@aws-0-region.pooler.supabase.com:6543/postgres
   ```
-- `[YOUR-PASSWORD]` ki jagah **wahi password daalo jo 1a mein banaya tha**
+- `[YOUR-PASSWORD]` ki jagah **wahi password daalo jo upar banaya tha**
 - End mein `?pgbouncer=true` add karo
 
 **DIRECT_URL** (direct — migrations ke liye):
-
 - Tab select karo: **"Session"** mode (ya "Direct connection")
 - Port dikhega **5432**
-- String copy karo:
-  ```
-  postgresql://postgres.abcdxyz:[YOUR-PASSWORD]@aws-0-region.pooler.supabase.com:5432/postgres
-  ```
-- Yahan bhi password daalo
+- String copy karo (yahan bhi password daalo)
 
 > **Tip:** Dono strings almost same hain — sirf **port alag hai** (6543 vs 5432).
 > DATABASE_URL = 6543 + `?pgbouncer=true` · DIRECT_URL = 5432
@@ -89,96 +90,94 @@ DATABASE_URL="postgresql://postgres.abcdxyz:TumharaPassword@...pooler.supabase.c
 DIRECT_URL="postgresql://postgres.abcdxyz:TumharaPassword@...pooler.supabase.com:5432/postgres"
 ```
 
+### Production — AWS RDS
+
+Production ab **AWS RDS Postgres** pe chalta hai (Supabase Auth kabhi use nahi hua,
+sirf Supabase Postgres dev/staging ke liye hai). RDS instance banane ka poora
+walkthrough (VPC, security group, subnet, parameter group) — **`AWS_MIGRATION.md`**
+dekho. Same `DATABASE_URL`/`DIRECT_URL` env shape use hoti hai, bas RDS host/creds ke saath.
+
 ---
 
 ## STEP 2 — Auth Secrets 🔑
 
-Ye 3 random secrets hain (min 32 characters). Terminal mein ye command chalao —
+Ye 4 random secrets hain (min 32 characters each). Terminal mein ye command chalao —
 har baar ek secret milega:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-**3 baar chalao**, teen alag secrets copy karo:
+**4 baar chalao**, chaar alag secrets copy karo:
 
 ```
 MANUFACTURER_SECRET="pehla-random-string-yahan"
 STORE_SECRET="dusra-random-string-yahan"
 MANAGER_SECRET="teesra-random-string-yahan"
+BRANCH_MANAGER_SECRET="chautha-random-string-yahan"   # Store Manager login ke liye
 COOKIE_TTL_SECONDS="28800"    # 8 ghante — ise waise hi rakho
 ```
 
-> **Note:** Teeno alag hone chahiye. Har ek 64 characters ka hoga (32 bytes hex) — bilkul theek.
+> **Note:** Chaaron alag hone chahiye. Har ek 64 characters ka hoga (32 bytes hex) — bilkul theek.
+> `BRANCH_MANAGER_SECRET` set na karo to `MANAGER_SECRET` pe fallback hoga (kaam karega,
+> par production me alag rakhna best practice hai).
 
 ---
 
-## STEP 3 — Cloudinary (Images) 🖼️
+## STEP 3 — AWS S3 + CloudFront (Images) 🖼️
 
-### 3a. Account banao
+Image storage Cloudinary se **AWS S3 + CloudFront** pe migrate ho chuka hai
+(2026-07-22) — `lib/cloudinary.ts` deleted hai, is guide me ab yahi flow hai.
 
-1. Jao: **https://cloudinary.com** → Sign up (free)
-2. Sign up ke baad seedha **Dashboard** khulega
+### 3a. S3 bucket banao
 
-### 3b. Credentials lo
+1. AWS Console → **S3** → **Create bucket**
+2. Naam unique rakho (e.g. `yourbrand-jewel-factory-dev`), apna region choose karo
+3. Default settings theek hain (public access block rehne do — reads CloudFront se honge)
 
-Dashboard pe upar hi ek box dikhega **"Product Environment Credentials"** (ya "Account Details"):
+### 3b. IAM user/role banao
 
-```
-Cloud name:  dxxxxxxxx
-API Key:     123456789012345
-API Secret:  abcXXXXXXXXXXXXXXXXXXXX   (click "reveal" / eye icon)
-```
+1. AWS Console → **IAM** → naya user (ya EC2 pe instance-role) banao jiske paas is
+   bucket pe `PutObject`/`GetObject` permission ho
+2. User ke liye access key generate karo (agar instance-role nahi use kar rahe)
+
+### 3c. CloudFront distribution banao
+
+1. AWS Console → **CloudFront** → **Create distribution** → origin = wahi S3 bucket
+2. Distribution ready hone ka wait karo (~5-10 min) → uska domain (`xxxxxxxx.cloudfront.net`) copy karo — yahi `S3_PUBLIC_BASE_URL` banega
 
 ### ✅ Ab tumhare paas hai:
 
 ```
-CLOUDINARY_CLOUD_NAME="dxxxxxxxx"
-CLOUDINARY_API_KEY="123456789012345"
-CLOUDINARY_API_SECRET="abcXXXXXXXXXXXXXXXXXXXX"
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME="dxxxxxxxx"     # cloud name DOBARA yahan (public)
+AWS_REGION="ap-south-1"
+AWS_S3_BUCKET="yourbrand-jewel-factory-dev"
+S3_PUBLIC_BASE_URL="https://xxxxxxxx.cloudfront.net"
+AWS_ACCESS_KEY_ID="<iam key>"          # agar instance-role use nahi kar rahe
+AWS_SECRET_ACCESS_KEY="<iam secret>"   # agar instance-role use nahi kar rahe
 ```
 
-> **Important:** `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` = wahi `CLOUDINARY_CLOUD_NAME` wala value.
+> Upload flow: server ek **presigned PUT URL** deta hai, browser seedha S3 pe upload
+> karta hai (`lib/storage.ts`). Public reads CloudFront se serve hote hain (fast + cached).
 
 ---
 
-## STEP 4 — Qdrant Cloud (Vector Search) 🔍
+## STEP 4 — pgvector (Vector Search) — no separate service needed 🔍
 
-> Ye sirf **similar-image search** ke liye chahiye. Abhi skip karna hai to
-> `QDRANT_URL` aur `QDRANT_API_KEY` khaali chhod do — baaki sab chalega, bas
-> photo-search kaam nahi karega.
+> Purane Qdrant Cloud setup ki tarah is step me koi account/cluster/API-key banane ki
+> zaroorat NAHI hai. **pgvector Postgres ka ek extension hai** — jis DB se tum already
+> connect ho rahe ho (Supabase ya RDS), usi ke andar `pgvector` migration column bana
+> deti hai (`manufacturer_product_embeddings.embedding vector(512)`) jab tum
+> STEP 8 me `pnpm db:deploy` chalaoge. Koi env var alag se nahi chahiye is step ke liye.
 
-### 4a. Cluster banao
-
-1. Jao: **https://cloud.qdrant.io** → Sign up (free)
-2. **"Create Cluster"** → Free tier select karo → region choose karo → Create
-3. Cluster ready hone ka wait (1-2 min)
-
-### 4b. URL + API key lo
-
-1. Cluster pe click → **Cluster URL** copy karo:
-   ```
-   https://xxxx-xxxx-xxxx.region.aws.cloud.qdrant.io:6333
-   ```
-2. **"API Keys"** section → **"Create API Key"** → copy karo
-
-### ✅ Ab tumhare paas hai:
-
-```
-QDRANT_URL="https://xxxx-xxxx.region.aws.cloud.qdrant.io:6333"
-QDRANT_API_KEY="tumhara-qdrant-api-key"
-QDRANT_MANUFACTURER_COLLECTION="jewelfactory_manufacturer_products"   # waise hi rakho
-```
-
-> Collection automatically ban jayegi jab pehli image index hogi — kuch manually nahi karna.
+Similarity search khud `lib/search.ts` me raw SQL (cosine distance) se hota hai —
+koi extra config nahi.
 
 ---
 
 ## STEP 5 — AI-Features service 🧠  [OPTIONAL — abhi skip kar sakte ho]
 
 **Ek hi Python service saara AI karta hai** — photo (visual) search KE SAATH
-"Generate with AI" (catalog image + transparent PNG + name/description). Repo:
+"Generate with AI" (catalog image + transparent PNG + description). Repo:
 `github.com/teamai-botivate/Jewel-Factory_AI` → HuggingFace **Docker Space** pe deploy.
 (Us `Jewel-Factory_AI` repo ke apne README + CLAUDE deploy steps dekho.)
 
@@ -195,7 +194,9 @@ Sab chalega, bas photo-search "warming up" dikhega + "Generate with AI" button h
 1. `Jewel-Factory_AI` repo ko HF Docker Space pe deploy karo.
 2. Us Space pe `OPENAI_API_KEY` set karo (gpt-image + gpt-4o ke liye). Optional:
    `EMBEDDER_API_KEY` (Bearer, `/embed/*`), `AI_FEATURES_API_KEY` (x-api-key).
-3. URL milega. Yahan bharo (dono EMBEDDER_URL + AI_FEATURES_URL = **same** URL):
+3. URL milega. Yahan bharo (dono EMBEDDER_URL + AI_FEATURES_URL = **same** URL, aur
+   **lowercase hi rakho** — capital host 307-redirect karta hai aur POST body drop kar
+   deta hai):
 ```
 EMBEDDER_URL="https://<user>-ai-features.hf.space"       # visual search (/embed/image)
 EMBEDDER_API_KEY=""                                       # jo Space pe set kiya
@@ -222,7 +223,7 @@ Password reset emails ke liye. Skip karo to reset link **console mein print** ho
 
 ```
 SMTP_HOST="smtp.gmail.com"
-SMTP_PORT="587"
+SMTP_PORT="465"           # production hosts (Render/EC2) pe 465 use karo — 587 blocked hota hai
 SMTP_USER="tumhara-email@gmail.com"
 SMTP_PASS="16charapppassword"       # app password, normal Gmail password NAHI
 FROM_EMAIL="tumhara-email@gmail.com"
@@ -266,20 +267,18 @@ MANAGER_SECRET="g7h8i9...64chars"
 BRANCH_MANAGER_SECRET="j0k1l2...64chars"   # Store Manager login
 COOKIE_TTL_SECONDS="28800"
 
-# Cloudinary
-CLOUDINARY_CLOUD_NAME="dxxxxxxxx"
-CLOUDINARY_API_KEY="123456789012345"
-CLOUDINARY_API_SECRET="abcXXXXXXXX"
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME="dxxxxxxxx"
+# AWS S3 + CloudFront (images)
+AWS_REGION="ap-south-1"
+AWS_S3_BUCKET="yourbrand-jewel-factory-dev"
+S3_PUBLIC_BASE_URL="https://xxxxxxxx.cloudfront.net"
+AWS_ACCESS_KEY_ID="<iam key>"
+AWS_SECRET_ACCESS_KEY="<iam secret>"
 
 # AI-Features service (visual search + AI generate) — one URL, optional
 EMBEDDER_URL=""            # AI-Features Space URL (embedder merged here)
 EMBEDDER_API_KEY=""
 AI_FEATURES_URL=""         # same URL as EMBEDDER_URL
 AI_FEATURES_API_KEY=""
-QDRANT_URL="https://xxxx.aws.cloud.qdrant.io:6333"
-QDRANT_API_KEY="tumhara-key"
-QDRANT_MANUFACTURER_COLLECTION="jewelfactory_manufacturer_products"
 
 # Email (optional)
 SMTP_HOST=""
@@ -296,24 +295,34 @@ NODE_ENV="development"
 ```
 
 > ⚠️ `.env` file kabhi git mein commit mat karna (`.gitignore` mein already hai).
+> ⚠️ `CLOUDINARY_*` / `QDRANT_*` vars **is file me set NAHI karni** — legacy/unused hain,
+> S3+CloudFront aur pgvector ne inki jagah le li hai. `.env.example` me kahin dikhe to
+> bhi khaali chhod do.
 
 ---
 
 ## STEP 8 — Database Tables banao (Prisma Migrate) 🏗️
 
-Ye command Supabase mein saare tables bana degi (Prisma schema se):
+Fresh DB ke liye ye command Postgres mein saare tables bana degi — **all 24
+existing migrations apply karo**, koi nayi migration create nahi kar rahe:
 
 ```bash
-pnpm db:migrate
+pnpm db:deploy
 ```
 
-- Pehli baar chalane pe migration ka naam poochega → `init` type karke Enter
-- "Your database is now in sync with your schema" dikhe = ✅ ho gaya
+"No pending migrations to apply" ya migrations ki list apply hoti dikhe = ✅ ho gaya.
+Ye `pgvector` migration bhi is me shaamil hai — vector-search column apne aap ban jaata hai.
+
+> ⚠️ **`pnpm db:migrate` (migrate dev) fresh DB pe use MAT karo.** Wo command sirf
+> tab chalao jab tum khud **local pe ek nayi migration create** kar rahe ho (schema
+> me naya change likh ke). `migrate dev` Supabase ke connection pooler pe advisory-lock
+> timeout hit kar sakta hai — isliye existing migrations apply karne ke liye hamesha
+> `pnpm db:deploy` (migrate deploy) use karo, `db:migrate` nahi.
 
 **Agar error aaye "Can't reach database":**
 
 - `DIRECT_URL` check karo — password sahi hai? port 5432 hai?
-- Supabase project active hai? (paused to nahi)
+- Supabase project active hai? (paused to nahi), ya RDS security group block to nahi kar raha
 
 ---
 
@@ -328,7 +337,7 @@ pnpm db:seed
 Ye banayega:
 
 - **1 Manufacturer** — login: `admin@atjewellers.com` / password from `SEED_MANUFACTURER_PASSWORD`
-- **10 Categories** (Ring, Earring, Necklace, etc.)
+- **14 Categories** (full taxonomy — Rings, Earrings, Necklaces, Bangles + sub-categories, etc. — see `lib/categories.ts`)
 
 **Testing ke liye ek demo store bhi chahiye?** (recommended pehli baar):
 
@@ -342,7 +351,7 @@ SEED_DEMO_STORE=true pnpm db:seed
 
 Ye ek approved demo store bhi banayega:
 
-- Store owner (Retailer / Head Office): `store@demo.com` / `store123`
+- Purchase manager (code: Retailer / Head Office): `store@demo.com` / `store123`
 - Kiosk URL: `http://localhost:3000/demo`
 
 > **Production ke liye:** seed se pehle apna password set karo:
@@ -351,8 +360,8 @@ Ye ek approved demo store bhi banayega:
 > $env:SEED_MANUFACTURER_PASSWORD="MeraStrongPassword"; pnpm db:seed
 > ```
 
-> **Note:** `pnpm db:migrate` (STEP 8) me saari migrations aa jaati hain — including
-> `20260717000000_branch_hierarchy` (multi-store: Retailer → Stores/branches →
+> **Note:** `pnpm db:deploy` (STEP 8) me saari 24 migrations aa jaati hain — including
+> `branch_hierarchy` (multi-store: Purchase manager → Stores/branches →
 > Store Managers). Fresh DB pe kuch extra nahi karna.
 
 ---
@@ -366,13 +375,13 @@ Sirf tab jab **pehle se data wali DB** ko naye multi-store structure me la rahe 
 pnpm migrate:branches
 ```
 
-Ye har purane Retailer ke andar ek default **"Main Store"** branch bana deta hai
+Ye har purane Purchase manager ke andar ek default **"Main Store"** branch bana deta hai
 aur purane kiosk/B2B/custom orders usse link kar deta hai. Dobara chalana safe hai.
 
-> Roles ka mapping (Option A): purana **Store Owner → Retailer (= Head Office)**,
-> + har retailer ka ek default **Store (branch)**. (Purana "Manager" data ab
+> Roles ka mapping (Option A): purana **Store Owner → Purchase manager (= Head Office)**,
+> + har purchase manager ka ek default **Store (branch)**. (Purana "Manager" data ab
 > `store_managers` table me inert reh jaata hai — HO Manager role hata diya gaya;
-> Retailer hi sab approvals karta hai.) Naye real branches + store managers
+> Purchase manager hi sab approvals karta hai.) Naye real branches + store managers
 > `/store/branches` se banao.
 
 ---
@@ -387,21 +396,21 @@ Browser mein khol ke test karo:
 
 | URL                                           | Kya                                                        |
 | --------------------------------------------- | ---------------------------------------------------------- |
-| `http://localhost:3000`                     | Branded Jewel Factory landing (navbar + featured catalog + **Login popup**: Retailer \| Store Manager) |
+| `http://localhost:3000`                     | Branded Jewel Factory landing (navbar + featured catalog + **Login popup**: Purchase manager \| Store Manager) |
 | `http://localhost:3000/about`               | About page (linked from landing navbar) |
 | `http://localhost:3000/manufacturer/login`  | `admin@atjewellers.com` / password from `SEED_MANUFACTURER_PASSWORD` (Manufacturer — hidden admin entry) |
-| `http://localhost:3000/store/login`         | `store@demo.com` / `store123` — **Retailer** (owner / Head Office) |
-| `http://localhost:3000/store/branches`      | Retailer: manage **Stores (branches)** + store managers + restock PIN |
+| `http://localhost:3000/store/login`         | `store@demo.com` / `store123` — **Purchase manager** (owner / Head Office) |
+| `http://localhost:3000/store/branches`      | Purchase manager: manage **Stores (branches)** + store managers + restock PIN |
 | `http://localhost:3000/store-manager/login` | **Store Manager** (no default login — create one in /store/branches first) |
 | `http://localhost:3000/demo`                | Legacy public kiosk (branch kiosk is inside /store-manager) |
 
 > `/portal` ab sirf `/` (landing) pe redirect karta hai. Staff landing ke **Login popup**
 > se ya seedha `/store/login` · `/store-manager/login` · `/manufacturer` se login karte hain.
 
-**Roles (3 staff + customer):** Manufacturer · Retailer (`/store`, = Head Office, does all approvals + chat) ·
+**Roles (3 staff + customer):** Manufacturer · Purchase manager (`/store`, = Head Office, does all approvals + chat) ·
 Store Manager (`/store-manager`) · Customer (walk-in, no login). See `flow.md` for the full flow.
 
-**Store Manager first login:** the Retailer (Head Office) must first create a Store (branch) and a
+**Store Manager first login:** the Purchase manager (Head Office) must first create a Store (branch) and a
 Store Manager under it at `/store/branches`. Then that store manager logs in at
 `/store-manager/login` → gets their branch's Kiosk + Restock.
 
@@ -410,12 +419,13 @@ Store Manager under it at `/store/branches`. Then that store manager logs in at
 ## 🧪 Pehla End-to-End Test (5 min)
 
 1. **Manufacturer login** → `/manufacturer/login`
-2. **Catalog → Add Design** → naam + photo upload + category + Status "Active" → Save
-   (Design number `JF-0001` auto milega)
+2. **Catalog → Add Design** → photo upload + category + Status "Active" → Save
+   (Design number `JF-0001` auto milega — design *name* ka field ab exist nahi karta)
 3. **Store kiosk** khol → `http://localhost:3000/demo/catalog` → wo product dikhega
 4. Product pe **Add to Bag** → Cart → **Checkout** → naam/phone daal ke Place Order
-5. **Store login** (`store@demo.com`) → **Pending Approvals** → Approve
-6. **Manufacturer** → **Kiosk Orders** → order dikhega (customer ka naam NAHI, sirf store + ship-to address) ✅
+5. **Purchase manager login** (`store@demo.com`) → **Pending Approvals** → Approve
+6. **Manufacturer** → **Kiosk Orders** → order dikhega (customer ka naam NAHI, sirf
+   business name + ship-to address) ✅
 
 Agar ye chal gaya to pura system working hai! 🎉
 
@@ -427,7 +437,8 @@ Agar ye chal gaya to pura system working hai! 🎉
 pnpm dev              # development server
 pnpm build            # production build
 pnpm db:studio        # database GUI (browser mein tables dekho/edit karo)
-pnpm db:migrate       # naye schema changes apply karo
+pnpm db:deploy        # EXISTING migrations apply karo (fresh DB / normal upgrade path)
+pnpm db:migrate       # sirf jab NAYI migration create kar rahe ho (local dev only)
 pnpm db:seed          # seed data (dobara chala sakte ho — safe hai)
 pnpm typecheck        # type errors check
 ```
@@ -438,24 +449,31 @@ pnpm typecheck        # type errors check
 
 | Problem                        | Fix                                                                                   |
 | ------------------------------ | ------------------------------------------------------------------------------------- |
-| `Can't reach database`       | `DIRECT_URL` ka password/port check karo; Supabase paused to nahi                   |
-| `Invalid server environment` | koi required env missing/khaali hai — 3 secrets min 32 chars hone chahiye            |
-| Image upload fail              | Cloudinary ke teeno values +`NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` bhare hain?         |
-| Search "warming up"            | Embedder set nahi (STEP 5) — ye normal hai agar skip kiya                            |
-| Password reset email nahi aaya | SMTP set nahi to link**terminal/console mein** print hoga — wahan se copy karo |
-| Manufacturer login fail        | Seed chalaya? `SEED_MANUFACTURER_PASSWORD` sahi value ke saath `pnpm db:seed`. |
+| `Can't reach database`       | `DIRECT_URL` ka password/port check karo; Supabase paused to nahi, ya RDS security group block kar raha |
+| `Invalid server environment` | koi required env missing/khaali hai — 4 secrets min 32 chars hone chahiye            |
+| `prisma migrate dev` pooler pe atakta hai | `pnpm db:deploy` use karo instead — fresh/existing DB pe ye hi correct command hai |
+| Image upload fail              | `AWS_REGION`/`AWS_S3_BUCKET`/`S3_PUBLIC_BASE_URL` + IAM creds bhare hain?            |
+| Search "warming up"            | AI-Features Space set nahi (STEP 5) — ye normal hai agar skip kiya                    |
+| Password reset email nahi aaya | SMTP set nahi to link **terminal/console mein** print hoga — wahan se copy karo      |
+| Manufacturer login fail        | Seed chalaya? `SEED_MANUFACTURER_PASSWORD` sahi value ke saath `pnpm db:seed`.       |
 
 ---
 
 ## 🌐 Deploy karte waqt (baad mein)
 
-Deploy pe (Render/Vercel) ye badalna:
+Production ke liye **do target** hain — AWS EC2 (primary) aur Render (alternate).
+Poora detail `AWS_MIGRATION.md` / `DEPLOY_RENDER.md` me hai; yahan sirf env checklist:
 
 - `NODE_ENV="production"`
 - `NEXT_PUBLIC_APP_URL="https://tumhara-domain.com"`
 - `ALLOWED_ORIGINS="https://tumhara-domain.com"`
-- Baaki saare env values same rahenge (production Supabase alag project bana sakte ho)
-- Build command: `pnpm build` · Start: `pnpm start`
+- Production DB = **AWS RDS** (EC2 path) ya alag Supabase project (Render path)
+- Baaki saare env values same rahenge
+- **AWS EC2:** Docker image git commit hash se tag hota hai — code push karne se
+  running container update NAHI hota, image rebuild + container restart chahiye
+  (poora command `AWS_MIGRATION.md` me). Migrations container start pe auto-apply hoti hain.
+- **Render:** Build command `pnpm install && pnpm build` · Start command `pnpm render-start`
+  (auto-migrates; plain `pnpm start` migrations apply NAHI karta)
 
 ---
 

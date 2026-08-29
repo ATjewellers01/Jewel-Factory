@@ -1,7 +1,17 @@
 # Jewel Factory — Render Deployment Guide (Hinglish)
 
 App ko Render pe live karne ke complete steps. Isse pehle `SETUP_GUIDE.md` ke
-saare accounts (Supabase, Cloudinary, Qdrant, SMTP) ready hone chahiye.
+saare accounts (Supabase, AWS S3/CloudFront, SMTP) ready hone chahiye.
+
+> **Do deploy targets exist** — Render (yahan documented) aur **AWS EC2**
+> (ab primary production, RDS Postgres + S3/CloudFront — see
+> `docs/AWS_MIGRATION.md`). Whether Render is still actively used alongside
+> AWS, ya AWS hi ab sole target hai, confirm kar lena team se pehle assume
+> karne se. **Cloudinary aur Qdrant ab legacy hain** (2026-07-22 ko AWS
+> S3+CloudFront aur pgvector se replace ho chuke — see CLAUDE.md "External
+> services"); agar tumhara Render service abhi bhi purani setup pe hai to
+> wahi chalega, lekin naya setup AWS-stack (S3/CloudFront + pgvector) ke
+> saath hi karna chahiye.
 
 ---
 
@@ -85,18 +95,26 @@ DIRECT_URL=<apni-supabase-direct-url-port-5432>
 MANUFACTURER_SECRET=<32-byte-hex>
 STORE_SECRET=<32-byte-hex>
 MANAGER_SECRET=<32-byte-hex>
+BRANCH_MANAGER_SECRET=<32-byte-hex>
 COOKIE_TTL_SECONDS=28800
 
-CLOUDINARY_CLOUD_NAME=<cloud-name>
-CLOUDINARY_API_KEY=<api-key>
-CLOUDINARY_API_SECRET=<api-secret>
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=<cloud-name>
+# AWS S3 + CloudFront — replaced Cloudinary (2026-07-22). On Render, use an
+# IAM user's access key/secret (EC2 uses an IAM role instead, no keys needed).
+AWS_REGION=ap-south-1
+AWS_S3_BUCKET=<bucket-name>
+S3_PUBLIC_BASE_URL=<cloudfront-distribution-url-no-trailing-slash>
 
-EMBEDDER_URL=https://botivate2026-embedder.hf.space
+# pgvector is a Postgres EXTENSION, not a separate service — no separate
+# account/URL/API-key needed. It lives in the same DATABASE_URL above; the
+# `pgvector` migration enables it automatically via `pnpm db:deploy`.
+
+# EMBEDDER_URL / AI_FEATURES_URL point at the SAME AI-Features service (one
+# Hugging Face Docker Space serves both /embed/* and /catalog,/transparent,
+# /describe,/classify) — replaced the old separate embedder Space + Qdrant.
+EMBEDDER_URL=<ai-features-space-url>
 EMBEDDER_API_KEY=
-QDRANT_URL=<qdrant-url-with-:6333>
-QDRANT_API_KEY=<qdrant-api-key>
-QDRANT_MANUFACTURER_COLLECTION=jewelfactory_manufacturer_products
+AI_FEATURES_URL=<same-ai-features-space-url>
+AI_FEATURES_API_KEY=
 
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=465
@@ -198,12 +216,10 @@ Render **auto-deploy** karega (autoDeploy on hai). Migrations bhi auto-apply hon
    pe ~30-50s lagta hai jagne mein. Paid plan ($7/mo) se ye issue khatam.
 
 2. **Secrets rotate karo:** Ye credentials chat + is file mein hain. Production live
-   karne se pehle Supabase password, Cloudinary secret, Gmail app password, Qdrant
-   key naye bana lena (dashboards se), aur Render env update kar dena.
+   karne se pehle Supabase password, AWS IAM secret, Gmail app password naye
+   bana lena (dashboards se), aur Render env update kar dena.
 
 3. **`.env` git mein mat daalo** — sirf Render dashboard mein.
-
-4. **Qdrant port `:6333`** — URL mein port hona zaroori hai (search ke liye).
 
 5. **Custom domain** (baad mein): Render → Settings → Custom Domains → apna domain
    add karo → `NEXT_PUBLIC_APP_URL` + `ALLOWED_ORIGINS` us domain pe update karo.
@@ -219,7 +235,7 @@ Render **auto-deploy** karega (autoDeploy on hai). Migrations bhi auto-apply hon
 | App loads but 500 everywhere | Koi env var missing — Render logs dekho, `Invalid server environment` |
 | Migrations nahi lagi | Start command `pnpm render-start` hai? (not `pnpm start`) |
 | Login redirect loop / cookies fail | `NODE_ENV=production` + `NEXT_PUBLIC_APP_URL`/`ALLOWED_ORIGINS` real URL pe set hain? |
-| Image upload fail | Cloudinary ke 4 env vars set hain? |
+| Image upload fail | AWS S3 env vars set hain (`AWS_REGION`/`AWS_S3_BUCKET`/`S3_PUBLIC_BASE_URL` + IAM creds)? |
 | Health check fail | `/api/health` path set hai health check mein? |
 
 ---

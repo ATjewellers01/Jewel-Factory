@@ -69,6 +69,12 @@ AI stays on the HF Space regardless of which app deploy is live.
 > **Code terminology trap:** `stores` = Retailer, `branches` = Store, `branch_managers`
 > = Store Manager. The `store_managers` table is **legacy/inert** (see §3.2).
 
+> **Display-text update (2026-07-30, see §3.21):** everywhere a human actually reads
+> this in the app, "Retailer" now shows as **"Purchase manager"** — this is a
+> display-text-only rename, same as the HO-Manager-to-Head-Office rename above it.
+> Code, routes, DB tables/columns, and this doc's own narrative below still say
+> "Retailer" throughout, and that's intentional — don't go find/replace it.
+
 ---
 
 ## 3. Chronological history — what was built and WHY
@@ -381,6 +387,89 @@ Two user-facing bugs discovered and fixed:
    can accumulate multiple similar images in one cart, then proceed to checkout.
    Same UX as kiosk "Add to Order" flow.
 
+### 3.21 The 2026-07-30 client punch list (11 items) — design name removed, Favorites, badges, registration overhaul, cascade-delete fix, display renames
+The client sent an 11-item punch list in one go. All 11 were built, committed, and pushed in this session (though NOT yet deployed to AWS as of that write-up — 4 new migrations were pending a container rebuild):
+
+1. **Design name removed entirely.** The client's real reason: the **design number is the only identifier that matters** on the floor — nobody was using the free-text name field, and it added clutter. `ManufacturerProduct.name` became nullable and unused by new products; every catalog/kiosk/order display across all 3 portals (19 files in one pass) switched from `product.name` to `product.designNumber`. The AI "Generate all" flow dropped its name-generation step (now just Description → Catalog image → Try-on PNG). Order-item snapshots fall back to `designNumber` when `name` is empty, so old rows with a name still show fine.
+2. **Karigar Code + Pieces** added to Add/Edit Design. `karigarCode` is manufacturer-internal only — which artisan makes the piece — and I made a point of **structurally** omitting it from every retailer/store-manager/customer-facing query (`omit: { karigarCode: true }` in Prisma, not just hiding it in the UI), since this is exactly the kind of field that leaks by accident if you only hide it client-side. `pieces` (default 1) records how many physical pieces make up the entered weight — a bangle pair being the obvious example.
+3. **Manual "Generate Try-On" button**, independent of "Generate all" — plus a per-catalog-image quick-generate in edit mode that reuses the already-uploaded S3 image as the AI's input instead of asking the manufacturer to re-upload.
+4. **Retailer gets a product detail modal** on `/store/manufacturer-catalog` — previously just static cards with no click-through. Reused the existing `StoreManagerProductDetailModal` rather than building a second one.
+5. **Similar-search pagination** — top 5 + "Show more" (+5/click), both `/store-manager/search` and `/store/similar-search`. Backend pool unchanged.
+6. **Retailer similar-search gets Add-to-Cart** — it previously had a no-op primary action; now behaves like the Store Manager's version.
+7. **Favorites**, server-backed, scoped by `(storeId, branchId)` — a new `FavoriteProduct` model. The subtlety worth remembering: a Store Manager's `storeId` tenancy value equals the retailer's id, so `branchId` is the only thing that keeps the Purchase Manager's own favorites and a Store Manager's favorites from silently merging into one list.
+8. **Cart-time remarks** — turned out this already existed via `requirementNote`; no code change needed, just confirmed.
+9. **Retailer badges** — manufacturer defines their own custom labels (e.g. "Gold Customer") and assigns one per retailer from the `/manufacturer/stores` edit modal. Deleting a label unassigns it everywhere it was used.
+10. **Registration overhaul** — 3 steps collapsed to 2 (Business, Address), the manager-account step removed entirely (there's no HO Manager to create an account for anymore), field renames at the label level only (`ownerName`/`ownerPhone` columns untouched), PIN-code-first address entry, and — the biggest behavioural change — **no manual password at registration**: the retailer's mobile number becomes their password once the manufacturer approves them.
+11. **Cascade-delete fix** — this was a real bug, not a nice-to-have: deleting a retailer threw an FK-violation the moment that retailer had ANY order history, so it had only ever "worked" in testing against brand-new zero-order retailers. Fixed by switching `b2b_orders`/`kiosk_orders`/`custom_design_orders`' FK to stores from `ON DELETE RESTRICT` to `CASCADE`.
+
+Also in the same session: the **"B2B order" → "Catalog order", "Custom (design) order" → "Customised order", "Retailer" → "Purchase manager"** display-text rename across all 3 portals + landing + email templates — same precedent as the earlier HO-Manager-to-Head-Office rename: routes, DB/Prisma identifiers, and enum values (`OrderKind.B2B`, `MessageSender.HO`) are all untouched, only what a human reads changed. And the raw AI photo upload limit went 3MB → 15MB. A same-day audit fix added try/catch + error banners to the retailer delete/active-toggle and badge add/remove buttons in `app/manufacturer/stores/page.tsx`, which had been failing silently.
+
+**Later the same day (2026-07-30 continued):** three more things came out of testing this batch live:
+- **Retailer's own direct catalog order needed its own approval** — a real bug: `placeB2bOrder()` defaulted `pendingManagerApproval` to `true` unconditionally, so an order the retailer placed themselves landed in their own Pending Approvals list waiting on a sign-off with no one above them to grant it. Fixed with an optional param the retailer's own route now passes as `false` (pre-approved). Store-Manager-originated orders are untouched and still correctly need the retailer's approval.
+- **Kiosk vs Restock favorites were incorrectly sharing one list** — both wrote to the same `(storeId, branchId)` scope, so a Store Manager's Kiosk and Restock pages showed the same favorites count. Added a `FavoriteKind` enum (`KIOSK`/`RESTOCK`) to split them.
+- **Order line items became clickable** on every order list with a linked catalog product, opening a karigarCode-free detail popup. Deliberately NOT added to the retailer's custom-designs page — custom requests carry a reference image, not a linked product, so there's nothing to open there.
+
+### 3.22 Email-optional purchase manager registration + auth responsiveness (2026-07-31)
+The client's real-world observation: a lot of older/smaller retailers don't use email at all, so requiring it at registration was locking people out. `Store.email` became nullable, and **the login username became "email if present, else mobile number"** — the password stays the mobile number either way. Mobile uniqueness is enforced at the app level (not a DB constraint), and only when no email is given, since that's the only case where the mobile *is* the username. Email can be added later from `/store/profile` if a collision doesn't already exist.
+
+The registration form itself dropped from 2 steps to 1 (email, street address, and landmark are all optional now), and `PortalLoginScreen` — which the retailer, store manager, and manufacturer logins all share — got a real mobile-responsiveness fix: it used to be `h-dvh` + `overflow-hidden`, which just clipped the form on a short viewport instead of scrolling.
+
+Also this session: the product-detail popup's "similar designs" went from a row of small thumbnails you had to click through to full scrollable blocks (each with its own "Add to order"), an items-per-row control on the Store Manager's kiosk/restock catalog (persisted in `localStorage`), a responsive fix to the landing-page product popup, and a full rework of the Retailer Admin's top header — the mobile burger + drawer are gone; Catalog and Similar Search sit next to the logo at every width now, and Dashboard moved to the far right. Also swapped the nav's diamond icon (`Gem` from lucide) for a custom jewellery-storefront SVG — this business is gold-only, no diamond imagery anywhere, and that lucide icon had been quietly violating that rule.
+
+**Known gap left from this session:** forgot-password is still email-only, so a retailer registered with mobile-only can't self-serve a password reset until they add an email to their profile.
+
+### 3.23 Cart UX, "Catalogue" rename, customised-order spec fields (2026-08-01)
+Product popups no longer close when you add to cart — across every page that opens one — because similar designs are listed below the opened product, and closing on add defeated the point of showing them. A new shared `CartQtyControl` (gold "Add" button at qty 0, a `− n +` stepper above it) replaced a dead "In cart" badge that had no way back out of the cart.
+
+**"Catalog" became "Catalogue"** in all display text (23 files) — routes, API paths, component names, and DB identifiers stayed exactly as they were; this is purely cosmetic, matching every other rename this project has done.
+
+The bigger structural change: **customised-order spec fields** — sub-category, order ref, delivery date, quantity, meena, length, size, broadness, screw, sample weight — added to both the request and order tables, all nullable. Worth remembering: `orderRef` is the *shop's own* order number, not the system's `JFC-####` (that numbering didn't exist yet at this point — it landed a few days later, see §3.25). The `MEENA_OPTIONS`/`SCREW_OPTIONS` constants in the custom-design form are **guessed shop vocabulary**, not something the client confirmed — flagged in the code as needing real-world confirmation.
+
+Bangle sizing got its own optional field, form-gated to only show for the Bangles category (switching away sends `size: null` so a stale value can't linger on a non-bangle design). And "Draft" status became displayed as "Inactive" (again, display-text only — the `ProductStatus.DRAFT` enum is unchanged), alongside a new catalogue status filter with bulk-activate for the manufacturer's catalog page.
+
+### 3.24 Customised-order UX + navbar cleanup (2026-08-03, early)
+Bangle sub-categories got reordered per client confirmation (new "Ultra Light Bangles" and "Nakshi Bangles" added). The retailer gained the ability to **place a Customised Order directly** (auto-forwards immediately, same self-approval-bypass precedent as the B2B fix in §3.21), and those requests started showing on Pending Approvals alongside kiosk/catalog orders. "Product Catalogue" was removed from the retailer's top navbar (still reachable via Dashboard). The custom-design form's previously-optional counter-spec fields became required, with narrower option sets (Meena: Yes/No; Screw: English/Pongli) and quantity switched from a number to free text ("2 pcs" — the client's actual usage didn't fit an integer).
+
+### 3.25 Order-status rework, per-item status, JFA-/JFC- order numbering (2026-08-03/04)
+This was the session that replaced the whole order-status vocabulary. The old `PENDING/CONFIRMED/PACKED/SHIPPED/DELIVERED/CANCELLED` didn't match how the client's own floor actually talks about a job — they gave a reference screenshot with their real stages: `PENDING/IN_PROCESS/GHAT_RECEIVED/READY_FOR_DELIVERY/DISPATCHED/COMPLETED/CANCELLED`. Historical rows were remapped automatically by the migration itself (`CONFIRMED→IN_PROCESS`, `PACKED→GHAT_RECEIVED`, `SHIPPED→DISPATCHED`, `DELIVERED→COMPLETED`) via a Postgres enum recreate + `USING CASE` cast, since Postgres won't let you drop an enum value in place. Every place that used to key off `'DELIVERED'` — the B2B "materialize into store inventory" trigger, six analytics queries — now keys off `'COMPLETED'`.
+
+Each **line item** within an order also got its own independent status (`kiosk_order_items`/`b2b_order_items` gained a `status` column), since in practice different products on the same order finish at different times. Custom design orders were deliberately excluded from this — they're generally a single design per order, so item-level granularity doesn't add anything.
+
+The other big piece: **JFA-#### / JFC-#### order numbering**, replacing the old `GK-YYYYMMDD-XXXX`/`B2B-YYYYMMDD-XXXX`/`CD-YYYYMMDD-XXXX` formats. Kiosk and Catalog/B2B orders share one counter (`JFA-####`) since they were already merged into one list everywhere; Customised orders get their own (`JFC-####`). The counter is **per manufacturer**, shared across every retailer that manufacturer serves, and increments via an atomic `UPDATE ... RETURNING` rather than a transaction — deliberately, so concurrent order placements from different retailers never collide on the same number. Old orders keep their old `orderNumber` untouched; there was no backfill.
+
+Also: Sales Code + Sales Person Name became required fields at the Store Manager's kiosk checkout (later removed entirely — see §3.28), and "Requirement note" became displayed as "Remark" everywhere (again, display-only).
+
+### 3.26 Customised-order merge/privacy/badges, registration + login polish (2026-08-05)
+Several threads converged in one session. The **Customised Design feature was removed from the Store Manager portal entirely** — the client's reasoning was that the manufacturer's granular per-item production status is Head-Office-only information; the Store Manager should just see a simple Pending/Approved/Completed badge, nothing more granular.
+
+The retailer's **Order History page** (renamed from "Catalogue Orders" to "Order History", then unified further) went through two passes in one day: first it merged Restock/Kiosk/Customised orders into one list with type/status/date filters and a "Placed by" dropdown; then, on the *same day*, the client came back and said that was too much filtering for what they actually wanted — a simpler list. The filters got removed again, replaced with just a visible Order Date column and clearer headers, plus source-kind badges ("Restock"/"Store Customer"/"Customised" — note "Kiosk" is deliberately labelled "Store Customer" per the client's own wording, not a translation slip).
+
+**Manufacturer order-view privacy went back and forth within the same session** — worth remembering as a cautionary tale about not committing to a privacy decision without checking with the client first. The first pass stripped the retailer's business name, city, AND branch name from every manufacturer order view, on the theory that "customer PII never reaches the manufacturer" should extend to retailer identity too. The client immediately pushed back: they need the business name to know **who placed each order** — that's basic order-management, not a privacy concern. So the business name join/select was restored everywhere, while city and branch name stayed stripped. The rule that survived: manufacturer sees the retailer's business name + requirement note + HO ship-to address + product/spec detail, but never city or branch.
+
+Several rounds of bangle-rendering prompt fixes went into the AI-Features repo this session too, all diagnosed from client screenshots: a bangle rendering as a flat 2D ribbon, then as an open "C"-shape with a gap, then with what looked like a fake clasp (which turned out, on closer inspection, to actually be a display prop/stand passing *through* the bangle's own opening rather than invented hardware — worth remembering as an example of "the AI didn't hallucinate a defect, the prompt just didn't constrain where props could touch the piece").
+
+Also this session: registration-form polish (support number visible, logo upload moved to the last field), unified mobile-number login labeling across both portals, past-dates disabled on the custom-order delivery-date picker, responsive nav labels (so icon-only buttons always show at least an abbreviated label — new users genuinely couldn't tell what bare icons meant), and weight relabeled "g" → "gm" everywhere via the shared `formatWeight()` helper.
+
+**Also parked this session:** `docs/WHATSAPP_SETUP.md`, a complete Meta WhatsApp Cloud API setup guide — but this is **prep documentation only**. The actual send integration (forgot-password via WhatsApp, approval notifications via WhatsApp) is not built; it's waiting on the client completing Meta's own setup and handing over credentials.
+
+### 3.27 Similar-search AI-cleanup, cart recommendations, Karigar-assignment + dual-PDF generation (2026-08-07 through 2026-08-11)
+This stretch of sessions is the largest single feature built in the project's history — a full Karigar (artisan) assignment workflow with dual PDF generation — plus two unrelated but significant fixes that happened alongside it.
+
+**Similar-design search accuracy.** The client's complaint was concrete: uploading a raw photo (cluttered background, hand-held) almost never matched its own catalogue studio shot of the same product, because the background was dominating the OpenCLIP embedding more than the jewellery itself. The fix pre-processes the query photo through AI-Features before embedding: a new `/classify` endpoint guesses the category from the image alone (this search page has no category picker), then the same background-cleanup pipeline the manufacturer's Add Design already uses runs on it, and only the *cleaned* image gets embedded — never the raw one, and the cleaned image itself is never saved or returned anywhere. Deliberately **category-only**, never sub-category — because an AI-guessed sub-category on this path won't always match a human's manually-chosen one on Add Design, and the two would get visibly different cleanups that drift the embeddings apart rather than together. As a stopgap while this was being validated, the similarity floor was also lowered (0.65 → 0.35) — real query photos just embed further from their own catalogue shot than two catalogue photos embed from each other.
+
+**Cart recommendations.** The retailer's catalogue page gained "You may also like" and "More from {category}" sections that replace the normal grid while the cart is open, powered by a simple priority-ranking helper (category weight 6, purity weight 3 — deliberately simplified, no sub-category or weight-closeness scoring, per client request). A keyword-search input was added alongside the existing exact-design-number search.
+
+**Karigar-assignment + dual-PDF — built in one continuous push across several sessions, each one driven by the client walking through the actual screen and catching real gaps:**
+- The **first pass** (Phases 1–4, built in one go per the client's explicit instruction to build everything and typecheck once at the end) added a manufacturer-scoped `Karigar` master-list, checkbox multi-select over unassigned order items, an "Assign Karigar" action that creates a `JFC-####` Customised Order and flips those items to `IN_PROCESS`, an assignment form with auto-filled + manually-filled fields, and client-side PDF generation — two separate PDFs (Customer PDF, showing full store identity; Karigar PDF, omitting store identity but including all internal notes since production notes aren't PII).
+- The client then walked through the live screen and asked for a **different layout** (2026-08-10): the dashed "ASSIGN KARIGAR" box was replaced with a dropdown on the same row as "Ship to", checkboxes moved directly onto each item row, and assignment moved into a separate modal reused for both assigning and editing. The biggest structural change here: a retailer's own bespoke request no longer creates a `CustomDesignOrder` immediately — it lands as a PENDING row in the manufacturer's merged list first, and only becomes a real order once a Karigar is assigned to it.
+- Then **three more rounds of real-screen feedback** in quick succession: the reference-form fields needed to be editable inputs, not read-only display (2026-08-11); the checked items' own detail (image, design number, spec) needed to actually appear in the modal and the PDF, not just be assigned invisibly; and then three concrete bugs surfaced from live use — clearing the Karigar Code field silently failed to save the clear (an `undefined`-vs-`null` bug, the same class of bug the `size` field had already been fixed for once before), the Karigar dropdown showed empty even when a product clearly had a code (the product-level free-text code and the separate master-list table were silently out of sync — fixed with a sync-on-read upsert), and there was no way to remove a selected code or pick one that wasn't already on the order.
+
+The pattern worth internalizing from this whole stretch: **the client validates by using the actual deployed screen, not by reading a spec**, and each round of feedback was concrete and screen-specific. Expect this to keep happening on any UI-heavy feature — build it, ship it, and expect a follow-up round once it's actually clickable.
+
+**Deliberately deferred, per explicit client instruction to keep it separate:** a system-wide retrofit of every form to use a consistent required-field-asterisk / "(Optional)" convention. This is still an open, un-started task (see PENDING.md).
+
+**Not yet deployed as of the last of these sessions** — the `karigar_assignment_phase1` migration needs `prisma migrate deploy` + a container rebuild on EC2.
+
 ---
 
 ## 4. What's PENDING (see docs/PENDING.md for the live checklist — this section is a summary, PENDING.md is the source of truth)
@@ -388,19 +477,47 @@ Two user-facing bugs discovered and fixed:
 1. ~~Merge `retailer-multistore` → `master`~~ — **DONE**, `master` is now the
    active branch (see §3.17/§3.18).
 2. ~~AWS migration~~ — **DONE** (§3.17): RDS + pgvector + S3/CloudFront + EC2/Docker,
-   all confirmed live. **What's still open:** confirm whether Render is retired or
-   still live in parallel; document the actual EC2 redeploy (rebuild+restart)
-   command — it's not automatic on `git push`.
+   all confirmed live. ~~Document the actual EC2 redeploy (rebuild+restart)
+   command~~ — **DONE**, it's now in `../CLAUDE.md`'s "Production deployments"
+   section (rebuild the Docker image at the new commit, restart the container).
+   **Still open:** confirm whether Render is retired or still live in parallel —
+   not confirmed as of the 2026-08-09 session either.
 3. **Rotate secrets** — the **AWS RDS database password** was freshly exposed in
-   plaintext during the 2026-07-24 debugging session (see §3.18) — rotate it.
+   plaintext during the 2026-07-24 debugging session (see §3.18) — no later
+   session confirms this was rotated, so treat it as still outstanding.
    Also still outstanding from earlier: Supabase (dev) DB pwd, Gmail app pwd, the
-   4 auth secrets. Cloudinary/Qdrant secrets are now moot (retired in prod).
+   4 auth secrets (now 5, `BRANCH_MANAGER_SECRET` added). Cloudinary/Qdrant
+   secrets are now moot (retired in prod).
 4. **Live end-to-end test** — all flows, on whichever deploy target is
-   authoritative (Render vs AWS EC2 — see #2).
+   authoritative (Render vs AWS EC2 — see #2). Multiple migrations landed since
+   this item was first written (see the Migrations section of `../CLAUDE.md` —
+   24 total now) and haven't all been confirmed applied on a live end-to-end pass.
 5. **OpenAI quota** — appeared resolved as of 2026-07-24 (a successful generation
    was observed), not exhaustively re-verified.
 6. **`gpt-image-1` deprecation (2026-10-23)** — the transparent-background step of
    AI try-on generation depends on it; re-test/repoint before that date (§3.18).
+   Still not resolved as of the latest session — the date is getting close.
+7. **AWS EC2 container rebuild + redeploy** — several sessions' worth of
+   migrations (see `../CLAUDE.md` Migrations, up through `karigar_assignment_phase1`)
+   have NOT been confirmed deployed to production as of the last session that
+   mentions it (2026-08-09/11). Confirm current deployed commit on EC2 before
+   assuming any post-2026-07-24 feature (Karigar assignment, JFA-/JFC- numbering,
+   order-status rework, Catalogue rename, etc.) is actually live.
+8. **WhatsApp send integration** — `docs/WHATSAPP_SETUP.md` is prep documentation
+   only (Meta Cloud API setup guide). The actual send code (forgot-password link
+   via WhatsApp, approval notification via WhatsApp) is NOT implemented; both
+   flows remain fully email-based. Blocked on the client finishing Meta's own
+   setup and handing over the access token / Phone Number ID / WABA ID / approved
+   template names (§3.26).
+9. **System-wide required/optional form convention retrofit** — a consistent
+   red-asterisk-for-required / "(Optional)"-for-optional convention across every
+   existing form, explicitly deferred out of the Karigar-assignment work per the
+   client's own instruction to keep it as a separate follow-up task (§3.27). Not
+   started.
+10. **Karigar "Order Stage" and "Expected Delivery Date"** — deliberately left as
+    a plain free-text field / not implemented at all respectively, because the
+    client hadn't decided the real option list or the field's meaning as of the
+    last Karigar session. Don't invent options for either — ask the client.
 
 ---
 
@@ -466,5 +583,6 @@ the Retailer (no default).
 - [`DATABASE.md`](DATABASE.md) — schema reference.
 - [`SETUP_GUIDE.md`](SETUP_GUIDE.md) — detailed dev setup.
 - [`DEPLOY_RENDER.md`](DEPLOY_RENDER.md) — Render deploy. [`AWS_MIGRATION.md`](AWS_MIGRATION.md) — the AWS production deploy (done, not just a plan — RDS/pgvector/S3/EC2).
+- [`WHATSAPP_SETUP.md`](WHATSAPP_SETUP.md) — Meta WhatsApp Cloud API setup guide (prep only — the send integration itself isn't built yet, see §3.26 and §4 item 8).
 - [`PENDING.md`](PENDING.md) — live remaining-work checklist.
 - **This file** — history, decisions, owner preferences.
