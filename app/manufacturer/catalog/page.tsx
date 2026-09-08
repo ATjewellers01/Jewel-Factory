@@ -20,13 +20,26 @@ type Product = {
   name: string | null;
   category: string | null;
   subCategory: string | null;
+  // Deprecated (2026-08-17) — every category now always captures Gross/Net
+  // Weight instead; kept only so an older product's legacy single-weight
+  // value still displays/filters if it was never re-saved after that change.
   weightGrams: string | null;
+  grossWeightGrams: string | null;
+  netWeightGrams: string | null;
   size: string | null;
   karigarCode: string | null;
   status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
   hasTryon: boolean;
   images: ProductImage[];
 };
+
+// Gross Weight is the current field every category writes; weightGrams is the
+// pre-2026-08-17 legacy single-weight field, kept for a design never re-saved
+// since. Prefer Gross, fall back to the legacy field, so both old and new
+// designs remain visible to the weight filter/sort/PDF.
+function displayWeight(p: Pick<Product, 'weightGrams' | 'grossWeightGrams'>): string | null {
+  return p.grossWeightGrams ?? p.weightGrams;
+}
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: 'bg-gray-100 text-gray-700',
@@ -57,6 +70,17 @@ export default function ManufacturerCatalogPage() {
   const [error, setError] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pdfProgress, setPdfProgress] = useState<{ done: number; total: number } | null>(null);
+  // PDF export scope — independent of the "Inactive"-only bulk-activate
+  // selection above (they'd otherwise fight over the same `selected` set if
+  // a manufacturer wanted to pick specific designs while NOT filtering by
+  // Inactive status). 'all' = every currently-filtered design (old behavior);
+  // 'selected' = only checkbox-picked designs, on ANY status filter;
+  // 'top' = the first N designs in the current sort/filter order.
+  const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
+  const [pdfScope, setPdfScope] = useState<'all' | 'selected' | 'top'>('all');
+  const [pdfSelecting, setPdfSelecting] = useState(false);
+  const [pdfSelected, setPdfSelected] = useState<Set<string>>(new Set());
+  const [pdfTopN, setPdfTopN] = useState('10');
 
   async function load() {
     try {
@@ -86,12 +110,12 @@ export default function ManufacturerCatalogPage() {
     return matchSearch && matchCat && matchSub && matchKarigar && matchSize && matchStatus;
   });
 
-  const weightBounds = weightExtent(preWeight.map((p) => p.weightGrams));
+  const weightBounds = weightExtent(preWeight.map(displayWeight));
   const filtered = sortProducts(
-    preWeight.filter((p) => matchWeightRange(p.weightGrams, weightRange)),
+    preWeight.filter((p) => matchWeightRange(displayWeight(p), weightRange)),
     sort,
     (p) => p.designNumber,
-    (p) => p.weightGrams,
+    displayWeight,
   );
 
   // Selecting designs only makes sense while a single status is in view — the
@@ -107,6 +131,23 @@ export default function ManufacturerCatalogPage() {
       return next;
     });
   }
+
+  function togglePdfSelected(id: string) {
+    setPdfSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  const pdfTopNNum = Math.max(1, parseInt(pdfTopN, 10) || 0);
+  // The set of designs that will actually go into the PDF, per the chosen
+  // scope — always a subset of `filtered` (whatever filters are active),
+  // never fights with the Inactive-only bulk-activate selection above.
+  const pdfExportItems =
+    pdfScope === 'selected' ? filtered.filter((p) => pdfSelected.has(p.id)) :
+    pdfScope === 'top' ? filtered.slice(0, pdfTopNNum) :
+    filtered;
 
   async function activateSelected() {
     if (selectedInView.length === 0) return;
@@ -128,19 +169,19 @@ export default function ManufacturerCatalogPage() {
     } finally { setActivating(false); }
   }
 
-  // Exports whatever is currently in `filtered` — the same set of cards the
-  // manufacturer is looking at, in the same order.
+  // Exports `pdfExportItems` — either the full currently-filtered list, just
+  // the checkbox-picked designs, or the first N in view, per `pdfScope`.
   async function downloadPdf() {
-    if (filtered.length === 0 || generatingPdf) return;
+    if (pdfExportItems.length === 0 || generatingPdf) return;
     setGeneratingPdf(true);
-    setPdfProgress({ done: 0, total: filtered.length });
+    setPdfProgress({ done: 0, total: pdfExportItems.length });
     try {
       await downloadCataloguePdf(
-        filtered.map((p) => ({
+        pdfExportItems.map((p) => ({
           designNumber: p.designNumber,
           category: p.category,
           subCategory: p.subCategory,
-          weightGrams: p.weightGrams,
+          weightGrams: displayWeight(p),
           size: p.size,
           karigarCode: p.karigarCode,
           statusLabel: STATUS_LABELS[p.status] ?? p.status.toLowerCase(),
@@ -171,18 +212,80 @@ export default function ManufacturerCatalogPage() {
           <p className="mt-0.5 text-sm text-muted-foreground">Your global design catalog. No price shown — Gold only.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            onClick={downloadPdf}
-            disabled={generatingPdf || filtered.length === 0}
-            title="Download the currently filtered list as a PDF"
-          >
-            {generatingPdf ? (
-              <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />{pdfProgress ? `${pdfProgress.done}/${pdfProgress.total}` : 'Generating…'}</>
-            ) : (
-              <><FileDown className="mr-1.5 h-4 w-4" /> Download PDF</>
+          <div className="relative">
+            <div className="flex">
+              <Button
+                variant="outline"
+                onClick={downloadPdf}
+                disabled={generatingPdf || pdfExportItems.length === 0}
+                className="rounded-r-none"
+                title={
+                  pdfScope === 'selected' ? 'Download the selected designs as a PDF'
+                  : pdfScope === 'top' ? `Download the top ${pdfTopNNum} designs in view as a PDF`
+                  : 'Download the currently filtered list as a PDF'
+                }
+              >
+                {generatingPdf ? (
+                  <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" />{pdfProgress ? `${pdfProgress.done}/${pdfProgress.total}` : 'Generating…'}</>
+                ) : (
+                  <><FileDown className="mr-1.5 h-4 w-4" /> Download PDF{pdfScope !== 'all' ? ` (${pdfExportItems.length})` : ''}</>
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-l-none border-l-0 px-2"
+                onClick={() => setPdfMenuOpen((v) => !v)}
+                aria-label="PDF export options"
+              >
+                ▾
+              </Button>
+            </div>
+            {pdfMenuOpen && (
+              <div className="absolute right-0 top-full z-10 mt-1 w-64 space-y-1 rounded-md border bg-card p-2 text-sm shadow-lg">
+                <button
+                  type="button"
+                  className={`block w-full rounded px-2 py-1.5 text-left hover:bg-muted ${pdfScope === 'all' ? 'bg-muted font-medium' : ''}`}
+                  onClick={() => { setPdfScope('all'); setPdfSelecting(false); setPdfMenuOpen(false); }}
+                >
+                  All designs currently in view
+                </button>
+                <button
+                  type="button"
+                  className={`block w-full rounded px-2 py-1.5 text-left hover:bg-muted ${pdfScope === 'selected' ? 'bg-muted font-medium' : ''}`}
+                  onClick={() => { setPdfScope('selected'); setPdfSelecting(true); setPdfMenuOpen(false); }}
+                >
+                  Only selected designs…
+                </button>
+                <div className={`flex items-center gap-2 rounded px-2 py-1.5 ${pdfScope === 'top' ? 'bg-muted font-medium' : ''}`}>
+                  <button
+                    type="button"
+                    className="flex-1 text-left"
+                    onClick={() => { setPdfScope('top'); setPdfSelecting(false); setPdfMenuOpen(false); }}
+                  >
+                    Top
+                  </button>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={pdfTopN}
+                    onChange={(e) => setPdfTopN(e.target.value)}
+                    onFocus={() => setPdfScope('top')}
+                    className="h-7 w-16 px-2 text-center"
+                  />
+                  <span>items</span>
+                </div>
+              </div>
             )}
-          </Button>
+          </div>
+          {pdfScope === 'selected' && (
+            <span className="text-xs text-muted-foreground">
+              {pdfSelecting ? `Tap designs below to select — ${pdfSelected.size} chosen` : `${pdfSelected.size} selected`}
+              {pdfSelecting && (
+                <button type="button" onClick={() => setPdfSelecting(false)} className="ml-2 font-medium text-primary hover:underline">Done</button>
+              )}
+            </span>
+          )}
           <Link href="/manufacturer/catalog/new">
             <Button className="metal-sheen text-[#17120b] font-semibold">
               <Plus className="mr-1.5 h-4 w-4" /> Add Design
@@ -316,8 +419,11 @@ export default function ManufacturerCatalogPage() {
           {filtered.map((p) => {
             const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
             const isSelected = selected.has(p.id);
+            const isPdfSelected = pdfSelected.has(p.id);
+            const showCheck = selectionMode || pdfSelecting;
+            const checked = selectionMode ? isSelected : isPdfSelected;
             const card = (
-                <div className={`group overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md ${isSelected ? 'border-primary ring-2 ring-primary/30' : ''}`}>
+                <div className={`group overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md ${checked ? 'border-primary ring-2 ring-primary/30' : ''}`}>
                   <div className="relative aspect-[3/4] bg-[#ece5da]">
                     {img ? (
                       <Image src={img.secureUrl} alt={p.designNumber} fill className="object-cover" />
@@ -334,8 +440,8 @@ export default function ManufacturerCatalogPage() {
                     <span className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_COLORS[p.status]}`}>
                       {STATUS_LABELS[p.status] ?? p.status.toLowerCase()}
                     </span>
-                    {selectionMode && (
-                      <span className={`absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full border-2 ${isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-white/80 bg-black/30 text-transparent'}`}>
+                    {showCheck && (
+                      <span className={`absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full border-2 ${checked ? 'border-primary bg-primary text-primary-foreground' : 'border-white/80 bg-black/30 text-transparent'}`}>
                         <Check className="h-4 w-4" />
                       </span>
                     )}
@@ -343,15 +449,20 @@ export default function ManufacturerCatalogPage() {
                   <div className="p-3">
                     <p className="truncate text-sm font-medium">{p.designNumber}</p>
                     <p className="truncate text-xs text-muted-foreground">{p.category ?? ''}{p.subCategory ? ` › ${p.subCategory}` : ''}</p>
-                    {formatWeight(p.weightGrams) && <p className="text-xs text-muted-foreground">{formatWeight(p.weightGrams)}{p.size ? ` · Size ${p.size}` : ''}</p>}
+                    {formatWeight(displayWeight(p)) && <p className="text-xs text-muted-foreground">{formatWeight(displayWeight(p))}{p.size ? ` · Size ${p.size}` : ''}</p>}
                     {p.karigarCode && <p className="text-xs text-muted-foreground/70">Karigar: {p.karigarCode}</p>}
                   </div>
                 </div>
             );
-            // On the Inactive filter the card selects instead of navigating —
-            // editing a design is still one click away from anywhere else.
+            // On the Inactive filter, or while picking designs for the PDF,
+            // the card selects instead of navigating — editing a design is
+            // still one click away from anywhere else.
             return selectionMode ? (
               <button key={p.id} type="button" onClick={() => toggle(p.id)} aria-pressed={isSelected} className="text-left">
+                {card}
+              </button>
+            ) : pdfSelecting ? (
+              <button key={p.id} type="button" onClick={() => togglePdfSelected(p.id)} aria-pressed={isPdfSelected} className="text-left">
                 {card}
               </button>
             ) : (
