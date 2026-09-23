@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Store as StoreIcon, Pencil, Key, Trash2 } from 'lucide-react';
+import { Loader2, Store as StoreIcon, Pencil, Key, Trash2, Download } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Optional, Required } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { useApi, apiPost, apiSend } from '@/hooks/use-api';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
+import { downloadCustomersExcel } from '@/lib/customers-excel';
 
 type Store = {
   id: string; name: string; slug: string; email: string | null;
@@ -37,6 +38,8 @@ export default function ManufacturerStoresPage() {
   const [badgeFilter, setBadgeFilter] = useState('');
   const [cityFilter, setCityFilter] = useState('');
   const [storeCountFilter, setStoreCountFilter] = useState<'' | 'zero' | 'has'>('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
 
   const cityOptions = Array.from(new Set((data ?? []).map((s) => s.city).filter((c): c is string => !!c))).sort();
 
@@ -52,6 +55,55 @@ export default function ManufacturerStoresPage() {
   const hasActiveFilters = !!(search || statusFilter || badgeFilter || cityFilter || storeCountFilter);
   function clearFilters() {
     setSearch(''); setStatusFilter(''); setBadgeFilter(''); setCityFilter(''); setStoreCountFilter('');
+  }
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((s) => selected.has(s.id));
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function toggleSelectAll() {
+    setSelected((prev) => {
+      if (allFilteredSelected) {
+        // Only deselect the currently-filtered rows — a selection made
+        // under a different filter (if any survived) stays intact.
+        const next = new Set(prev);
+        filtered.forEach((s) => next.delete(s.id));
+        return next;
+      }
+      const next = new Set(prev);
+      filtered.forEach((s) => next.add(s.id));
+      return next;
+    });
+  }
+
+  async function exportExcel() {
+    // No selection -> export the current filtered list (all customers if no
+    // filter is applied) rather than requiring a selection first.
+    const rowsToExport = selected.size > 0 ? filtered.filter((s) => selected.has(s.id)) : filtered;
+    if (rowsToExport.length === 0) return;
+    setExporting(true);
+    try {
+      await downloadCustomersExcel(
+        rowsToExport.map((s) => ({
+          companyName: s.name,
+          slug: s.slug,
+          email: s.email,
+          phone: s.phone,
+          ownerName: s.ownerName,
+          ownerPhone: s.ownerPhone,
+          city: s.city,
+        })),
+        `customers-${new Date().toISOString().slice(0, 10)}.xlsx`,
+      );
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Could not export Excel file');
+    } finally {
+      setExporting(false);
+    }
   }
 
   async function toggle(s: Store) {
@@ -114,6 +166,18 @@ export default function ManufacturerStoresPage() {
           {hasActiveFilters && (
             <button type="button" onClick={clearFilters} className="self-start text-xs text-muted-foreground hover:text-foreground sm:self-auto">Clear</button>
           )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={exportExcel}
+            disabled={exporting || filtered.length === 0}
+            className="sm:ml-auto"
+            title={selected.size > 0 ? `Export ${selected.size} selected customer${selected.size === 1 ? '' : 's'}` : 'Export all customers currently shown'}
+          >
+            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {selected.size > 0 ? `Download Excel (${selected.size})` : 'Download Excel'}
+          </Button>
         </div>
       )}
 
@@ -133,17 +197,30 @@ export default function ManufacturerStoresPage() {
               phones even inside overflow-x-auto, which is unusable as a primary
               list. Table view (unchanged) takes over from md up. */}
           <div className="space-y-2 md:hidden">
+            <label className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+              <input type="checkbox" checked={allFilteredSelected} onChange={toggleSelectAll} className="h-4 w-4 rounded border-input" />
+              Select all ({filtered.length})
+            </label>
             {filtered.map((s, index) => (
               <div key={s.id} className="rounded-xl border bg-card p-3">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs text-muted-foreground">#{index + 1}</p>
-                    <p className="truncate text-sm font-medium">
-                      {s.name} <span className="text-xs font-normal text-muted-foreground">/{s.slug}</span>
-                    </p>
-                    {s.badgeLabel && <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">{s.badgeLabel}</span>}
-                    <p className="mt-1 truncate text-xs text-muted-foreground">{s.email ?? s.ownerPhone ?? 'No email'}</p>
-                    <p className="truncate text-xs text-muted-foreground">{[s.city, s.phone].filter(Boolean).join(' · ')}</p>
+                  <div className="flex min-w-0 flex-1 items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(s.id)}
+                      onChange={() => toggleSelected(s.id)}
+                      className="mt-1 h-4 w-4 shrink-0 rounded border-input"
+                      aria-label={`Select ${s.name}`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-muted-foreground">#{index + 1}</p>
+                      <p className="truncate text-sm font-medium">
+                        {s.name} <span className="text-xs font-normal text-muted-foreground">/{s.slug}</span>
+                      </p>
+                      {s.badgeLabel && <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">{s.badgeLabel}</span>}
+                      <p className="mt-1 truncate text-xs text-muted-foreground">{s.email ?? s.ownerPhone ?? 'No email'}</p>
+                      <p className="truncate text-xs text-muted-foreground">{[s.city, s.phone].filter(Boolean).join(' · ')}</p>
+                    </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <button onClick={() => setEditing(s)} className="text-muted-foreground hover:text-primary" aria-label={`Edit ${s.name}`}><Pencil className="h-4 w-4" /></button>
@@ -168,6 +245,9 @@ export default function ManufacturerStoresPage() {
               {/* divide-x on every row draws the vertical column separators. */}
               <thead>
                 <tr className="divide-x border-b bg-muted/40 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="whitespace-nowrap px-3 py-2.5">
+                    <input type="checkbox" checked={allFilteredSelected} onChange={toggleSelectAll} className="h-4 w-4 rounded border-input" aria-label="Select all customers" />
+                  </th>
                   <th className="whitespace-nowrap px-3 py-2.5">Sr No.</th>
                   <th className="whitespace-nowrap px-3 py-2.5">Company Name</th>
                   <th className="whitespace-nowrap px-3 py-2.5">Contact</th>
@@ -179,6 +259,9 @@ export default function ManufacturerStoresPage() {
               <tbody className="divide-y">
                 {filtered.map((s, index) => (
                   <tr key={s.id} className="divide-x hover:bg-muted/20">
+                    <td className="whitespace-nowrap px-3 py-3">
+                      <input type="checkbox" checked={selected.has(s.id)} onChange={() => toggleSelected(s.id)} className="h-4 w-4 rounded border-input" aria-label={`Select ${s.name}`} />
+                    </td>
                     <td className="whitespace-nowrap px-3 py-3 tabular-nums text-muted-foreground">{index + 1}</td>
                     <td className="min-w-[180px] px-3 py-3">
                       <p className="truncate text-sm font-medium">

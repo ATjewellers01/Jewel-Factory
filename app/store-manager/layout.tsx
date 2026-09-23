@@ -149,10 +149,20 @@ function Shell({ children }: { children: ReactNode }) {
 
           <div className="border-b border-black/10 bg-[#fbf8f1]/95 backdrop-blur-xl">
             <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-3 sm:px-4 md:px-6 lg:px-8 xl:px-12">
-              <Link href="/store-manager" className="group flex min-w-0 shrink items-center gap-2.5 lg:max-w-[190px] xl:max-w-[230px]" aria-label={`${data.retailer.name} — home`}>
-                <Image src={data.retailer.logoUrl || FALLBACK_STORE_LOGO} alt={data.retailer.name} width={36} height={36} className="h-9 w-9 shrink-0 rounded-full object-contain ring-1 ring-[#c9a84c]/30 transition-shadow group-hover:ring-[#c9a84c]/60" />
+              <Link
+                href="/store-manager"
+                className="group flex min-w-[130px] shrink items-center gap-2.5 sm:min-w-[160px] lg:max-w-[220px] xl:max-w-[260px]"
+                aria-label={`${data.retailer.name} — home`}
+              >
+                <Image
+                  src={data.retailer.logoUrl || FALLBACK_STORE_LOGO}
+                  alt={data.retailer.name}
+                  width={44}
+                  height={44}
+                  className="h-10 w-10 shrink-0 rounded-full object-contain ring-1 ring-[#c9a84c]/30 transition-shadow group-hover:ring-[#c9a84c]/60 sm:h-11 sm:w-11"
+                />
                 <span className="min-w-0">
-                  <span className="block truncate font-display text-[17px] font-medium leading-tight tracking-[0.02em] text-[#211c17] sm:text-lg">
+                  <span className="block truncate font-display text-lg font-medium leading-tight tracking-[0.02em] text-[#211c17] sm:text-xl">
                     {data.retailer.name}
                   </span>
                   <span className="mt-0.5 hidden truncate text-[9px] font-semibold uppercase tracking-[0.16em] text-[#9b7a3c] sm:block">

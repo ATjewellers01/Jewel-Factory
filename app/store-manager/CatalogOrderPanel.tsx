@@ -17,6 +17,7 @@ import { useApi, apiPost } from '@/hooks/use-api';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useStoreManagerKioskCart, useStoreManagerRestockCart } from '@/hooks/use-store-manager-cart';
 import { useTaxonomy } from '@/hooks/use-taxonomy';
+import { buildCatalogCounts, subCategories1WithStock, subCategories2WithStock } from '@/lib/catalog-counts';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { formatWeight } from '@/lib/format';
 import { matchesDescriptionQuery, rankSimilar } from '@/lib/product-similarity';
@@ -78,6 +79,12 @@ export function CatalogOrderPanel({
   const orderCart = showPopularity ? restockCart : kioskCart;
   const { data, loading, error } = useApi<Product[]>('/api/branch-manager/catalog', '/store-manager/login');
   const taxonomy = useTaxonomy('/api/branch-manager/taxonomy');
+  // Same "≥1 active design" rule as /store/home's collection drawer and the
+  // Retailer Admin's manufacturer-catalog page — don't offer a sub-category
+  // filter option that would return an empty grid.
+  const catalogCounts = useMemo(() => buildCatalogCounts(data ?? []), [data]);
+  const subCategories1WithDesigns = (cat: string) => subCategories1WithStock(catalogCounts, cat, taxonomy.subCategories1For(cat));
+  const subCategories2WithDesigns = (cat: string, sub1: string) => subCategories2WithStock(catalogCounts, cat, sub1, taxonomy.subCategories2For(cat, sub1));
   const favorites = useFavorites('/api/branch-manager/favorites', showPopularity ? 'RESTOCK' : 'KIOSK');
   const [search, setSearch] = useState('');
   const [descQuery, setDescQuery] = useState('');
@@ -265,7 +272,7 @@ export function CatalogOrderPanel({
           </div>
         </div>
 
-        {mobileFilters ? <div className="mb-6 rounded-lg border border-black/10 bg-[#fffdf8] p-4 lg:hidden"><CatalogFilters categories={availableCategories} subCategoriesFor={taxonomy.subCategories1For} subCategories2For={taxonomy.subCategories2For} category={category} subCategory={subCategory} subCategory2={subCategory2} size={size} sizes={availableSizes} weightRange={weightRange} weightBounds={weightBounds} setCategory={setCategory} setSubCategory={setSubCategory} setSubCategory2={setSubCategory2} setSize={setSize} setWeightRange={setWeightRange} /></div> : null}
+        {mobileFilters ? <div className="mb-6 rounded-lg border border-black/10 bg-[#fffdf8] p-4 lg:hidden"><CatalogFilters categories={availableCategories} subCategoriesFor={subCategories1WithDesigns} subCategories2For={subCategories2WithDesigns} category={category} subCategory={subCategory} subCategory2={subCategory2} size={size} sizes={availableSizes} weightRange={weightRange} weightBounds={weightBounds} setCategory={setCategory} setSubCategory={setSubCategory} setSubCategory2={setSubCategory2} setSize={setSize} setWeightRange={setWeightRange} /></div> : null}
         {error ? <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
 
       {showCart && (
@@ -476,7 +483,7 @@ export function CatalogOrderPanel({
 
       <div className="flex items-start gap-8">
         <aside className="sticky top-28 hidden w-60 shrink-0 border-r border-black/10 pr-6 lg:block">
-          <CatalogFilters categories={availableCategories} subCategoriesFor={taxonomy.subCategories1For} subCategories2For={taxonomy.subCategories2For} category={category} subCategory={subCategory} subCategory2={subCategory2} size={size} sizes={availableSizes} weightRange={weightRange} weightBounds={weightBounds} setCategory={setCategory} setSubCategory={setSubCategory} setSubCategory2={setSubCategory2} setSize={setSize} setWeightRange={setWeightRange} />
+          <CatalogFilters categories={availableCategories} subCategoriesFor={subCategories1WithDesigns} subCategories2For={subCategories2WithDesigns} category={category} subCategory={subCategory} subCategory2={subCategory2} size={size} sizes={availableSizes} weightRange={weightRange} weightBounds={weightBounds} setCategory={setCategory} setSubCategory={setSubCategory} setSubCategory2={setSubCategory2} setSize={setSize} setWeightRange={setWeightRange} />
         </aside>
         <div className="min-w-0 flex-1">
       {loading ? (

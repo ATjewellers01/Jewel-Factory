@@ -3,7 +3,7 @@
 import { Loader2, Gem, Heart, ShoppingCart, Minus, Plus, Trash2, Sparkles, CheckCircle2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 
 import { StoreManagerProductDetailModal } from '@/components/kiosk/StoreManagerProductDetailModal';
 import { CartQtyControl } from '@/components/orders/CartQtyControl';
@@ -17,6 +17,7 @@ import { useApi, apiPost } from '@/hooks/use-api';
 import { useB2bCart } from '@/hooks/use-b2b-cart';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useTaxonomy } from '@/hooks/use-taxonomy';
+import { buildCatalogCounts, subCategories1WithStock, subCategories2WithStock } from '@/lib/catalog-counts';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { formatWeight } from '@/lib/format';
 import { matchesDescriptionQuery, rankSimilar } from '@/lib/product-similarity';
@@ -61,6 +62,10 @@ export default function ManufacturerCatalogBrowsePage() {
 function CatalogBrowse() {
   const { data, error, loading } = useApi<Product[]>('/api/store/catalog', '/store/login');
   const taxonomy = useTaxonomy('/api/store/taxonomy');
+  // Same "≥1 active design" rule as /store/home's collection drawer — a
+  // sub-category the manufacturer created but never actually put a design
+  // in isn't worth offering as a filter option here either.
+  const catalogCounts = useMemo(() => buildCatalogCounts(data ?? []), [data]);
   const cart = useB2bCart();
   const favorites = useFavorites('/api/store/favorites');
   const router = useRouter();
@@ -199,18 +204,24 @@ function CatalogBrowse() {
               <option value="">All categories</option>
               {taxonomy.categories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
-            {taxonomy.subCategories1For(category).length > 0 && (
-              <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={subCategory} onChange={(e) => { setSubCategory(e.target.value); setSubCategory2(''); }}>
-                <option value="">All sub-categories</option>
-                {taxonomy.subCategories1For(category).map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            )}
-            {taxonomy.subCategories2For(category, subCategory).length > 0 && (
-              <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={subCategory2} onChange={(e) => setSubCategory2(e.target.value)} aria-label="Filter by sub-category 2">
-                <option value="">All {subCategory ? 'types' : 'sub-categories 2'}</option>
-                {taxonomy.subCategories2For(category, subCategory).map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            )}
+            {(() => {
+              const subs1 = subCategories1WithStock(catalogCounts, category, taxonomy.subCategories1For(category));
+              return subs1.length > 0 && (
+                <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={subCategory} onChange={(e) => { setSubCategory(e.target.value); setSubCategory2(''); }}>
+                  <option value="">All sub-categories</option>
+                  {subs1.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              );
+            })()}
+            {(() => {
+              const subs2 = subCategories2WithStock(catalogCounts, category, subCategory, taxonomy.subCategories2For(category, subCategory));
+              return subs2.length > 0 && (
+                <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={subCategory2} onChange={(e) => setSubCategory2(e.target.value)} aria-label="Filter by sub-category 2">
+                  <option value="">All {subCategory ? 'types' : 'sub-categories 2'}</option>
+                  {subs2.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              );
+            })()}
             {sizeOptions.length > 0 && (
               <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={size} onChange={(e) => setSize(e.target.value)} aria-label="Filter by size">
                 <option value="">All sizes</option>
