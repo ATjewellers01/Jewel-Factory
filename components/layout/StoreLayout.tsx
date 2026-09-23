@@ -100,7 +100,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
 
       <header className="sticky top-0 z-30 border-b border-[#e8e3da] bg-white/90 backdrop-blur-xl">
         <div className="flex h-[66px] items-center gap-1.5 px-2.5 sm:gap-3 sm:px-6 lg:px-8">
-          <Link href="/store/manufacturer-catalog" className="flex min-w-0 shrink-0 items-center gap-2.5">
+          <Link href="/store/manufacturer-catalog" className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={store.logoUrl || FALLBACK_STORE_LOGO}
@@ -108,9 +108,14 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
               className="h-9 w-9 shrink-0 rounded-lg border border-[#eadfca] bg-[#fbf6ea] object-contain p-1"
               onError={(e) => { e.currentTarget.src = FALLBACK_STORE_LOGO; }}
             />
-            <span className="hidden min-w-0 sm:block">
-              <span className="block truncate text-sm font-semibold text-[#26221e]">{storeName}</span>
-              <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-[#9b8f82]">Retailer Admin portal</span>
+            {/* The retailer's name shows at EVERY width (it was `hidden sm:block`,
+                so phones saw a bare logo and no way to tell whose portal it is).
+                Below `sm` it is capped at 38vw and truncates, leaving the rest of
+                the row to the scrolling nav; the portal subtitle is the only part
+                that drops out on a phone. */}
+            <span className="block min-w-0 max-w-[38vw] sm:max-w-none">
+              <span className="block truncate text-[13px] font-semibold leading-tight text-[#26221e] sm:text-sm">{storeName}</span>
+              <span className="hidden text-[9px] font-bold uppercase tracking-[0.14em] text-[#9b8f82] sm:block">Retailer Admin portal</span>
             </span>
           </Link>
 
