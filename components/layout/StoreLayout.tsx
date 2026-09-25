@@ -112,7 +112,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
                 header (see the second row below) so it never fights the
                 Home/Search/Dashboard icons for space on the same line. */}
             <span className="hidden min-w-0 sm:block">
-              <span className="block whitespace-nowrap text-sm font-semibold text-[#26221e]">{storeName}</span>
+              <span className="block whitespace-nowrap text-base font-bold text-[#26221e] lg:text-lg">{storeName}</span>
               <span className="hidden text-[11px] font-bold uppercase tracking-[0.14em] text-[#9b8f82] sm:block">Retailer Admin portal</span>
             </span>
           </Link>
@@ -189,8 +189,8 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
         {/* Mobile-only second row: the full store name, given its own line
             so it never has to share space with the Home/Search/Dashboard
             icons above (that row stays icon-only and uncrowded below `sm`). */}
-        <div className="border-t border-[#eee9e1] px-2.5 py-2 sm:hidden">
-          <span className="block break-words text-base font-bold text-[#26221e]">{storeName}</span>
+        <div className="border-t border-[#eee9e1] px-2.5 py-2.5 sm:hidden">
+          <span className="block break-words text-xl font-bold leading-tight text-[#26221e]">{storeName}</span>
         </div>
       </header>
 
