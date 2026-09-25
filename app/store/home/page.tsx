@@ -154,7 +154,7 @@ export default function StoreHomePage() {
         <p className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.17em] text-[#9a7229]">
           <Sparkles className="h-3.5 w-3.5" /> The collection
         </p>
-        <h1 className="mt-2 font-display text-3xl font-semibold tracking-[-0.025em] sm:text-4xl">Browse by category</h1>
+        <h1 className="mt-2 font-display text-2xl font-semibold tracking-[-0.025em] sm:text-4xl">Browse by category</h1>
         <div className="mt-1.5 flex items-start justify-between gap-3">
           <p className="max-w-xl text-sm leading-6 text-muted-foreground">
             Explore the full product catalogue, then build a restock order.
