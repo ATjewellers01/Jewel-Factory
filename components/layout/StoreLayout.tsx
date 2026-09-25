@@ -108,8 +108,11 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
               className="h-9 w-9 shrink-0 rounded-lg border border-[#eadfca] bg-[#fbf6ea] object-contain p-1"
               onError={(e) => { e.currentTarget.src = FALLBACK_STORE_LOGO; }}
             />
-            <span className="block min-w-0">
-              <span className="block whitespace-nowrap text-[13px] font-semibold text-[#26221e] sm:text-sm">{storeName}</span>
+            {/* Below `sm` the name moves to its own row underneath the
+                header (see the second row below) so it never fights the
+                Home/Search/Dashboard icons for space on the same line. */}
+            <span className="hidden min-w-0 sm:block">
+              <span className="block whitespace-nowrap text-sm font-semibold text-[#26221e]">{storeName}</span>
               <span className="hidden text-[9px] font-bold uppercase tracking-[0.14em] text-[#9b8f82] sm:block">Retailer Admin portal</span>
             </span>
           </Link>
@@ -181,6 +184,13 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
               <span>Dashboard</span>
             </button>
           </div>
+        </div>
+
+        {/* Mobile-only second row: the full store name, given its own line
+            so it never has to share space with the Home/Search/Dashboard
+            icons above (that row stays icon-only and uncrowded below `sm`). */}
+        <div className="border-t border-[#eee9e1] px-2.5 py-1.5 sm:hidden">
+          <span className="block break-words text-[13px] font-semibold text-[#26221e]">{storeName}</span>
         </div>
       </header>
 
