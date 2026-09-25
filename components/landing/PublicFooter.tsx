@@ -4,7 +4,7 @@ import { Award, Building2, Camera, Factory, Mail, Phone, Search, ShieldCheck, Sp
 import Link from 'next/link';
 
 import { Wordmark } from '@/components/landing/Wordmark';
-import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
+import { COMPANY_ADDRESS, COMPANY_NAME, SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
 
 const TRUST = [
   { icon: ShieldCheck, label: 'BIS Hallmarked' },
@@ -93,7 +93,10 @@ export function PublicFooter({ onLogin }: { onLogin?: () => void }) {
       {/* Bottom bar */}
       <div className="border-t border-white/10 px-5 py-5 sm:px-6 lg:px-10 xl:px-12">
         <div className="mx-auto flex max-w-[1400px] flex-col items-center justify-between gap-3 text-[10px] text-white/35 sm:flex-row">
-          <span>© {new Date().getFullYear()} Jewel Factory. All rights reserved.</span>
+          <span className="text-center sm:text-left">
+            <span className="block">© {new Date().getFullYear()} Jewel Factory. All rights reserved.</span>
+            <span className="mt-1 block">{COMPANY_NAME} · {COMPANY_ADDRESS}</span>
+          </span>
           <span className="inline-flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-[#c9a84c]" /> Powered by Jewel Factory</span>
         </div>
       </div>

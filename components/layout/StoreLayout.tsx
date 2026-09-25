@@ -12,7 +12,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
 import { useB2bCart } from '@/hooks/use-b2b-cart';
 import { useFavorites } from '@/hooks/use-favorites';
-import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
+import { COMPANY_ADDRESS, COMPANY_NAME, SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
 
 const FALLBACK_STORE_LOGO = '/storeRe-logo.avif';
 
@@ -113,7 +113,7 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
                 Home/Search/Dashboard icons for space on the same line. */}
             <span className="hidden min-w-0 sm:block">
               <span className="block whitespace-nowrap text-sm font-semibold text-[#26221e]">{storeName}</span>
-              <span className="hidden text-[9px] font-bold uppercase tracking-[0.14em] text-[#9b8f82] sm:block">Retailer Admin portal</span>
+              <span className="hidden text-[11px] font-bold uppercase tracking-[0.14em] text-[#9b8f82] sm:block">Retailer Admin portal</span>
             </span>
           </Link>
 
@@ -197,7 +197,11 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
 
       <footer className="flex flex-col items-center justify-between gap-2 border-t border-[#e8e3da] bg-white px-4 py-4 text-[11px] text-[#8d8379] sm:flex-row sm:flex-wrap sm:px-6 lg:px-8">
-        <span>{storeName} · Retailer Admin portal</span>
+        <span className="text-center sm:text-left">
+          <span className="block">{storeName} · Retailer Admin portal</span>
+          <span className="mt-1 block text-[10px] text-[#aaa096]">Powered by Jewel Factory · {COMPANY_NAME}</span>
+          <span className="block text-[10px] text-[#aaa096]">{COMPANY_ADDRESS}</span>
+        </span>
         <span className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
           <span>
             Facing an issue?{' '}
@@ -205,7 +209,6 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
             {' · '}
             <a href={SUPPORT_PHONE_HREF} className="whitespace-nowrap font-medium text-[#96702a] hover:underline">{SUPPORT_PHONE}</a>
           </span>
-          <span>Powered by Jewel Factory</span>
         </span>
       </footer>
 
