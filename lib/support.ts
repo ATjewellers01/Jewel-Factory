@@ -17,3 +17,13 @@ export const SUPPORT_PHONE =
 export const SUPPORT_PHONE_HREF = `tel:${SUPPORT_PHONE.replace(/[^\d+]/g, '')}`;
 
 export const SUPPORT_EMAIL_HREF = `mailto:${SUPPORT_EMAIL}`;
+
+/**
+ * Registered company identity, shown on staff/admin-facing footers (landing,
+ * Manufacturer, Retailer Admin, Store Manager) alongside "Powered by Jewel
+ * Factory" — deliberately left off customer-facing kiosk surfaces, where only
+ * the retailer's own identity should show.
+ */
+export const COMPANY_NAME = 'A T Plus Jewellers Pvt Ltd, Mumbai';
+export const COMPANY_ADDRESS =
+  '69/71, Panchshila Bldg., 3rd Floor, Office No.7, Dhanji Street, Zaveri Bazaar, Mumbai, 400003';

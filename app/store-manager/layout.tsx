@@ -33,7 +33,7 @@ import {
 import { useApi, apiPost } from '@/hooks/use-api';
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
 import { useStoreManagerKioskCart } from '@/hooks/use-store-manager-cart';
-import { SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
+import { COMPANY_ADDRESS, COMPANY_NAME, SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
 import { StoreManagerProvider, type StoreManagerMe } from './store-manager-context';
 
 // Fallback store logo (gold medallion) when a retailer has no logoUrl set.
@@ -285,6 +285,7 @@ function Shell({ children }: { children: ReactNode }) {
                   {' · '}
                   <a href={SUPPORT_PHONE_HREF} className="whitespace-nowrap text-[#c9a84c] hover:text-white">{SUPPORT_PHONE}</a>
                 </span>
+                <span className="mt-1 block text-white/25">{COMPANY_NAME} · {COMPANY_ADDRESS}</span>
               </span>
               <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
                 <Sparkles className="h-3.5 w-3.5 text-[#c9a84c]" />

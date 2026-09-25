@@ -110,13 +110,18 @@ export default function LandingPage() {
             <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-[#a0824a]">
               <Sparkles className="h-3.5 w-3.5" /> Intelligent gold jewellery
             </p>
-            <h1 className="mx-auto mt-4 max-w-xl font-display text-4xl font-normal leading-[1.05] tracking-tight text-balance sm:text-5xl md:text-6xl lg:mx-0">
-              Welcome to <span className="text-[#c9a84c]">Jewel Factory</span>
+            <h1 className="mx-auto mt-4 max-w-xl font-display text-4xl font-normal leading-[1.1] tracking-tight text-balance sm:text-5xl md:text-6xl lg:mx-0">
+              What if your Jewellery Catalogue could <span className="text-[#c9a84c]">think?</span>
             </h1>
-            <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-muted-foreground lg:mx-0">
-              The B2B platform connecting a gold-jewellery manufacturer to its purchase manager
-              network and their in-store customers — catalogue, AR try-on, orders and
-              approvals, all in one place.
+            <p className="mx-auto mt-5 max-w-xl space-y-1 text-base leading-7 text-muted-foreground lg:mx-0">
+              <span className="block">Photo से Similar Designs खोजें.</span>
+              <span className="block">AI से नई Jewellery Discover करें.</span>
+              <span className="block">Customer को Virtual Try-On कराएँ.</span>
+              <span className="block">और पसंद आते ही Order करें.</span>
+            </p>
+            <p className="mx-auto mt-5 max-w-xl lg:mx-0">
+              <span className="block font-display text-xl font-semibold text-[#c9a84c] sm:text-2xl">Meet Jewel Factory AI.</span>
+              <span className="mt-1 block text-sm font-medium uppercase tracking-[0.14em] text-muted-foreground">The AI-powered Jewellery Catalogue</span>
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
               <button onClick={() => setShowLogin(true)} className="metal-sheen inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-[#17120b] shadow-lg shadow-black/10 transition-transform hover:scale-[1.02]">
