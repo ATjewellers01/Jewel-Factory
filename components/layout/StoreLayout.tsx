@@ -108,9 +108,9 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
               className="h-9 w-9 shrink-0 rounded-lg border border-[#eadfca] bg-[#fbf6ea] object-contain p-1"
               onError={(e) => { e.currentTarget.src = FALLBACK_STORE_LOGO; }}
             />
-            <span className="hidden min-w-0 sm:block">
-              <span className="block truncate text-sm font-semibold text-[#26221e]">{storeName}</span>
-              <span className="block text-[9px] font-bold uppercase tracking-[0.14em] text-[#9b8f82]">Retailer Admin portal</span>
+            <span className="block min-w-0">
+              <span className="block whitespace-nowrap text-[13px] font-semibold text-[#26221e] sm:text-sm">{storeName}</span>
+              <span className="hidden text-[9px] font-bold uppercase tracking-[0.14em] text-[#9b8f82] sm:block">Retailer Admin portal</span>
             </span>
           </Link>
 
