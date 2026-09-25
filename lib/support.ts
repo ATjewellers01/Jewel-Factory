@@ -8,7 +8,7 @@
  * deployment change them without a code edit.
  */
 export const SUPPORT_EMAIL =
-  process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'Jforder1957@gmail.com';
+  process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'mumbai@atplus.in';
 
 export const SUPPORT_PHONE =
   process.env.NEXT_PUBLIC_SUPPORT_PHONE || '7000596858';
