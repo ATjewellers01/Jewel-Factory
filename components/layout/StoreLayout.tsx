@@ -189,8 +189,8 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
         {/* Mobile-only second row: the full store name, given its own line
             so it never has to share space with the Home/Search/Dashboard
             icons above (that row stays icon-only and uncrowded below `sm`). */}
-        <div className="border-t border-[#eee9e1] px-2.5 py-1.5 sm:hidden">
-          <span className="block break-words text-[13px] font-semibold text-[#26221e]">{storeName}</span>
+        <div className="border-t border-[#eee9e1] px-2.5 py-2 sm:hidden">
+          <span className="block break-words text-base font-bold text-[#26221e]">{storeName}</span>
         </div>
       </header>
 
