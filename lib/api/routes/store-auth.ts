@@ -1,13 +1,14 @@
 import { jsonValidator } from '../validation';
 import { Hono } from 'hono';
-import { deleteCookie, setCookie } from 'hono/cookie';
+import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import crypto from 'node:crypto';
 import { z } from 'zod';
 
 import { prisma } from '@/lib/prisma';
 import { getServerEnv } from '@/lib/env';
 import { hashPassword, verifyPassword } from '@/lib/password';
-import { STORE_COOKIE, issueStoreCookie, cookieOptions } from '@/lib/auth';
+import { STORE_COOKIE, issueStoreCookie, verifyStoreCookie, cookieOptions } from '@/lib/auth';
+import { recordRetailerLoginEvent } from '@/lib/db/login-events';
 import { slugify, uniqueStoreSlug } from '@/lib/slug';
 import { createResetToken, verifyResetToken, consumeResetToken } from '@/lib/reset-token';
 import { buildAppUrl, passwordResetEmail, sendEmail } from '@/lib/email';
@@ -79,6 +80,7 @@ storeAuthRoutes.post('/login', jsonValidator(LoginBody), async (c) => {
     ttlSeconds: env.COOKIE_TTL_SECONDS,
   });
   setCookie(c, STORE_COOKIE, token, cookieOptions(env.COOKIE_TTL_SECONDS, env.NODE_ENV === 'production'));
+  void recordRetailerLoginEvent('LOGIN', store.id, store.manufacturerId);
 
   // Mobile client: the app stores this token in SecureStore and sends it as
   // `Authorization: Bearer <token>`. The browser keeps using the cookie above.
@@ -87,7 +89,16 @@ storeAuthRoutes.post('/login', jsonValidator(LoginBody), async (c) => {
 });
 
 // POST /api/store/logout
-storeAuthRoutes.post('/logout', (c) => {
+storeAuthRoutes.post('/logout', async (c) => {
+  const env = getServerEnv();
+  const token = getCookie(c, STORE_COOKIE);
+  if (token) {
+    const result = await verifyStoreCookie(token, { secret: env.STORE_SECRET, ttlSeconds: env.COOKIE_TTL_SECONDS });
+    if (result.valid) {
+      const store = await prisma.store.findUnique({ where: { id: result.storeId }, select: { manufacturerId: true } });
+      void recordRetailerLoginEvent('LOGOUT', result.storeId, store?.manufacturerId ?? null);
+    }
+  }
   deleteCookie(c, STORE_COOKIE, { path: '/' });
   return sendData(c, { ok: true });
 });

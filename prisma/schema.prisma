@@ -1115,3 +1115,35 @@ model ProductSale {
   @@index([storeId, productId])
   @@map("product_sales")
 }
+
+enum LoginEventUserType {
+  RETAILER
+  BRANCH_MANAGER
+}
+
+enum LoginEventKind {
+  LOGIN
+  LOGOUT
+}
+
+// Manufacturer-facing audit trail — see CLAUDE.md "Customer Activity" —
+// LOGIN/LOGOUT rows for the Retailer (Head Office) and Store Manager portals,
+// written from the existing /login and /logout routes (store-auth.ts,
+// branch-manager.ts). Plain string ids, no FK, same precedent as TryonEvent/
+// ProductSale above (a retailer/branch-manager delete never needs to touch
+// this table — it's an append-only log, not live state).
+model LoginEvent {
+  id               String              @id @default(uuid())
+  userType         LoginEventUserType  @map("user_type")
+  event            LoginEventKind
+  storeId          String              @map("store_id")
+  branchManagerId  String?             @map("branch_manager_id")
+  branchId         String?             @map("branch_id")
+  manufacturerId   String?             @map("manufacturer_id")
+  createdAt        DateTime            @default(now()) @map("created_at")
+
+  @@index([manufacturerId, createdAt])
+  @@index([storeId, createdAt])
+  @@index([branchManagerId, createdAt])
+  @@map("login_events")
+}

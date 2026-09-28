@@ -10,10 +10,12 @@ import {
   BRANCH_MANAGER_COOKIE,
   RESTOCK_COOKIE,
   issueBranchManagerCookie,
+  verifyBranchManagerCookie,
   verifyRestockCookie,
   issueRestockCookie,
   cookieOptions,
 } from '@/lib/auth';
+import { recordBranchManagerLoginEvent } from '@/lib/db/login-events';
 import { listActiveProducts, getActiveProductByDesignOrId } from '@/lib/db/manufacturer-catalog';
 import { getTaxonomyForStoreId } from '@/lib/db/taxonomy';
 import {
@@ -61,12 +63,12 @@ branchManagerRoutes.post('/login', jsonValidator(LoginBody), async (c) => {
   const bm = username.includes('@')
     ? await prisma.branchManager.findFirst({
         where: { email: username },
-        include: { branch: { select: { id: true, isActive: true, retailerId: true, retailer: { select: { isActive: true, registrationStatus: true } } } } },
+        include: { branch: { select: { id: true, isActive: true, retailerId: true, retailer: { select: { isActive: true, registrationStatus: true, manufacturerId: true } } } } },
       })
     : await prisma.branchManager.findFirst({
         where: { phone: username },
         orderBy: { createdAt: 'asc' },
-        include: { branch: { select: { id: true, isActive: true, retailerId: true, retailer: { select: { isActive: true, registrationStatus: true } } } } },
+        include: { branch: { select: { id: true, isActive: true, retailerId: true, retailer: { select: { isActive: true, registrationStatus: true, manufacturerId: true } } } } },
       });
   if (!bm) return sendError(c, 'unauthorized', 'Invalid email or password', 401);
 
@@ -84,6 +86,7 @@ branchManagerRoutes.post('/login', jsonValidator(LoginBody), async (c) => {
     ttlSeconds: env.COOKIE_TTL_SECONDS,
   });
   setCookie(c, BRANCH_MANAGER_COOKIE, token, cookieOptions(env.COOKIE_TTL_SECONDS, env.NODE_ENV === 'production'));
+  void recordBranchManagerLoginEvent('LOGIN', bm.id, bm.branch.retailerId, bm.branch.id, bm.branch.retailer.manufacturerId ?? null);
 
   // Mobile client: the app stores this token in SecureStore and sends it as
   // `Authorization: Bearer <token>`. The browser keeps using the cookie above.
@@ -92,7 +95,19 @@ branchManagerRoutes.post('/login', jsonValidator(LoginBody), async (c) => {
 });
 
 // POST /api/branch-manager/logout
-branchManagerRoutes.post('/logout', (c) => {
+branchManagerRoutes.post('/logout', async (c) => {
+  const env = getServerEnv();
+  const token = getCookie(c, BRANCH_MANAGER_COOKIE);
+  if (token) {
+    const result = await verifyBranchManagerCookie(token, { secret: bmSecret(env), ttlSeconds: env.COOKIE_TTL_SECONDS });
+    if (result.valid) {
+      const bm = await prisma.branchManager.findUnique({
+        where: { id: result.branchManagerId },
+        select: { branch: { select: { retailer: { select: { manufacturerId: true } } } } },
+      });
+      void recordBranchManagerLoginEvent('LOGOUT', result.branchManagerId, result.retailerId, result.branchId, bm?.branch.retailer.manufacturerId ?? null);
+    }
+  }
   deleteCookie(c, BRANCH_MANAGER_COOKIE, { path: '/' });
   deleteCookie(c, RESTOCK_COOKIE, { path: '/' });
   return sendData(c, { ok: true });

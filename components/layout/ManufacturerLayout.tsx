@@ -8,6 +8,7 @@ import {
   Store as StoreIcon,
   ClipboardCheck,
   BarChart3,
+  Activity,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -25,6 +26,7 @@ const NAV = [
   { label: 'Customised Orders', href: '/manufacturer/custom-designs', icon: PencilLine, section: 'Catalogue & orders' },
   { label: 'Customers', href: '/manufacturer/stores', icon: StoreIcon, section: 'Customer network' },
   { label: 'Customer Registrations', href: '/manufacturer/store-registrations', icon: ClipboardCheck, section: 'Customer network' },
+  { label: 'Customer Activity', href: '/manufacturer/customer-activity', icon: Activity, section: 'Customer activity' },
 ];
 
 export default function ManufacturerLayout({ children }: { children: ReactNode }) {
