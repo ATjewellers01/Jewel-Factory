@@ -92,10 +92,10 @@ export default function StoreManagerSearchPage() {
             </span>
           )}
           <p className="mt-4 text-sm font-medium text-foreground">{preview ? 'Search another photo' : 'Take a photo or choose one from your device'}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Use a clear, front-facing image for the closest match.</p>
+          <p className="mt-1 text-xs text-muted-foreground">For the best match, use a clear photo of the jewellery on a plain background.</p>
           <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#eadfca] bg-[#fbf6ea] px-3 py-1.5 text-xs font-semibold text-[#8a6a24]">
             <Lightbulb className="h-3.5 w-3.5 flex-shrink-0 text-[#c9a84c]" />
-            Tip: Use a plain background — no clutter or patterns, for the best match
+            Tip: One design. Plain background. Clear photo.
           </span>
           <div className="mt-5 flex w-full max-w-md flex-col gap-3 sm:flex-row sm:justify-center">
             <Button type="button" disabled={loading} className="metal-sheen min-h-11 flex-1 rounded-full px-6 font-semibold text-[#17120b]" onClick={() => cameraInput.current?.click()}>
