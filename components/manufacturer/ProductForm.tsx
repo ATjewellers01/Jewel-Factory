@@ -215,6 +215,23 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
     setAiRawPreview(URL.createObjectURL(file));
   }
 
+  // Copy an already-saved catalogue photo into the "Raw photo" slot, so the
+  // regenerate buttons (e.g. a brightness fix) work on an existing design
+  // without the manufacturer manually downloading + re-uploading the image.
+  async function loadExistingPhotoAsRaw(imageUrl: string) {
+    setAiError(null);
+    try {
+      const response = await fetch(imageUrl);
+      if (!response.ok) throw new Error('Could not load this photo');
+      const blob = await response.blob();
+      const file = new File([blob], 'existing-catalog-image.jpg', { type: blob.type || 'image/jpeg' });
+      setAiRaw(file);
+      setAiRawPreview(imageUrl);
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : 'Could not load this photo');
+    }
+  }
+
   function aiForm(extra?: boolean): FormData {
     const fd = new FormData();
     fd.append('image', aiRaw!, aiRaw!.name || 'raw.jpg');
@@ -779,13 +796,23 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
         <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Catalogue Photos</label>
         <div className="flex flex-wrap gap-3">
           {images.map((img) => (
-            <div key={img.id} className="flex flex-col gap-2">
+            <div key={img.id} className="flex flex-col gap-1">
               <div className="relative h-24 w-24 overflow-hidden rounded-lg border">
                 <Image src={img.secureUrl} alt="" fill onClick={() => setZoom({ src: img.secureUrl })} className="cursor-zoom-in object-cover" title="Click to enlarge" />
                 <button type="button" onClick={() => removeImage(img.id)} className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80">
                   <X className="h-3 w-3" />
                 </button>
               </div>
+              {aiEnabled && (
+                <button
+                  type="button"
+                  onClick={() => loadExistingPhotoAsRaw(img.secureUrl)}
+                  className="text-[10px] font-medium text-primary hover:underline"
+                  title="Use this photo as the AI raw input, e.g. to regenerate with a brightness fix"
+                >
+                  Use for AI
+                </button>
+              )}
             </div>
           ))}
           <button
