@@ -1,6 +1,12 @@
 # CLAUDE.md — Jewel Factory (clean rebuild)
 
-Guidance for Claude Code working in this repo.
+Guidance for Claude Code working in this repo. Codex guidance is in the local
+`AGENTS.md` (currently Git-ignored). Keep both consistent when operational rules change.
+
+**Read first:** the "Production operations" section below contains the latest verified
+AWS context (2026-08-28) and the owner's release-retention rule. Its dated facts
+supersede older deployment instructions and historical "not yet deployed" notes.
+Recheck live state before acting; a documentation snapshot is not deployment authorization.
 
 ## What this is
 
@@ -139,9 +145,16 @@ Guards in `lib/api/guards.ts`: `manufacturerGuard`, `storeGuard` (retailer/owner
 
 ## Commands
 
+**Production-data warning:** this machine's `.env` was synchronized from the live
+AWS container on 2026-08-28. Do not run seed, reset, development migrations,
+one-off backfills, or write-producing tests against it. Use a separately configured
+development database for local development. A production migration/deployment
+requires the user's task to authorize it.
+
 ```bash
 pnpm install                    # deps + prisma generate
-pnpm dev | build | start | typecheck | lint
+pnpm dev | build | start | typecheck
+pnpm exec eslint .              # package.json lint still invokes next lint
 pnpm db:migrate | db:deploy | db:seed | db:studio | db:generate
 SEED_DEMO_STORE=true pnpm db:seed   # + demo store at /demo
 pnpm migrate:categories             # map legacy flat categories -> 14-cat taxonomy (existing DB only)
@@ -150,48 +163,181 @@ pnpm migrate:branches               # Option-A: default "Main Store" branch per 
 
 ## Setup for a fresh DB
 
+This section is for a **new, isolated development database**, not this machine's
+production-linked `.env`. Do not overwrite the synchronized file as a setup shortcut.
+
 1. `cp .env.example .env` — fill DATABASE_URL + DIRECT_URL (Postgres — Supabase for dev, or RDS in production, see `docs/AWS_MIGRATION.md`), secrets (min 32 chars: MANUFACTURER/STORE/MANAGER/**BRANCH_MANAGER**), AWS S3 (`AWS_REGION`/`AWS_S3_BUCKET`/`S3_PUBLIC_BASE_URL` + IAM creds or role), EMBEDDER_URL (+ optional AI_FEATURES_URL/AI_FEATURES_API_KEY for AI generate), SMTP. No `NEXT_PUBLIC_SUPABASE_*` — app uses Postgres directly, not Supabase Auth. (Cloudinary/Qdrant env vars are legacy-optional, not needed on a fresh setup.)
-2. `pnpm db:deploy` (runs all 8 migrations → full schema, no manual SQL) then `pnpm db:seed` (1 manufacturer + 14 categories).
+2. `pnpm db:deploy` (applies the migrations present in `prisma/migrations`) then `pnpm db:seed` (1 manufacturer + 14 categories).
 3. `pnpm dev`.
 **New agent / new machine? Read [`docs/PROJECT_HISTORY.md`](docs/PROJECT_HISTORY.md) first** — full backstory, every big decision + why, what's pending, and how the owner likes to work. It gives you the same context the previous agent had.
 
-**All docs live in `docs/` (except this file + `README.md`, which stay at the repo root).**
+**Project docs live in `docs/`; `CLAUDE.md`, local `AGENTS.md`, and `README.md` stay at the repo root.**
 Handover / client onboarding: `docs/HANDOVER.md` (zero-to-live). Schema: `docs/DATABASE.md`.
 Full system flow: `docs/flow.md`. Detailed dev setup: `docs/SETUP_GUIDE.md`. Render deploy:
 `docs/DEPLOY_RENDER.md`. AWS migration (now the live production deploy): `docs/AWS_MIGRATION.md`.
 Pending work / checklist: `docs/PENDING.md`. End-user (non-technical) guide with roles + demo
 login credentials + step-by-step workflows: `docs/USER_MANUAL.md`.
 
-## Production deployments (TWO targets exist — know which one you're debugging)
+## Production operations (verified 2026-09-25)
 
-| | Render | AWS EC2 (primary production) |
-|---|---|---|
-| App | `jewel-factory.onrender.com`, `pnpm render-start` | Docker container `jewel-factory` on `13.126.65.154`, image tag = git commit hash (e.g. `jewel-factory-prod:529b664`), reverse-proxied via `13-126-65-154.sslip.io` |
-| DB | Supabase Postgres | **AWS RDS Postgres** (`database-1.c98u4y6sk2lz.ap-south-1.rds.amazonaws.com`, db `jewel_factory`) |
-| Storage | — | **S3 + CloudFront** (bucket `atjewellers01-jewel-factory-prod-*`, see `lib/storage.ts`) |
-| Vector search | — | **pgvector** in the same RDS (see External services) |
-| AI-Features | HF Space | **Same HF Space** (`botivate2026-ai-workspace.hf.space`) — AI-Features was NOT moved to EC2, stays external on both deploys |
-| Migrations | manual (`pnpm render-start` or Docker) | **auto-applied on container start** (`prisma migrate deploy` runs before `next start` — confirmed via container boot log: "Applying database migrations... No pending migrations to apply.") |
-| SSH | — | `ssh -i jewel-factory-prod-<date>.pem ec2-user@13.126.65.154` (Amazon Linux 2023, passwordless `sudo`, app runs in Docker — `sudo docker logs jewel-factory`, `sudo docker exec jewel-factory ...`) |
+### Scope and access
 
-**To redeploy AWS after a code fix:** the running container is tagged to a specific commit — merging to `master` alone does NOT update it. Rebuild the Docker image at the new commit and restart the container on the EC2 host:
+- Primary production site: **https://jewelfactory.in**, with nginx forwarding to
+  Docker at `127.0.0.1:3000`. The old `13-126-65-154.sslip.io` hostname in historical
+  docs is not the primary URL. Render's current status is still unverified; do not
+  modify or retire it based on old documentation.
+- AWS account: `152439496944` (`Zold`); region: **`ap-south-1`**.
+- Target instance: **`i-0b5322cc744e40987`**, name `jewel-factory-app`, public IP
+  `13.126.65.154`, Amazon Linux 2023, `t3.small`, 30 GiB root EBS volume
+  `vol-05ad9aab20fa7b14e`. Confirm the instance ID and tags before remote commands;
+  do not select a machine by IP alone.
+- This Linux machine has AWS CLI v2 installed at `~/.local/bin/aws`. Use the
+  **`abhay-linux-cli`** profile explicitly. The matching IAM user has
+  `AdministratorAccess` and no console access; this broad capability does not
+  authorize changes outside Jewel Factory. The old `abhay-cli` user's access
+  was left unchanged. Never print credentials or create/rotate keys without a specific request.
+- Use **AWS CLI + Systems Manager Run Command** (`AWS-RunShellScript`) targeted
+  only to the instance above. SSM was online; no SSH key is configured on this
+  instance. Do not depend on the older computer's PEM-file instructions.
+- Only inspect or change Jewel Factory resources within the current user request.
+  **Do not access files or execute commands on other instances.** When asked for
+  account storage totals, read-only AWS service inventory is allowed; it does not
+  authorize inspecting other machines' files or altering their resources.
+- An inspection/storage-audit request is read-only: no deployment, deletion,
+  pruning, configuration edits, IAM changes, or restarts without authorization.
+
+Read-only identity check:
+
 ```bash
-cd /opt/jewel-factory-staging && \
-sudo git pull origin master && \
-JF_IMAGE="jewel-factory-prod:$(sudo git rev-parse --short HEAD)" && \
-echo "Building $JF_IMAGE" && \
-sudo docker build -t "$JF_IMAGE" . 2>&1 | tail -100 && \
-sudo docker rm -f jewel-factory && \
-sudo docker run -d --name jewel-factory --restart unless-stopped --env-file /opt/jewel-factory-staging/.env.production -p 127.0.0.1:3000:3000 "$JF_IMAGE" && \
-sleep 5 && \
-sudo docker logs jewel-factory --tail 50 && \
-sudo docker image prune -f && \
-sudo docker ps && \
-curl -sI https://13-126-65-154.sslip.io/api/health
+aws sts get-caller-identity --profile abhay-linux-cli --region ap-south-1
 ```
-Accepts a brief window where the old container is down before the new one is up (a 504 may show briefly during that window) — this is the accepted tradeoff for keeping the deploy simple. A zero-downtime blue/green variant was tried (2026-08-18) but reverted at the owner's request in favor of this simpler sequence.
 
-Whether Render is still actively used alongside AWS EC2, or AWS is now the sole production target, was **not confirmed this session** — check with the team before assuming Render is retired.
+### Application services and paths
+
+| Item | Verified configuration |
+|---|---|
+| Live container | `jewel-factory`, restart `unless-stopped`, `127.0.0.1:3000:3000` |
+| Instance role/profile | `JewelFactoryEc2Profile`; app uses instance-role AWS credentials |
+| Database | RDS PostgreSQL `database-1`, database `jewel_factory`; pgvector in the same DB |
+| Object storage | S3 `atjewellers01-jewel-factory-prod-152439496944`, CloudFront `d3ux0gjx94zt93.cloudfront.net` |
+| AI | External Hugging Face AI-Features service; not hosted on this EC2 instance |
+| Server checkout | `/opt/jewel-factory-staging` |
+| Server env source | `/opt/jewel-factory-staging/.env.production` (sensitive backups also exist) |
+| Release artifacts | `/opt/jewel-factory-releases/<full-commit>/` |
+| Release metadata | `deployment.json` in that release directory; includes commit/image IDs and retention details |
+| Runtime env snapshot | `runtime.env` in that release directory, mode `600`; never display its contents |
+
+### Required deployment and rollback procedure
+
+**Owner's rule: build first, then remove only the oldest release after success.
+Always retain the new current release and the immediately previous release.**
+
+1. Verify AWS identity/target, fetch `origin`, and resolve the requested source
+   commit from `origin/master` (origin is `https://github.com/ATjewellers01/Jewel-Factory.git`).
+   Inspect the running container's image ID, tag and OCI revision label; the
+   server checkout's `HEAD` alone does not establish what is serving traffic.
+   Preserve uncommitted work and never assume the local branch is latest.
+2. Inventory current and rollback containers/images, disk space, runtime config,
+   and migration changes. Record the exact current image ID and rollback path.
+3. Build the new commit while **both** existing release images remain. Three
+   release images may temporarily coexist. Use a clean archive of the resolved
+   commit; preserve runtime settings separately. Do not copy `.env` files,
+   environment backups, AWS credentials, or other secrets into the build context.
+4. Test the candidate before switching live traffic. Remember that starting this
+   image runs `prisma migrate deploy`, including a candidate pointed at the live
+   database. Review/authorize schema changes and rollback compatibility first;
+   do not treat candidate startup as read-only.
+5. Keep the outgoing live container/image available for rollback. Switch the
+   `jewel-factory` container to the verified new image with the existing runtime
+   settings and loopback port binding. A brief restart window is acceptable;
+   a permanent blue/green redesign is not required by the owner.
+6. Verify public HTTPS health and meaningful routes, container stability and
+   migration status. Last successful checks included `/api/health` (200),
+   `/store/login` (200), `/manufacturer` (200), `/api/manufacturer/me` (401 without
+   login), and `/api/kiosk/catalog` (200). A 200 page alone is not sufficient.
+   If verification fails, restore the outgoing release and retain rollback options.
+7. **Only after success**, remove the specifically identified oldest Jewel Factory
+   release and any obsolete container referencing it, leaving the new live release
+   plus its immediate predecessor. Record full commit/image IDs and the retention
+   outcome in release metadata. Do not use broad Docker image/system prune or
+   delete images merely because they are stopped/unused by the live container.
+   **Build-cache cleanup is a separate action requiring explicit authorization.**
+
+Build/migration pitfalls observed during the last deployment:
+
+- `.dockerignore` currently excludes `.env` and `.env*.local`, but **does not
+  exclude `.env.production` or its backups**. Building directly from the server
+  checkout can bake secrets into images. The last release used a clean Git archive.
+- The checked-in Dockerfile only supplies dummy database URLs for the build.
+  The last clean build additionally needed dummy auth secrets meeting the schema's
+  minimum lengths in the **build stage only**, plus the intended public
+  `NEXT_PUBLIC_*` values at build time. That adjustment was in the release's
+  temporary build context, not committed to this repo. Never use real auth secrets
+  as build arguments or bake them into images; runtime env cannot repair public
+  values already compiled into client bundles.
+- `docker-entrypoint.sh` attempts migrations but **continues on migration failure**.
+  Inspect migration status explicitly; a running container is not proof of success.
+
+### Last verified release snapshot — recheck before any deployment
+
+- Deployed 2026-09-25 from `origin/master`: commit
+  `0369f573600511be5498d00bf18714facbf8de2b`, image
+  `jewel-factory-prod:0369f57`, container `jewel-factory`. OCI revision label matches
+  the full commit; the container was running with zero restarts after cutover.
+- Immediate rollback: `1622f8632b863bfc3e00f172e418e99906b934dd`, image
+  `jewel-factory-prod:1622f86`, stopped container `jewel-factory-rollback-1622f86`.
+  The older `fa6fea8` rollback container/image was specifically removed only after
+  verification; no broad Docker prune was run.
+- Candidate and public HTTPS checks passed: `/api/health`, `/store/login`,
+  `/manufacturer`, expected unauthenticated `401` from `/api/manufacturer/me`, and
+  `/api/kiosk/catalog` with 511 items. Prisma found 37 migrations and reported the
+  schema up to date. The release metadata is in
+  `/opt/jewel-factory-releases/0369f573600511be5498d00bf18714facbf8de2b/deployment.json`.
+- This release was built from the exact clean Git archive on the Linux workstation,
+  transferred temporarily through the project S3 bucket, checksum-verified, loaded,
+  and tested on EC2. Both temporary S3 transfer objects were deleted afterward.
+- Post-retention disk snapshot: 30 GiB provisioned, about 15.96 GiB used (54%) and
+  13.96 GiB free. Docker retained exactly two release images. Build cache was not
+  pruned: 14.21 GB across 85 records remained reclaimable.
+- Old "not yet deployed" session notes below are historical, not a current
+  migration/deployment checklist.
+
+### Local environment and secret handling
+
+- On **2026-08-28**, this machine's `.env` was synchronized with all **29 application
+  settings** from the live container and verified through Next.js dotenv parsing.
+  Five existing values were corrected and five missing values added. It is
+  Git-ignored with mode **`600`**. Docker platform variables were not copied.
+- **This is production configuration**, including database, SMTP, integrations,
+  origins and `NODE_ENV`. Local app/API activity can affect live services. Do not
+  silently replace values with localhost defaults or run write-producing checks.
+  For development, deliberately configure isolated services and dev-specific
+  origins/cookie settings; do not assume `pnpm dev` makes production data safe.
+- Never print `.env`, unfiltered `docker inspect`/`printenv`, connection strings,
+  or credential files. Report variable names and match/mismatch counts only.
+  If syncing again, encrypt values on the instance before they reach SSM output,
+  decrypt locally, validate dotenv round-tripping, and remove temporary key material.
+  Do not persist plaintext secrets in SSM logs or commit them into documentation.
+
+### Storage audit snapshot — 2026-08-28, not a quota or cleanup instruction
+
+- Jewel Factory root disk: **30 GiB provisioned**, **11.55 GiB used (39%)**,
+  **18.38 GiB free**; filesystem capacity is slightly below the volume allocation.
+- **Two release images**, **zero dangling images**, one live container and one
+  intentionally stopped rollback container. The rollback is not a dead release.
+- Final `docker builder du` check: **54 reclaimable cache records**, **7.654 GB
+  private**, **1.996 GB shared** with images (Docker decimal units). Cache records
+  are build steps, not 54 complete builds; shared bytes are not necessarily freed
+  while the retained images remain. Nothing was pruned during this audit.
+- Read-only account inventory across all **18 enabled regions** found **89 GiB
+  EBS allocation** across five volumes, **20 GiB RDS allocation**, and about
+  **1.06 GiB used in three S3 buckets** (latest S3 metrics dated August 26).
+  No EFS/FSx filesystems or owned EBS snapshots were found.
+- AWS has no single fixed account-wide disk pool. The **109 GiB EC2 + RDS total
+  is allocated capacity**, not free space or an account limit; S3 is separate.
+  This was not an exhaustive billing inventory of every backup/log/service.
+  Re-run read-only inventory for current usage; never infer other instances'
+  filesystem free space from their provisioned EBS sizes.
 
 ## Migrations (35, all Prisma-managed, idempotent)
 `0001 jewel_factory` · `kiosk_pin` · `b2b_item_image` · `branch_hierarchy` (branches + branch_managers + branch_id/requirement_note on orders + nullable PII) · `order_messages` (order_messages table + OrderKind/MessageSender enums + completed_at on kiosk/b2b/custom) · `add_analytics_indexes` · `custom_design_weight_range` · `pgvector` (adds the `vector(512)` embedding column on `manufacturer_product_embeddings`, used by pgvector search — see External services) · `extra_branch_allowance` · **`product_karigar_pieces_nullable_name`** (2026-07-30: `ManufacturerProduct.name` DROP NOT NULL, adds `pieces` + `karigar_code`) · **`favorite_products`** (2026-07-30: new table, see Core rules) · **`retailer_badges`** (2026-07-30: `manufacturers.retailer_badge_labels` + `stores.badge_label`) · **`retailer_delete_cascade`** (2026-07-30: `b2b_orders`/`kiosk_orders`/`custom_design_orders` FK to stores switched from `ON DELETE RESTRICT` to `CASCADE` — see Gotchas) · **`custom_order_karigar_code`** (2026-07-30: an early `karigarCode` column on custom design orders, superseded by the real `Karigar` master-list added in `karigar_assignment_phase1`) · **`favorite_kind_kiosk_restock`** (2026-07-30: adds `FavoriteKind` enum + `kind` column on `favorite_products`, unique/index widened to include it — see Status) · **`store_email_optional`** (2026-07-31: `stores.email` DROP NOT NULL + index on `owner_phone` — mobile-only purchase manager signup, see Gotchas) · **`branch_manager_email_optional`** (2026-07-31: same email-optional treatment for `branch_managers`) · **`custom_design_spec_fields`** (2026-08-01: sub-category + the counter spec — order ref, delivery date, quantity, meena, length, size, broadness, screw, sample weight — on BOTH `custom_design_requests` and `custom_design_orders`, all nullable) · **`product_size`** (2026-08-02: optional `size` on `manufacturer_products` — bangle sizing, form-gated to the Bangles category) · **`custom_design_quantity_text`** (2026-08-03: `quantity` on custom design requests/orders widened `Int?` → `String?` — free text like "2 pcs") · **`kiosk_sales_person`** (2026-08-03: `sales_code` + `sales_person_name` on `kiosk_orders`, captured at Store Manager "Add to Cart" — later removed, see `remove_sales_person_multi_image`) · **`order_status_rework`** (2026-08-03: `OrderStatus`/`CustomOrderStatus` enums replaced — see Status) · **`order_item_status`** (2026-08-03: `status OrderStatus` added to `kiosk_order_items`/`b2b_order_items` — per-line-item status) · **`manufacturer_order_seq`** (2026-08-04: `manufacturers.next_catalog_order_seq`/`next_custom_order_seq` — backs JFA-/JFC- order numbers, see Status) · **`custom_design_sales_person`** · **`order_item_purity`** (melting/purity override per order line, same field this doc's Core rules describe) · **`remove_sales_person_multi_image`** (2026-08-04: drops the sales-code/person columns entirely — reversed the two migrations above — and adds multi-image support for customised orders) · **`cart_items`** (2026-08-06: server-backed cart tables `cart_items`/`cart_note`, scoped like `FavoriteProduct` by `(storeId, branchId, kind)` — replaces the old localStorage-only cart) · **`order_delivery_date`** (2026-08-07: optional `delivery_date DATE` on `b2b_orders` and `kiosk_orders` — Retailer Admin sets it when placing their own order or approving a branch's order, forwarded to the manufacturer; nullable, no backfill, see Status) · **`karigar_assignment_phase1`** (2026-08-09: new `karigars` table + `CustomDesignOrder` extensions for the Karigar-assignment feature — see Status) · **`retailer_custom_request`** (2026-08-10: new `RetailerCustomRequest` model for a Purchase Manager's own bespoke-design requests, pending Karigar assignment) · **`karigar_form_extra_fields`** (2026-08-11: `totalWeightGrams`/`karigarNotes` on `CustomDesignOrder`) · **`product_subcategory2_gross_net_weight`** (2026-08-13: `grossWeightGrams`/`netWeightGrams` on `ManufacturerProduct`, the first step toward retiring the single `weightGrams` field) · **`manufacturer_taxonomy`** (2026-08-17: `ManufacturerCategory`/`SubCategory1`/`SubCategory2`/`Purity` — manufacturer-editable taxonomy, replaces the static `lib/categories.ts` list — see Status) · **`subcategory2_per_subcategory1`** (2026-08-18: re-parents `ManufacturerSubCategory2` from Category-level to Sub-category-1-level — see Status) · **`custom_design_order_o2d_sync`** (2026-08-18: `o2dOrderId`/`o2dOrderNo`/`o2dSyncedAt`/`o2dSyncError` on `CustomDesignOrder` — see the O2D integration entry in Status) · **`cart_item_size`** (2026-08-24: editable per-line `size` override on `cart_items` and `b2b_order_items`, mirroring the existing `purity` override). `pnpm db:deploy` applies all. `migrate:categories`/`migrate:branches` = one-off upgrades for an EXISTING DB only; `pnpm backfill:set-subcategory2` = one-off backfill for Set's default Sub-category 2 values on a DB that predates the taxonomy re-parenting.
