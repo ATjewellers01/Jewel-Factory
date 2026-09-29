@@ -178,14 +178,20 @@ Full system flow: `docs/flow.md`. Detailed dev setup: `docs/SETUP_GUIDE.md`. Ren
 Pending work / checklist: `docs/PENDING.md`. End-user (non-technical) guide with roles + demo
 login credentials + step-by-step workflows: `docs/USER_MANUAL.md`.
 
-## Production operations (verified 2026-09-25)
+## Production operations (verified 2026-09-29)
 
 ### Scope and access
 
-- Primary production site: **https://jewelfactory.in**, with nginx forwarding to
-  Docker at `127.0.0.1:3000`. The old `13-126-65-154.sslip.io` hostname in historical
-  docs is not the primary URL. Render's current status is still unverified; do not
-  modify or retire it based on old documentation.
+- Primary production site: **https://jewelfactory.ai** (connected 2026-09-28),
+  with nginx forwarding to Docker at `127.0.0.1:3000`. **https://jewelfactory.in
+  redirects to it** (301, both HTTP and HTTPS, path+query preserved via
+  `$request_uri`) — `.in`'s own TLS cert still terminates the connection before
+  redirecting, so old bookmarks don't hit a cert warning. Both domains' DNS
+  point at the same Elastic IP `13.126.65.154`. The old `13-126-65-154.sslip.io`
+  hostname in historical docs is not the primary URL (still live as a fallback).
+  Render's current status is still unverified; do not modify or retire it based
+  on old documentation. See "Domains, CORS, and cross-cutting config" below
+  before touching either domain's config.
 - AWS account: `152439496944` (`Zold`); region: **`ap-south-1`**.
 - Target instance: **`i-0b5322cc744e40987`**, name `jewel-factory-app`, public IP
   `13.126.65.154`, Amazon Linux 2023, `t3.small`, 30 GiB root EBS volume
@@ -211,6 +217,85 @@ Read-only identity check:
 ```bash
 aws sts get-caller-identity --profile abhay-linux-cli --region ap-south-1
 ```
+
+### Domains, CORS, and cross-cutting config
+
+Adding or changing a production domain touches **four independent layers** —
+missing one produces a working-looking site with one specific feature broken,
+not an obvious outage. Verified against real bugs hit connecting `.ai`:
+
+1. **DNS** — an `A` record at the registrar (GoDaddy for both domains) pointing
+   at the Elastic IP. `www` is a CNAME to the apex, so it follows automatically.
+2. **nginx server block + TLS cert.** Each domain has its own file in
+   `/etc/nginx/conf.d/` (`jewelfactory-domain.conf` for `.in`, now a redirect-only
+   block; `jewelfactory-ai-domain.conf` for `.ai`, the real proxy block) and its
+   own Let's Encrypt cert (`certbot certificates` lists both). **`certbot --nginx
+   -d <domain>` is not safe to trust blindly** — issuing the `.ai` cert this way,
+   certbot's nginx plugin picked the *wrong* existing server block to model the
+   new one on (the `sslip.io` fallback in `jewel-factory.conf`) and wrote a new
+   HTTPS block with the right `server_name` and cert paths but **no `location /`
+   proxy_pass at all** — `nginx -t` passed and certbot printed "Congratulations,"
+   but every request would have 404'd. Always `cat` the resulting config file
+   after running `certbot --nginx` and compare it against a known-good domain's
+   block before reloading nginx. Recovery, if it happens again: restore the
+   touched file from its pre-certbot `.bak-*` (certbot writes one), then
+   hand-write a clean block modeled on `jewelfactory-domain.conf`'s original
+   (proxy_pass) form.
+3. **App-level CORS — `ALLOWED_ORIGINS`** (`.env.production`, comma-separated,
+   read by `lib/api/app.ts`'s CORS middleware). Controls requests the browser
+   makes back to **our own API** (`/api/*`) when the page's origin doesn't match
+   the request's target — mostly matters for any future cross-origin embed;
+   same-origin calls from a page served on that domain work regardless, since
+   browsers don't apply CORS to same-origin requests.
+4. **S3 bucket CORS — completely separate from #3, easy to forget.** The
+   manufacturer's "Generate with AI" flow (and any other direct-to-S3 upload —
+   `lib/storage.ts`'s presigned PUT) has the **browser upload straight to S3**,
+   bypassing our API entirely. S3 evaluates the request's `Origin` against the
+   **bucket's own CORS configuration** (`aws s3api get/put-bucket-cors`), which
+   has nothing to do with `ALLOWED_ORIGINS`. Missing this after the `.ai` DNS
+   cutover broke every AI-image-generation save with `blocked by CORS policy`
+   on the `PutObject` request, while every server-proxied API call worked fine
+   — the three AI-generation steps before it (`/describe`, `/catalog` via
+   `manufacturer-ai.ts`) go through our own server and were unaffected, which
+   made the symptom look narrower than it was. Current `AllowedOrigins`:
+   `jewelfactory.in`, `jewelfactory.ai`, `www.jewelfactory.ai`,
+   `13-126-65-154.sslip.io`, `http://localhost:3000`, `https://o2d.zold.in`
+   (O2D fetches order-reference images cross-origin). Add a new production
+   domain to **both** #3 and #4, or uploads will silently CORS-fail from it.
+- **`NEXT_PUBLIC_*` env vars split into two behaviors depending on how the code
+  reads them** — matters for whether a value change needs a full image rebuild
+  or just a container recreate with the edited `.env.production`:
+  - Read via **literal `process.env.NEXT_PUBLIC_X`** in a module reachable from
+    a client bundle (e.g. `lib/support.ts`'s `SUPPORT_EMAIL`) — Next.js's
+    webpack `DefinePlugin` **inlines the value at build time** by matching that
+    exact text pattern. A runtime env change does nothing until rebuilt; the
+    build stage must intentionally *not* set an env var here if the code's own
+    default is what should ship (see the Dockerfile pitfall below).
+  - Read via **`getServerEnv().X`** (`lib/env.ts`'s `ServerEnvSchema.safeParse(process.env)`,
+    a bulk object read, not a literal member access) in server-only code (Hono
+    route handlers) — e.g. `NEXT_PUBLIC_APP_URL` in `store-auth.ts`/`manufacturer-stores.ts`.
+    Next.js's build-time replacer can't rewrite a bulk `process.env` read, so
+    this genuinely reads live at container start. Editing `.env.production` +
+    recreating the container (same image, `docker stop/rm/run` — a plain
+    `docker restart` does **not** re-read `--env-file`) is sufficient; no
+    rebuild needed. `ALLOWED_ORIGINS` is the same pattern (plain server var,
+    not even `NEXT_PUBLIC_`-prefixed).
+- **A domain can be reachable and correctly configured and still appear "down"
+  to some visitors** — FortiGuard (Fortinet's web-filtering service, common on
+  Indian corporate/ISP networks) auto-categorizes brand-new domains as
+  "Newly Registered Domain" and blocks them by default policy for roughly the
+  first 30–90 days after registration, regardless of the site's actual content
+  or configuration. Confirmed hitting `jewelfactory.ai` directly (explicit
+  FortiGuard block page, category "Newly Registered Domain") — this also
+  explains an earlier-observed Firefox/Zen "potentially serious security
+  issue" TLS warning on the same networks (the filtering appliance intercepts
+  HTTPS and presents its own certificate for the block page, which the browser
+  correctly flags as not matching). **Nothing server-side fixes this** — verify
+  cert/health/CORS from the EC2 box itself first (rules out real
+  infra problems), then point the reporter at FortiGuard's own re-categorization
+  request link (shown on their block page, or fortiguard.com/webfilter) if it's
+  actually blocking real users. `jewelfactory.in` doesn't trigger it (aged
+  domain, established reputation).
 
 ### Application services and paths
 
@@ -280,27 +365,39 @@ Build/migration pitfalls observed during the last deployment:
 
 ### Last verified release snapshot — recheck before any deployment
 
-- Deployed 2026-09-25 from `origin/master`: commit
-  `0369f573600511be5498d00bf18714facbf8de2b`, image
-  `jewel-factory-prod:0369f57`, container `jewel-factory`. OCI revision label matches
-  the full commit; the container was running with zero restarts after cutover.
-- Immediate rollback: `1622f8632b863bfc3e00f172e418e99906b934dd`, image
-  `jewel-factory-prod:1622f86`, stopped container `jewel-factory-rollback-1622f86`.
-  The older `fa6fea8` rollback container/image was specifically removed only after
-  verification; no broad Docker prune was run.
-- Candidate and public HTTPS checks passed: `/api/health`, `/store/login`,
-  `/manufacturer`, expected unauthenticated `401` from `/api/manufacturer/me`, and
-  `/api/kiosk/catalog` with 511 items. Prisma found 37 migrations and reported the
-  schema up to date. The release metadata is in
-  `/opt/jewel-factory-releases/0369f573600511be5498d00bf18714facbf8de2b/deployment.json`.
-- This release was built from the exact clean Git archive on the Linux workstation,
-  transferred temporarily through the project S3 bucket, checksum-verified, loaded,
-  and tested on EC2. Both temporary S3 transfer objects were deleted afterward.
-- Post-retention disk snapshot: 30 GiB provisioned, about 15.96 GiB used (54%) and
-  13.96 GiB free. Docker retained exactly two release images. Build cache was not
-  pruned: 14.21 GB across 85 records remained reclaimable.
-- Old "not yet deployed" session notes below are historical, not a current
-  migration/deployment checklist.
+- Deployed 2026-09-29 from `origin/master`: commit `6a318ca` (photo-search tip
+  wording), image `jewel-factory-prod:6a318ca`, container `jewel-factory`. OCI
+  revision label matches. Four code releases landed 2026-09-25 → 2026-09-29
+  (`0369f57` → `c2408de` → `3073393` → `7dd6160` → `6a318ca`), each following
+  the same build/candidate-test/cutover/retention procedure below; only the
+  `c2408de` release carried a migration (`login_events`, additive-only).
+- Immediate rollback: `jewel-factory-prod:7dd6160`, stopped container
+  `jewel-factory-rollback-7dd6160`. Each deploy's retention step removes only
+  the release *before* that one, per the owner's rule — check `docker images
+  jewel-factory-prod` for the exact current pair, this note goes stale fast.
+- **`.env.production` has also been edited twice since `6a318ca` was deployed,
+  with the container recreated (not rebuilt) each time** — `NEXT_PUBLIC_SUPPORT_EMAIL`
+  corrected to `mumbai@atplus.in`, then `NEXT_PUBLIC_APP_URL` switched to
+  `https://jewelfactory.ai` and `ALLOWED_ORIGINS` extended for `.ai`/`www.ai`.
+  The running container's env can therefore differ from a fresh `docker run`
+  using an older `.env.production` backup — always diff against the *current*
+  file, not a `.bak-*`, before treating a backup as ground truth.
+- Candidate and public HTTPS checks passed on every release: `/api/health`,
+  `/store/login`, `/manufacturer`, expected unauthenticated `401` from
+  `/api/manufacturer/me`, `/api/kiosk/catalog` (568+ items and climbing as the
+  manufacturer adds designs), and — after the `login_events` migration —
+  `/manufacturer/customer-activity` (new page) returning 200. Prisma reports
+  **38 migrations**, schema up to date. Release metadata is in
+  `/opt/jewel-factory-releases/<commit>/deployment.json` per release.
+- Build method unchanged: clean Git archive on the Linux workstation, S3
+  transfer, checksum-verified, loaded and candidate-tested on EC2 before
+  cutover. Temporary S3 transfer objects deleted after each deploy.
+- Local build-machine memory can be tight (shared desktop running VS Code,
+  Chrome, etc.) — one build was OOM-killed mid-`next build`; retried
+  successfully once `free -h`'s `available` column recovered. Not an EC2 or
+  app issue when it happens; just retry after checking local memory.
+- Old "not yet deployed" session notes below (predating 2026-08-25) are
+  historical, not a current migration/deployment checklist.
 
 ### Local environment and secret handling
 
@@ -339,12 +436,22 @@ Build/migration pitfalls observed during the last deployment:
   Re-run read-only inventory for current usage; never infer other instances'
   filesystem free space from their provisioned EBS sizes.
 
-## Migrations (35, all Prisma-managed, idempotent)
-`0001 jewel_factory` · `kiosk_pin` · `b2b_item_image` · `branch_hierarchy` (branches + branch_managers + branch_id/requirement_note on orders + nullable PII) · `order_messages` (order_messages table + OrderKind/MessageSender enums + completed_at on kiosk/b2b/custom) · `add_analytics_indexes` · `custom_design_weight_range` · `pgvector` (adds the `vector(512)` embedding column on `manufacturer_product_embeddings`, used by pgvector search — see External services) · `extra_branch_allowance` · **`product_karigar_pieces_nullable_name`** (2026-07-30: `ManufacturerProduct.name` DROP NOT NULL, adds `pieces` + `karigar_code`) · **`favorite_products`** (2026-07-30: new table, see Core rules) · **`retailer_badges`** (2026-07-30: `manufacturers.retailer_badge_labels` + `stores.badge_label`) · **`retailer_delete_cascade`** (2026-07-30: `b2b_orders`/`kiosk_orders`/`custom_design_orders` FK to stores switched from `ON DELETE RESTRICT` to `CASCADE` — see Gotchas) · **`custom_order_karigar_code`** (2026-07-30: an early `karigarCode` column on custom design orders, superseded by the real `Karigar` master-list added in `karigar_assignment_phase1`) · **`favorite_kind_kiosk_restock`** (2026-07-30: adds `FavoriteKind` enum + `kind` column on `favorite_products`, unique/index widened to include it — see Status) · **`store_email_optional`** (2026-07-31: `stores.email` DROP NOT NULL + index on `owner_phone` — mobile-only purchase manager signup, see Gotchas) · **`branch_manager_email_optional`** (2026-07-31: same email-optional treatment for `branch_managers`) · **`custom_design_spec_fields`** (2026-08-01: sub-category + the counter spec — order ref, delivery date, quantity, meena, length, size, broadness, screw, sample weight — on BOTH `custom_design_requests` and `custom_design_orders`, all nullable) · **`product_size`** (2026-08-02: optional `size` on `manufacturer_products` — bangle sizing, form-gated to the Bangles category) · **`custom_design_quantity_text`** (2026-08-03: `quantity` on custom design requests/orders widened `Int?` → `String?` — free text like "2 pcs") · **`kiosk_sales_person`** (2026-08-03: `sales_code` + `sales_person_name` on `kiosk_orders`, captured at Store Manager "Add to Cart" — later removed, see `remove_sales_person_multi_image`) · **`order_status_rework`** (2026-08-03: `OrderStatus`/`CustomOrderStatus` enums replaced — see Status) · **`order_item_status`** (2026-08-03: `status OrderStatus` added to `kiosk_order_items`/`b2b_order_items` — per-line-item status) · **`manufacturer_order_seq`** (2026-08-04: `manufacturers.next_catalog_order_seq`/`next_custom_order_seq` — backs JFA-/JFC- order numbers, see Status) · **`custom_design_sales_person`** · **`order_item_purity`** (melting/purity override per order line, same field this doc's Core rules describe) · **`remove_sales_person_multi_image`** (2026-08-04: drops the sales-code/person columns entirely — reversed the two migrations above — and adds multi-image support for customised orders) · **`cart_items`** (2026-08-06: server-backed cart tables `cart_items`/`cart_note`, scoped like `FavoriteProduct` by `(storeId, branchId, kind)` — replaces the old localStorage-only cart) · **`order_delivery_date`** (2026-08-07: optional `delivery_date DATE` on `b2b_orders` and `kiosk_orders` — Retailer Admin sets it when placing their own order or approving a branch's order, forwarded to the manufacturer; nullable, no backfill, see Status) · **`karigar_assignment_phase1`** (2026-08-09: new `karigars` table + `CustomDesignOrder` extensions for the Karigar-assignment feature — see Status) · **`retailer_custom_request`** (2026-08-10: new `RetailerCustomRequest` model for a Purchase Manager's own bespoke-design requests, pending Karigar assignment) · **`karigar_form_extra_fields`** (2026-08-11: `totalWeightGrams`/`karigarNotes` on `CustomDesignOrder`) · **`product_subcategory2_gross_net_weight`** (2026-08-13: `grossWeightGrams`/`netWeightGrams` on `ManufacturerProduct`, the first step toward retiring the single `weightGrams` field) · **`manufacturer_taxonomy`** (2026-08-17: `ManufacturerCategory`/`SubCategory1`/`SubCategory2`/`Purity` — manufacturer-editable taxonomy, replaces the static `lib/categories.ts` list — see Status) · **`subcategory2_per_subcategory1`** (2026-08-18: re-parents `ManufacturerSubCategory2` from Category-level to Sub-category-1-level — see Status) · **`custom_design_order_o2d_sync`** (2026-08-18: `o2dOrderId`/`o2dOrderNo`/`o2dSyncedAt`/`o2dSyncError` on `CustomDesignOrder` — see the O2D integration entry in Status) · **`cart_item_size`** (2026-08-24: editable per-line `size` override on `cart_items` and `b2b_order_items`, mirroring the existing `purity` override). `pnpm db:deploy` applies all. `migrate:categories`/`migrate:branches` = one-off upgrades for an EXISTING DB only; `pnpm backfill:set-subcategory2` = one-off backfill for Set's default Sub-category 2 values on a DB that predates the taxonomy re-parenting.
+## Migrations (38, all Prisma-managed, idempotent)
+`0001 jewel_factory` · `kiosk_pin` · `b2b_item_image` · `branch_hierarchy` (branches + branch_managers + branch_id/requirement_note on orders + nullable PII) · `order_messages` (order_messages table + OrderKind/MessageSender enums + completed_at on kiosk/b2b/custom) · `add_analytics_indexes` · `custom_design_weight_range` · `pgvector` (adds the `vector(512)` embedding column on `manufacturer_product_embeddings`, used by pgvector search — see External services) · `extra_branch_allowance` · **`product_karigar_pieces_nullable_name`** (2026-07-30: `ManufacturerProduct.name` DROP NOT NULL, adds `pieces` + `karigar_code`) · **`favorite_products`** (2026-07-30: new table, see Core rules) · **`retailer_badges`** (2026-07-30: `manufacturers.retailer_badge_labels` + `stores.badge_label`) · **`retailer_delete_cascade`** (2026-07-30: `b2b_orders`/`kiosk_orders`/`custom_design_orders` FK to stores switched from `ON DELETE RESTRICT` to `CASCADE` — see Gotchas) · **`custom_order_karigar_code`** (2026-07-30: an early `karigarCode` column on custom design orders, superseded by the real `Karigar` master-list added in `karigar_assignment_phase1`) · **`favorite_kind_kiosk_restock`** (2026-07-30: adds `FavoriteKind` enum + `kind` column on `favorite_products`, unique/index widened to include it — see Status) · **`store_email_optional`** (2026-07-31: `stores.email` DROP NOT NULL + index on `owner_phone` — mobile-only purchase manager signup, see Gotchas) · **`branch_manager_email_optional`** (2026-07-31: same email-optional treatment for `branch_managers`) · **`custom_design_spec_fields`** (2026-08-01: sub-category + the counter spec — order ref, delivery date, quantity, meena, length, size, broadness, screw, sample weight — on BOTH `custom_design_requests` and `custom_design_orders`, all nullable) · **`product_size`** (2026-08-02: optional `size` on `manufacturer_products` — bangle sizing, form-gated to the Bangles category) · **`custom_design_quantity_text`** (2026-08-03: `quantity` on custom design requests/orders widened `Int?` → `String?` — free text like "2 pcs") · **`kiosk_sales_person`** (2026-08-03: `sales_code` + `sales_person_name` on `kiosk_orders`, captured at Store Manager "Add to Cart" — later removed, see `remove_sales_person_multi_image`) · **`order_status_rework`** (2026-08-03: `OrderStatus`/`CustomOrderStatus` enums replaced — see Status) · **`order_item_status`** (2026-08-03: `status OrderStatus` added to `kiosk_order_items`/`b2b_order_items` — per-line-item status) · **`manufacturer_order_seq`** (2026-08-04: `manufacturers.next_catalog_order_seq`/`next_custom_order_seq` — backs JFA-/JFC- order numbers, see Status) · **`custom_design_sales_person`** · **`order_item_purity`** (melting/purity override per order line, same field this doc's Core rules describe) · **`remove_sales_person_multi_image`** (2026-08-04: drops the sales-code/person columns entirely — reversed the two migrations above — and adds multi-image support for customised orders) · **`cart_items`** (2026-08-06: server-backed cart tables `cart_items`/`cart_note`, scoped like `FavoriteProduct` by `(storeId, branchId, kind)` — replaces the old localStorage-only cart) · **`order_delivery_date`** (2026-08-07: optional `delivery_date DATE` on `b2b_orders` and `kiosk_orders` — Retailer Admin sets it when placing their own order or approving a branch's order, forwarded to the manufacturer; nullable, no backfill, see Status) · **`karigar_assignment_phase1`** (2026-08-09: new `karigars` table + `CustomDesignOrder` extensions for the Karigar-assignment feature — see Status) · **`retailer_custom_request`** (2026-08-10: new `RetailerCustomRequest` model for a Purchase Manager's own bespoke-design requests, pending Karigar assignment) · **`karigar_form_extra_fields`** (2026-08-11: `totalWeightGrams`/`karigarNotes` on `CustomDesignOrder`) · **`product_subcategory2_gross_net_weight`** (2026-08-13: `grossWeightGrams`/`netWeightGrams` on `ManufacturerProduct`, the first step toward retiring the single `weightGrams` field) · **`manufacturer_taxonomy`** (2026-08-17: `ManufacturerCategory`/`SubCategory1`/`SubCategory2`/`Purity` — manufacturer-editable taxonomy, replaces the static `lib/categories.ts` list — see Status) · **`subcategory2_per_subcategory1`** (2026-08-18: re-parents `ManufacturerSubCategory2` from Category-level to Sub-category-1-level — see Status) · **`custom_design_order_o2d_sync`** (2026-08-18: `o2dOrderId`/`o2dOrderNo`/`o2dSyncedAt`/`o2dSyncError` on `CustomDesignOrder` — see the O2D integration entry in Status) · **`cart_item_size`** (2026-08-24: editable per-line `size` override on `cart_items` and `b2b_order_items`, mirroring the existing `purity` override) · **`login_events`** (2026-09-28: new append-only `login_events` table + `LoginEventUserType`/`LoginEventKind` enums — LOGIN/LOGOUT audit rows for the Retailer and Store Manager portals, written from the existing `/login`/`/logout` routes, plain string ids and no FK to `stores`/`branch_managers` — same no-FK precedent as `TryonEvent`/`ProductSale`, see the retailer-delete-cascade Gotcha; backs the manufacturer's new Customer Activity page). `pnpm db:deploy` applies all. `migrate:categories`/`migrate:branches` = one-off upgrades for an EXISTING DB only; `pnpm backfill:set-subcategory2` = one-off backfill for Set's default Sub-category 2 values on a DB that predates the taxonomy re-parenting.
 
 ## Status
 
-**Latest session (2026-08-17 → 2026-08-25) — manufacturer-editable taxonomy, next/image rollout, O2D order-creation integration, and a punch-list of UX fixes:**
+**Latest session (2026-09-28 → 2026-09-29) — `jewelfactory.ai` connected as the canonical production domain, four code deploys, and a hard-won cross-cutting-config gotcha list:**
+- **[x] `jewelfactory.ai` connected, `jewelfactory.in` redirects to it (no redirect the other way, both intentionally kept resolvable).** GoDaddy DNS `A` record repointed to the same Elastic IP; Let's Encrypt cert issued for `.ai`+`www.ai` via certbot (**hit and fixed a certbot bug** — see "Domains, CORS, and cross-cutting config" above, it modeled the new nginx block on the wrong existing one and shipped a block with no `location /`); `.in`'s nginx block rewritten to `return 301 https://jewelfactory.ai$request_uri` on both port 80 and 443 (its own valid cert still terminates first, so no cert warning for old links) instead of proxying to the app.
+- **[x] `.env.production` support email fixed** — `NEXT_PUBLIC_SUPPORT_EMAIL` had drifted to a stale Gmail address the client had already asked changed in code (`lib/support.ts`'s default, commit `12d871a`); server-side reads (`lib/email.ts`) were still using the stale env value since it's read via `getServerEnv()`'s live `process.env` parse. Corrected in place, container recreated (not rebuilt — see the `NEXT_PUBLIC_*` runtime-vs-build-time split documented above).
+- **[x] `NEXT_PUBLIC_APP_URL` switched to `https://jewelfactory.ai`; `ALLOWED_ORIGINS` extended with `.ai`+`www.ai`** — same env-only fix pattern, container recreated, no rebuild. Password-reset/store-approval email links now point at `.ai` directly instead of resolving via the `.in` redirect hop.
+- **[x] S3 bucket CORS fixed for `.ai`** — the manufacturer's "Generate with AI" save was failing with a browser CORS error on the final `PutObject` (direct browser→S3 upload, unrelated to `ALLOWED_ORIGINS`) because the bucket's own CORS `AllowedOrigins` never had `.ai` added when the domain was connected. `aws s3api put-bucket-cors` updated additively (kept `.in`/sslip.io/localhost/`o2d.zold.in`, added `.ai`+`www.ai`); confirmed via a real OPTIONS preflight against the bucket, not just re-reading the config back.
+- **[x] Four code releases deployed** (`0369f57` baseline → `c2408de` → `3073393` → `7dd6160` → `6a318ca`) — manufacturer Customer Activity page (`login_events` migration, additive), AI-regenerate-from-saved-photo feature + its own CORS/fetch-failure fix, and the photo-search tip wording update ("For the best match, use a clear photo of the jewellery on a plain background." / "Tip: One design. Plain background. Clear photo." on both `/store-manager/search` and `/store/similar-search`). Same build/candidate-test/cutover/retention procedure throughout; one build was OOM-killed by the shared local workstation's own memory pressure (VS Code/Chrome, not EC2) and succeeded on retry.
+- **[x] Diagnosed a false-alarm "site not fetching from DB" report** — was Next.js's expected Server Action ID mismatch on a browser tab left open across a container restart (`Failed to find Server Action "..."` → client falls back to a full page reload automatically). Confirmed via container logs + a clean `/api/kiosk/catalog` fetch that the DB/app were never actually affected; fix for the user was just a hard refresh.
+- **[x] Diagnosed a real external constraint, not a bug**: FortiGuard (Fortinet web-filtering, common on Indian corporate/ISP networks) auto-blocks `jewelfactory.ai` under "Newly Registered Domain" category policy for some visitors — confirmed via an actual FortiGuard block page and matched to an earlier-seen Firefox/Zen TLS warning from the same class of network. Not fixable server-side; documented under "Domains, CORS, and cross-cutting config" so it isn't re-investigated as an infra bug later.
+- Git push required switching the active `gh` account to **`ATjewellers01`** each time — the session's default accounts (`InternsatBotivate`, `teamai-botivate`) are read-only on this repo.
+
+**Previous session (2026-08-17 → 2026-08-25) — manufacturer-editable taxonomy, next/image rollout, O2D order-creation integration, and a punch-list of UX fixes:**
 - **[x] Manufacturer-editable Category / Sub-category 1 / Sub-category 2 / Purity taxonomy (2026-08-17/18)** — replaces the old hardcoded `lib/categories.ts` `CATEGORY_TREE`/`PURITIES` as the source of truth for the Add/Edit Design form's dropdowns. New models `ManufacturerCategory`/`ManufacturerSubCategory1`/`ManufacturerSubCategory2`/`ManufacturerPurity` (migration `manufacturer_taxonomy`), all manufacturer-scoped. **Sub-category 1** is scoped to its own parent Category (e.g. Bangles has a different Sub-cat-1 list than Set). **Sub-category 2 is scoped to its own parent Sub-category 1** (migration `subcategory2_per_subcategory1`, 2026-08-18 — re-parented from Category-level after the client asked for Set's own Sub-cat-1 values — Long Set/Short Set/Choker Set/Pendent Set — to each have their own independent Sub-cat-2 list rather than sharing one). `ensureDefaultTaxonomy()` backfills a manufacturer's first-ever taxonomy read from the old static list (additive), and seeds every Set Sub-category-1 row with 5 default Sub-category-2 values (Antique/Handmade/Casting/Turkish/Temple Set) — ordinary, fully editable/removable rows, no special-casing. A one-off `pnpm backfill:set-subcategory2` script (`prisma/backfill-set-subcategory2.ts`) seeds those same 5 defaults onto any Set Sub-category-1 row that predates the re-parenting and is still empty (additive-only, never touches a row that already has values). Every level supports "+ Add new…" / inline remove from its own dropdown (`components/manufacturer/EditableSelect.tsx`), with delete blocked (409) if any product currently uses that value. **`Temple Set` was removed as a top-level Category** (folded into Set's taxonomy instead) and Set's Sub-category 1 simplified to Long/Short/Choker/Pendent Set only.
 - **[x] Plain/Studded removed — every category now always captures Gross + Net Weight** (both optional) instead of a single `weightGrams` field gated behind a Plain/Studded switch. `weightGrams` is kept on the schema only so an older product's legacy single-weight value still round-trips if ever loaded; new/edited designs always write `grossWeightGrams`/`netWeightGrams`. Any UI that used to check `subCategory2 === 'Studded'` to decide which weight fields to show now checks "does this row have gross/net weight data" instead, so it works uniformly for the old Plain/Studded categories and Set's new taxonomy alike.
 - **[x] `next/image` rollout (2026-08-18)** — every `<img>` tag across the app (Manufacturer, Purchase Manager, Store Manager, kiosk, public/landing — ~34 files) replaced with Next.js's `<Image>` component, so every catalogue/order/kiosk image now gets automatic resize + format negotiation (WebP/AVIF) + lazy-loading instead of shipping a full-resolution source file (many AI-generated designs are uncompressed PNG) at thumbnail display size. Pure frontend rendering change — `next.config.ts`'s S3/CloudFront/Cloudinary `remotePatterns` were already correct and untouched, no upload/storage/AI-generation/database code touched, stored image formats are unchanged. A handful of local file-preview images (`blob:`/`data:` URIs from raw uploads and AR captures) are intentionally left as plain `<img>` since `next/image` can't optimize non-remote sources.
@@ -635,3 +742,4 @@ full LuxeMatch-style storefront (hero/catalog/try-on/search/custom/restock) + My
 - **`Store.email` is nullable and doubles as the login username** (2026-07-31) — a retailer may register with a mobile number only. `POST /api/store/login`'s `email` field is a *username*: it's looked up by `email` if it contains `@`, else by `ownerPhone`. Don't re-add `.email()` to that validator, and don't assume `store.email` is a string in new code (manufacturer list/registration views fall back to `ownerPhone`). Registration only enforces mobile uniqueness for email-less signups, so `ownerPhone` is NOT unique in the DB.
 - **Purchase manager (retailer) has no password at registration** (removed 2026-07-30) — `POST /api/store/register` creates the row with a random unguessable placeholder hash (login is impossible pre-approval anyway, since `registrationStatus !== 'APPROVED'` blocks it). On approval, `approveRegistration` (`lib/db/stores.ts`) hashes the retailer's **mobile number** (`ownerPhone`) as the real `passwordHash` — login is email (username) + mobile number (password). If the retailer's registered mobile number changes later via `/store/profile`, their password does **not** auto-update (they'd need the existing forgot-password/reset flow) — this is a known, accepted gap, not a bug to "fix" by auto-syncing.
 - **Registration address is PIN-code-first** — `app/store/register/page.tsx` calls `api.postalpincode.in/pincode/{pin}` client-side on a 6-digit PIN to auto-fill city/state (falls back to manual entry on a miss). This is the same India Post API referenced for future Karigar/address-autofill work; no server proxy, no API key needed, no rate limit per their docs.
+- **A new production domain needs FOUR separate things updated, not one** — DNS, the nginx server block + TLS cert, the app's `ALLOWED_ORIGINS`, and **the S3 bucket's own CORS `AllowedOrigins`** (unrelated to `ALLOWED_ORIGINS`, controls direct browser→S3 presigned uploads like "Generate with AI"). See "Domains, CORS, and cross-cutting config" under Production operations for the full story, including a real `certbot --nginx` bug that shipped a proxyless server block while reporting success.
