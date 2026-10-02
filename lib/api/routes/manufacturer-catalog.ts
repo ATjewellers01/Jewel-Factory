@@ -115,6 +115,7 @@ const ProductBody = z.object({
   // Nullable so clearing the field in Edit actually wipes the stored code —
   // undefined would mean "don't touch this field" (see updateManufacturerProduct).
   karigarCode: z.string().nullish(),
+  expectedDate: z.string().nullish(),
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional(),
 });
 

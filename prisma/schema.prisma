@@ -319,6 +319,7 @@ model ManufacturerProduct {
   // that here, so an older/other-category row may still carry a value.
   size         String?
   karigarCode  String?       @map("karigar_code") // manufacturer-internal only — never exposed to retailer/store manager
+  expectedDate String?       @map("expected_date") // delivery timeline / expected date (free text: integer days, dates, etc.)
   hasTryon     Boolean       @default(false) @map("has_tryon")
   status       ProductStatus @default(DRAFT)
   createdAt    DateTime      @default(now()) @map("created_at")

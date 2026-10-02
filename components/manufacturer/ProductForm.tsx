@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
-import { Optional } from '@/components/ui/field-mark';
+import { Required, Optional } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { uploadToObjectStorage } from '@/lib/upload-client';
 import { toFieldErrors } from '@/lib/field-error';
@@ -53,6 +53,7 @@ export type ProductFormData = {
   pieces: string;
   size: string; // bangle size — only shown/sent for the Bangles category
   karigarCode: string;
+  expectedDate?: string;
   status: 'DRAFT' | 'ACTIVE';
   designNumber?: string;
   images?: { id: string; secureUrl: string; isPrimary: boolean }[];
@@ -69,7 +70,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
     initial ?? {
       name: '', category: '', subCategory: '', subCategory2: '', description: '',
       weightGrams: '', grossWeightGrams: '', netWeightGrams: '',
-      purity: '', minOrderQty: '1', pieces: '1', size: '', karigarCode: '',
+      purity: '', minOrderQty: '1', pieces: '1', size: '', karigarCode: '', expectedDate: '',
       status: 'ACTIVE', // new designs are visible by default
     },
   );
@@ -514,6 +515,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
       // field" server-side, so an emptied field would otherwise silently keep
       // its old value instead of clearing.
       karigarCode: form.karigarCode.trim() || null,
+      expectedDate: (form.expectedDate ?? '').trim() || null,
       status: form.status,
     };
   }
@@ -594,6 +596,18 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
   async function save() {
     setError(null);
     setFieldErrors({});
+
+    // Karigar Code is required
+    const errors: Record<string, string> = {};
+    if (!form.karigarCode.trim()) {
+      errors.karigarCode = 'Karigar code is required';
+    }
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setError('Please fill in the required Karigar Code');
+      return;
+    }
+
     setBusy(true);
     try {
       const id = await ensureProductId();
@@ -735,10 +749,21 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
             <FieldError errors={toFieldErrors(fieldErrors.status)} />
           </div>
         </div>
-        <div>
-          <label className="text-xs font-medium text-muted-foreground">Karigar Code <span className="text-[10px] normal-case text-muted-foreground/70">(internal only — never shown to purchase managers)</span></label>
-          <Input className="mt-1" placeholder="e.g. K-104" value={form.karigarCode} onChange={set('karigarCode')} />
-          <FieldError errors={toFieldErrors(fieldErrors.karigarCode)} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">
+              Karigar Code<Required /> <span className="text-[10px] font-normal text-muted-foreground/70" title="Internal only — never shown to purchase managers">(internal only)</span>
+            </label>
+            <Input className="mt-1" placeholder="e.g. K-104" value={form.karigarCode} onChange={set('karigarCode')} />
+            <FieldError errors={toFieldErrors(fieldErrors.karigarCode)} />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">
+              Expected Date / Days
+            </label>
+            <Input className="mt-1" placeholder="e.g. 7-10 days, 15 Oct, etc." value={form.expectedDate ?? ''} onChange={set('expectedDate')} />
+            <FieldError errors={toFieldErrors(fieldErrors.expectedDate)} />
+          </div>
         </div>
       </section>
 
