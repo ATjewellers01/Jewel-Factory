@@ -28,6 +28,7 @@ type Product = {
   netWeightGrams: string | null;
   size: string | null;
   karigarCode: string | null;
+  expectedDate: string | null;
   status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
   hasTryon: boolean;
   images: ProductImage[];
@@ -451,6 +452,7 @@ export default function ManufacturerCatalogPage() {
                     <p className="truncate text-xs text-muted-foreground">{p.category ?? ''}{p.subCategory ? ` › ${p.subCategory}` : ''}</p>
                     {formatWeight(displayWeight(p)) && <p className="text-xs text-muted-foreground">{formatWeight(displayWeight(p))}{p.size ? ` · Size ${p.size}` : ''}</p>}
                     {p.karigarCode && <p className="text-xs text-muted-foreground/70">Karigar: {p.karigarCode}</p>}
+                    {p.expectedDate && <p className="text-xs text-muted-foreground/70">Expected: {p.expectedDate}</p>}
                   </div>
                 </div>
             );

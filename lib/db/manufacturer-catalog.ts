@@ -95,6 +95,7 @@ export type CreateProductInput = {
   pieces?: number;
   size?: string | null; // bangle size — only collected for the Bangles category
   karigarCode?: string | null;
+  expectedDate?: string | null;
   status?: ProductStatus;
 };
 
@@ -119,6 +120,7 @@ export async function createManufacturerProduct(manufacturerId: string, input: C
       pieces: input.pieces ?? 1,
       size: input.size ?? null,
       karigarCode: input.karigarCode ?? null,
+      expectedDate: input.expectedDate ?? null,
       status: input.status ?? 'DRAFT',
     },
   });
@@ -169,6 +171,7 @@ export async function updateManufacturerProduct(
       ...(input.pieces !== undefined ? { pieces: input.pieces } : {}),
       ...(input.size !== undefined ? { size: input.size } : {}),
       ...(input.karigarCode !== undefined ? { karigarCode: input.karigarCode } : {}),
+      ...(input.expectedDate !== undefined ? { expectedDate: input.expectedDate } : {}),
       ...(input.status !== undefined ? { status: input.status } : {}),
     },
   });

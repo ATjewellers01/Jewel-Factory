@@ -22,6 +22,7 @@ export default function EditProductPage() {
             subCategory: string | null; subCategory2: string | null; description: string | null; weightGrams: string | null;
             grossWeightGrams: string | null; netWeightGrams: string | null;
             purity: string | null; minOrderQty: number; pieces: number | null; size: string | null; karigarCode: string | null;
+            expectedDate: string | null;
             status: string; hasTryon: boolean;
             images: { id: string; secureUrl: string; isPrimary: boolean }[];
             tryonAssets: { assetUrl: string; jewelleryType: string }[];
@@ -46,6 +47,7 @@ export default function EditProductPage() {
           pieces: String(p.pieces ?? 1),
           size: p.size ?? '',
           karigarCode: p.karigarCode ?? '',
+          expectedDate: p.expectedDate ?? '',
           status: (p.status === 'ACTIVE' ? 'ACTIVE' : 'DRAFT'),
           images: p.images,
           hasTryon: p.hasTryon,
