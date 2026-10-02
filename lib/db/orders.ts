@@ -143,7 +143,7 @@ async function hydrateItemsForStoreManager<T extends { manufacturerProductId: st
         select: {
           id: true, category: true, subCategory: true, subCategory2: true,
           weightGrams: true, grossWeightGrams: true, netWeightGrams: true, size: true,
-          purity: true, description: true, designNumber: true, hasTryon: true,
+          purity: true, description: true, designNumber: true, hasTryon: true, expectedDate: true,
           images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], select: { secureUrl: true, isPrimary: true } },
         },
       })
@@ -234,7 +234,7 @@ export async function getKioskOrderForManufacturer(manufacturerId: string, id: s
 // manufacturer-facing routes, never retailer/store-manager ones.
 async function hydrateItemsWithProduct<T extends { manufacturerProductId: string | null }>(
   items: T[],
-): Promise<Array<T & { product: null | { karigarCode: string | null; category: string | null; subCategory: string | null; subCategory2: string | null; weightGrams: unknown; grossWeightGrams: unknown; netWeightGrams: unknown; pieces: number; size: string | null; purity: string | null; description: string | null; designNumber: string; images: { secureUrl: string; isPrimary: boolean }[] } }>> {
+): Promise<Array<T & { product: null | { karigarCode: string | null; category: string | null; subCategory: string | null; subCategory2: string | null; weightGrams: unknown; grossWeightGrams: unknown; netWeightGrams: unknown; pieces: number; size: string | null; purity: string | null; description: string | null; designNumber: string; expectedDate: string | null; images: { secureUrl: string; isPrimary: boolean }[] } }>> {
   const ids = [...new Set(items.map((i) => i.manufacturerProductId).filter((x): x is string => !!x))];
   if (ids.length === 0) return items.map((i) => ({ ...i, product: null }));
   const products = await prisma.manufacturerProduct.findMany({
@@ -242,7 +242,7 @@ async function hydrateItemsWithProduct<T extends { manufacturerProductId: string
     select: {
       id: true, karigarCode: true, category: true, subCategory: true, subCategory2: true,
       weightGrams: true, grossWeightGrams: true, netWeightGrams: true, pieces: true, size: true,
-      purity: true, description: true, designNumber: true,
+      purity: true, description: true, designNumber: true, expectedDate: true,
       images: { orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }], select: { secureUrl: true, isPrimary: true } },
     },
   });

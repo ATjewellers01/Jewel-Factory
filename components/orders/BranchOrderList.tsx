@@ -137,6 +137,7 @@ export function BranchOrderList({ kind, endpoint }: { kind: BranchOrderKind; end
                             {it.product.subCategory ? ` › ${it.product.subCategory}` : ''}
                             {it.product.weightGrams != null ? ` · ${it.product.weightGrams}gm` : ''}
                             {it.purity ? ` · ${it.purity}` : ''}
+                            {it.product.expectedDate ? ` · Exp: ${it.product.expectedDate}` : ''}
                           </span>
                         )}
                       </span>

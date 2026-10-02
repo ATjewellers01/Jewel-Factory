@@ -28,7 +28,7 @@ type Product = {
   id: string; designNumber: string; name?: string | null; category: string | null; subCategory: string | null;
   subCategory2?: string | null; purity: string | null; weightGrams: string | null;
   grossWeightGrams?: string | null; netWeightGrams?: string | null;
-  size?: string | null; description?: string | null; hasTryon: boolean; images: Img[];
+  size?: string | null; description?: string | null; expectedDate?: string | null; hasTryon: boolean; images: Img[];
 };
 // Sales info across ALL of this retailer's branches, keyed by manufacturerProductId.
 type SalesInfo = { stars: number; unitsLast30d: number };
@@ -375,6 +375,9 @@ function CatalogBrowse() {
                                 {fullProduct?.size ? `Size ${fullProduct.size}` : ''}
                               </span>
                             )}
+                            {fullProduct?.expectedDate && (
+                              <span className="block text-[11px] text-muted-foreground/80">Expected: {fullProduct.expectedDate}</span>
+                            )}
                           </span>
                         </button>
                         <div className="flex w-[104px] shrink-0 items-center justify-center gap-1">
@@ -578,6 +581,7 @@ function ProductGrid({
                   {p.category ? `${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}
                 </p>
                 {formatWeight(p.weightGrams) && <p className="text-xs font-medium text-muted-foreground">{formatWeight(p.weightGrams)}{p.size ? ` · Size ${p.size}` : ''}</p>}
+                {p.expectedDate && <p className="text-[11px] text-muted-foreground/80">Expected: {p.expectedDate}</p>}
                 {salesMap[p.id] ? (
                   <div className="mt-1 flex items-center gap-1.5">
                     <StarRating count={salesMap[p.id].stars} size="sm" />

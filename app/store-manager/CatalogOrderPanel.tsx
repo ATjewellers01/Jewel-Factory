@@ -326,6 +326,9 @@ export function CatalogOrderPanel({
                                 {fullProduct?.size ? `Size ${fullProduct.size}` : ''}
                               </span>
                             )}
+                            {fullProduct?.expectedDate && (
+                              <span className="block text-[11px] text-muted-foreground/80">Expected: {fullProduct.expectedDate}</span>
+                            )}
                           </span>
                         </button>
                         <div className="flex w-[104px] shrink-0 items-center justify-center gap-1">
@@ -521,6 +524,7 @@ export function CatalogOrderPanel({
                         on narrow phone cards, where it used to be clipped first. */}
                     <p className="truncate text-xs text-muted-foreground">{p.category ? `${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}</p>
                     {formatWeight(p.weightGrams) && <p className="text-xs font-medium text-muted-foreground">{formatWeight(p.weightGrams)}{p.size ? ` · Size ${p.size}` : ''}</p>}
+                    {p.expectedDate && <p className="text-[11px] text-muted-foreground/80">Expected: {p.expectedDate}</p>}
                     {showPopularity && salesMap[p.id] ? (
                       <div className="flex items-center gap-1.5 pt-0.5">
                         <StarRating count={salesMap[p.id].stars} size="sm" />
