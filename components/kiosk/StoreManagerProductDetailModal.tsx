@@ -186,7 +186,7 @@ function ProductBlock({
             )}
             {product.size ? <Spec label="Size" value={product.size} /> : null}
             <Spec label="Category" value={`${product.category ?? '—'}${product.subCategory ? ` › ${product.subCategory}` : ''}`} wide={!product.size} />
-            {product.expectedDate ? <Spec label="Expected Delivery" value={product.expectedDate} wide /> : null}
+            {product.expectedDate ? <Spec label="Estimated Order Time" value={product.expectedDate} wide /> : null}
           </div>
           {product.description && product.description.trim().length >= 4 ? <p className="mt-2 text-xs leading-[1.15rem] text-[#6f665e] sm:mt-4 sm:text-sm md:leading-6 lg:text-base lg:leading-7">{product.description}</p> : null}
         </div>

@@ -311,7 +311,7 @@ export default function StoreCatalogueOrdersPage() {
                             {it.product?.subCategory ? ` › ${it.product.subCategory}` : ''}
                             {it.product?.weightGrams != null ? ` · ${it.product.weightGrams}gm` : ''}
                             {it.purity ? ` · ${it.purity}` : ''}
-                            {it.product?.expectedDate ? ` · Exp: ${it.product.expectedDate}` : ''}
+                            {it.product?.expectedDate ? ` · Est: ${it.product.expectedDate}` : ''}
                           </p>
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-1">

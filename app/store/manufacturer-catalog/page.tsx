@@ -376,7 +376,7 @@ function CatalogBrowse() {
                               </span>
                             )}
                             {fullProduct?.expectedDate && (
-                              <span className="block text-[11px] text-muted-foreground/80">Expected: {fullProduct.expectedDate}</span>
+                              <span className="block text-[11px] text-muted-foreground/80">Estimated Order Time: {fullProduct.expectedDate}</span>
                             )}
                           </span>
                         </button>
@@ -581,7 +581,7 @@ function ProductGrid({
                   {p.category ? `${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}
                 </p>
                 {formatWeight(p.weightGrams) && <p className="text-xs font-medium text-muted-foreground">{formatWeight(p.weightGrams)}{p.size ? ` · Size ${p.size}` : ''}</p>}
-                {p.expectedDate && <p className="text-[11px] text-muted-foreground/80">Expected: {p.expectedDate}</p>}
+                {p.expectedDate && <p className="text-[11px] text-muted-foreground/80">Estimated Order Time: {p.expectedDate}</p>}
                 {salesMap[p.id] ? (
                   <div className="mt-1 flex items-center gap-1.5">
                     <StarRating count={salesMap[p.id].stars} size="sm" />

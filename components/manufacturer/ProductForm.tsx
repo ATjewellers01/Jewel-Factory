@@ -759,7 +759,7 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">
-              Expected Date / Days
+              Estimated Order Time
             </label>
             <Input className="mt-1" placeholder="e.g. 7-10 days, 15 Oct, etc." value={form.expectedDate ?? ''} onChange={set('expectedDate')} />
             <FieldError errors={toFieldErrors(fieldErrors.expectedDate)} />

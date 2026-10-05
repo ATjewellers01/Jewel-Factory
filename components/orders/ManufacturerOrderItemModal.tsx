@@ -70,7 +70,7 @@ export function ManufacturerOrderItemModal({ product, onClose }: { product: Orde
               {product.karigarCode && (
                 <div className="flex justify-between bg-amber-50 px-4 py-2"><span className="text-amber-800">Karigar</span><span className="font-semibold text-amber-900">{product.karigarCode}</span></div>
               )}
-              {product.expectedDate && <div className="flex justify-between px-4 py-2"><span className="text-muted-foreground">Expected Delivery</span><span className="font-medium">{product.expectedDate}</span></div>}
+              {product.expectedDate && <div className="flex justify-between px-4 py-2"><span className="text-muted-foreground">Estimated Order Time</span><span className="font-medium">{product.expectedDate}</span></div>}
             </div>
             {product.description && <p className="text-sm leading-relaxed text-muted-foreground">{product.description}</p>}
           </div>

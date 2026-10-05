@@ -223,7 +223,7 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
                     {it.product.subCategory ? ` › ${it.product.subCategory}` : ''}
                     {it.product.weightGrams != null ? ` · ${it.product.weightGrams}gm` : ''}
                     {it.purity ? ` · ${it.purity}` : ''}
-                    {it.product.expectedDate ? ` · Exp: ${it.product.expectedDate}` : ''}
+                    {it.product.expectedDate ? ` · Est: ${it.product.expectedDate}` : ''}
                   </span>
                 )}
               </span>
