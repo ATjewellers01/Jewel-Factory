@@ -217,8 +217,12 @@ export default function StoreHomePage() {
  */
 function CatalogueStrip({ products }: { products: Product[] }) {
   if (products.length === 0) return null;
+  // Keep the animated layer and decoded images bounded on mobile WebKit.
+  // Products are already interleaved by category; the full catalogue still
+  // supplies the category covers/counts and remains available when browsing.
+  const highlights = products.slice(0, 12);
   // Duplicated once so the -50% translate loops seamlessly (see globals.css).
-  const reel = [...products, ...products];
+  const reel = [...highlights, ...highlights];
 
   return (
     <section aria-label="Catalogue highlights">
@@ -232,10 +236,11 @@ function CatalogueStrip({ products }: { products: Product[] }) {
             <Link
               key={`${p.id}-${i}`}
               href={`/store/manufacturer-catalog?category=${encodeURIComponent(p.category ?? '')}`}
+              prefetch={false}
               // The duplicate half is decorative — keep it out of the tab order
               // and off the accessibility tree so nothing is announced twice.
-              aria-hidden={i >= products.length}
-              tabIndex={i >= products.length ? -1 : undefined}
+              aria-hidden={i >= highlights.length}
+              tabIndex={i >= highlights.length ? -1 : undefined}
               className="group/card relative block h-64 w-52 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-black/5 transition-shadow hover:shadow-[0_10px_30px_rgba(31,24,15,0.16)] sm:h-96 sm:w-80 lg:h-[30rem] lg:w-[24rem]"
               title={p.designNumber}
             >
@@ -248,6 +253,7 @@ function CatalogueStrip({ products }: { products: Product[] }) {
                 alt={p.designNumber}
                 fill
                 loading="eager"
+                sizes="(min-width: 1024px) 384px, (min-width: 640px) 320px, 208px"
                 className="object-cover transition-transform duration-500 group-hover/card:scale-105"
               />
               <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 to-transparent px-4 pb-3 pt-9 text-sm font-semibold tabular-nums text-white sm:px-5 sm:text-base">
@@ -345,6 +351,7 @@ function CategoryMosaic({
                 alt=""
                 fill
                 loading="lazy"
+                sizes="(min-width: 640px) 70vw, 100vw"
                 className="object-cover transition-transform duration-700 group-hover:scale-[1.06]"
               />
 
@@ -395,7 +402,7 @@ function SubCategoryPanel({
       <aside className="absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-3xl bg-[#fffdfa] shadow-2xl sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[min(92vw,460px)] sm:rounded-none">
         <div className="relative h-32 shrink-0 overflow-hidden sm:h-44">
           {cover ? (
-            <Image src={cover} alt="" fill className="object-cover" />
+            <Image src={cover} alt="" fill sizes="(min-width: 640px) 460px, 100vw" className="object-cover" />
           ) : (
             <div className="h-full w-full bg-[#efe7da]" />
           )}

@@ -9,3 +9,6 @@ export const POST = handle(app);
 export const PATCH = handle(app);
 export const PUT = handle(app);
 export const DELETE = handle(app);
+// Let Hono answer preflight requests with its origin allowlist and credentials.
+// Next.js's automatic OPTIONS response only supplies an Allow header.
+export const OPTIONS = handle(app);
