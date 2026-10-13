@@ -39,7 +39,10 @@ export function CartQtyControl({
       <button
         type="button"
         onClick={onAdd}
-        className={`metal-sheen flex ${height} w-full items-center justify-center gap-1.5 rounded-lg ${text} font-semibold text-[#17120b] transition-transform hover:-translate-y-px ${className}`}
+        // active: instant tap-down confirmation — the cart update itself is
+        // already optimistic/instant, but this gives a visual response even
+        // in the one frame before that state change commits.
+        className={`metal-sheen flex ${height} w-full items-center justify-center gap-1.5 rounded-lg ${text} font-semibold text-[#17120b] transition-transform hover:-translate-y-px active:scale-95 ${className}`}
       >
         <Plus className={icon} /> {addLabel}
       </button>

@@ -3,7 +3,7 @@
 import { Loader2, Gem, Heart, ShoppingCart, Minus, Plus, Trash2, Sparkles, CheckCircle2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { StoreManagerProductDetailModal } from '@/components/kiosk/StoreManagerProductDetailModal';
 import { CartQtyControl } from '@/components/orders/CartQtyControl';
@@ -19,7 +19,7 @@ import { useFavorites } from '@/hooks/use-favorites';
 import { useTaxonomy } from '@/hooks/use-taxonomy';
 import { buildCatalogCounts, subCategories1WithStock, subCategories2WithStock } from '@/lib/catalog-counts';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
-import { formatWeight } from '@/lib/format';
+import { categoryHierarchy, formatWeight, grossNetWeightSummary } from '@/lib/format';
 import { matchesDescriptionQuery, rankSimilar } from '@/lib/product-similarity';
 import { SORT_OPTIONS, weightExtent, matchWeightRange, sortProducts, type SortOption } from '@/lib/weight-filter';
 
@@ -143,6 +143,33 @@ function CatalogBrowse() {
     (p) => p.designNumber,
     (p) => p.weightGrams,
   );
+
+  // O(1) per-card cart lookup instead of cart.items.find() inside the grid's
+  // map — with hundreds of designs on screen, re-deriving that with a linear
+  // scan for every card on every render (e.g. after a single Add click) was
+  // the main cost behind the catalogue feeling slow to update.
+  const cartQtyById = useMemo(() => {
+    const m = new Map<string, number>();
+    cart.items.forEach((i) => m.set(i.productId, i.quantity));
+    return m;
+  }, [cart.items]);
+
+  // Stable across renders (cart.add/.remove/.setQty are themselves
+  // useCallback'd) so ProductCard's React.memo can actually skip re-rendering
+  // cards whose own quantity/favorite state didn't change.
+  const handleAdd = useCallback((p: Product) => {
+    const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
+    cart.add({ productId: p.id, name: p.designNumber, designNumber: p.designNumber, imageUrl: img?.secureUrl, purity: p.purity ?? undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.add]);
+  const handleSetQuantity = useCallback((id: string, qty: number) => {
+    if (qty <= 0) cart.remove(id); else cart.setQty(id, qty);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.remove, cart.setQty]);
+  const handleToggleFavorite = useCallback((id: string) => {
+    void favorites.toggle(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favorites.toggle]);
 
   const sizeOptions = Array.from(
     new Set((data ?? []).map((p) => p.size).filter((s): s is string => !!s)),
@@ -443,9 +470,33 @@ function CatalogBrowse() {
 
       {/* Normal catalogue grid — hidden while Cart or Favorites is open, since
           that's not what's on screen there (the "You may also like" grid
-          below takes this exact spot instead when the cart is open). */}
+          below takes this exact spot instead when the cart is open). A
+          horizontal-scrolling row of the same designs sits above the grid —
+          same data, just a second way to browse without scrolling down. */}
       {!showCart && !showFavorites && data && filtered.length > 0 && (
-        <ProductGrid products={filtered} cart={cart} favorites={favorites} salesMap={salesMap} cols={`${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`} onOpen={setDetail} />
+        <>
+          <HorizontalProductStrip
+            products={filtered}
+            cartQtyById={cartQtyById}
+            favorites={favorites}
+            salesMap={salesMap}
+            onOpen={setDetail}
+            onAdd={handleAdd}
+            onSetQuantity={handleSetQuantity}
+            onToggleFavorite={handleToggleFavorite}
+          />
+          <ProductGrid
+            products={filtered}
+            cartQtyById={cartQtyById}
+            favorites={favorites}
+            salesMap={salesMap}
+            cols={`${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`}
+            onOpen={setDetail}
+            onAdd={handleAdd}
+            onSetQuantity={handleSetQuantity}
+            onToggleFavorite={handleToggleFavorite}
+          />
+        </>
       )}
 
       {/* "You may also like" — one group per unique cart line, ranked by
@@ -490,7 +541,7 @@ function CatalogBrowse() {
                 {groups.map(({ fullProduct, similar }) => (
                   <div key={`similar-${fullProduct.id}`} className="space-y-3">
                     <h2 className="text-sm font-semibold">You may also like — like {fullProduct.designNumber}</h2>
-                    <ProductGrid products={similar} cart={cart} favorites={favorites} salesMap={salesMap} cols={`${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`} onOpen={setDetail} />
+                    <ProductGrid products={similar} cartQtyById={cartQtyById} favorites={favorites} salesMap={salesMap} cols={`${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`} onOpen={setDetail} onAdd={handleAdd} onSetQuantity={handleSetQuantity} onToggleFavorite={handleToggleFavorite} />
                   </div>
                 ))}
               </div>
@@ -500,7 +551,7 @@ function CatalogBrowse() {
                 {categoryGroups.map(({ category, items }) => (
                   <div key={`category-${category}`} className="space-y-3">
                     <h2 className="text-sm font-semibold">More from {category}</h2>
-                    <ProductGrid products={items} cart={cart} favorites={favorites} salesMap={salesMap} cols={`${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`} onOpen={setDetail} />
+                    <ProductGrid products={items} cartQtyById={cartQtyById} favorites={favorites} salesMap={salesMap} cols={`${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`} onOpen={setDetail} onAdd={handleAdd} onSetQuantity={handleSetQuantity} onToggleFavorite={handleToggleFavorite} />
                   </div>
                 ))}
               </div>
@@ -537,69 +588,142 @@ function CatalogBrowse() {
   );
 }
 
+/**
+ * One catalogue card. Memoized so that adding a single design to the cart —
+ * which only changes that one card's `inCartQty` — doesn't force every other
+ * card on screen (hundreds of designs, each with its own image) to
+ * re-render. Props are kept down to primitives (`inCartQty`, `isFavorite`)
+ * and stable callbacks so React.memo's shallow comparison actually catches
+ * the "nothing relevant changed" case for every other card.
+ */
+const ProductCard = memo(function ProductCard({
+  product: p, inCartQty, isFavorite, salesInfo, onOpen, onToggleFavorite, onAdd, onSetQuantity,
+}: {
+  product: Product;
+  inCartQty: number;
+  isFavorite: boolean;
+  salesInfo?: SalesInfo;
+  onOpen: (product: Product) => void;
+  onToggleFavorite: (id: string) => void;
+  onAdd: (product: Product) => void;
+  onSetQuantity: (id: string, qty: number) => void;
+}) {
+  const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
+  const hierarchy = categoryHierarchy(p);
+  const weight = grossNetWeightSummary(p);
+  return (
+    <div className="overflow-hidden rounded-xl border bg-card">
+      <button type="button" onClick={() => onOpen(p)} className="relative block aspect-[3/4] w-full bg-[#ece5da]" title="View details">
+        {img ? (
+          <Image src={img.secureUrl} alt={p.designNumber} fill className="object-cover" />
+        ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-8 w-8" /></div>}
+        {p.hasTryon && <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]"><Sparkles className="mr-0.5 inline h-2.5 w-2.5" />AR</span>}
+        <span
+          role="button"
+          tabIndex={-1}
+          onClick={(e) => { e.stopPropagation(); onToggleFavorite(p.id); }}
+          className="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-colors hover:bg-black/60"
+          aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          <Heart className={`h-3.5 w-3.5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+        </span>
+      </button>
+      <div className="p-3 space-y-2">
+        <button type="button" onClick={() => onOpen(p)} className="block w-full text-left">
+          <p className="truncate text-sm font-medium hover:text-primary">{p.designNumber}</p>
+          {/* Weight on its own non-truncating line so narrow phone
+              cards can't clip it (it was last on one truncated line). */}
+          <p className="truncate text-xs text-muted-foreground">{hierarchy}</p>
+          {weight && <p className="text-xs font-medium text-muted-foreground">{weight}{p.size ? ` · Size ${p.size}` : ''}</p>}
+          {p.expectedDate && <p className="text-[11px] text-muted-foreground/80">Estimated Order Time: {p.expectedDate}</p>}
+          {salesInfo ? (
+            <div className="mt-1 flex items-center gap-1.5">
+              <StarRating count={salesInfo.stars} size="sm" />
+              <span className="text-[10px] text-muted-foreground">{salesInfo.unitsLast30d} sold · 30d</span>
+            </div>
+          ) : null}
+        </button>
+        <CartQtyControl
+          size="sm"
+          designNumber={p.designNumber}
+          quantity={inCartQty}
+          onAdd={() => onAdd(p)}
+          onSetQuantity={(quantity) => onSetQuantity(p.id, quantity)}
+        />
+      </div>
+    </div>
+  );
+});
+
+type GridCallbacks = {
+  onOpen: (product: Product) => void;
+  onAdd: (product: Product) => void;
+  onSetQuantity: (id: string, qty: number) => void;
+  onToggleFavorite: (id: string) => void;
+};
+
 /** Shared card grid — used for the normal catalogue browse AND for "You may
  *  also like" (which takes this exact spot when the cart is open), so both
  *  look identical: same card, same Add-to-cart control, same info shown. */
 function ProductGrid({
-  products, cart, favorites, salesMap, cols, onOpen,
+  products, cartQtyById, favorites, salesMap, cols, onOpen, onAdd, onSetQuantity, onToggleFavorite,
 }: {
   products: Product[];
-  cart: ReturnType<typeof useB2bCart>;
+  cartQtyById: Map<string, number>;
   favorites: ReturnType<typeof useFavorites>;
   salesMap: Record<string, SalesInfo>;
   cols: string;
-  onOpen: (product: Product) => void;
-}) {
+} & GridCallbacks) {
   return (
     <div className={`grid gap-4 ${cols}`}>
-      {products.map((p) => {
-        const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
-        const inCartQty = cart.items.find((i) => i.productId === p.id)?.quantity ?? 0;
-        return (
-          <div key={p.id} className="overflow-hidden rounded-xl border bg-card">
-            <button type="button" onClick={() => onOpen(p)} className="relative block aspect-[3/4] w-full bg-[#ece5da]" title="View details">
-              {img ? (
-                <Image src={img.secureUrl} alt={p.designNumber} fill className="object-cover" />
-              ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-8 w-8" /></div>}
-              {p.hasTryon && <span className="metal-sheen absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold text-[#17120b]"><Sparkles className="mr-0.5 inline h-2.5 w-2.5" />AR</span>}
-              <span
-                role="button"
-                tabIndex={-1}
-                onClick={(e) => { e.stopPropagation(); void favorites.toggle(p.id); }}
-                className="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-colors hover:bg-black/60"
-                aria-label={favorites.isFavorite(p.id) ? 'Remove from favorites' : 'Add to favorites'}
-              >
-                <Heart className={`h-3.5 w-3.5 ${favorites.isFavorite(p.id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-              </span>
-            </button>
-            <div className="p-3 space-y-2">
-              <button type="button" onClick={() => onOpen(p)} className="block w-full text-left">
-                <p className="truncate text-sm font-medium hover:text-primary">{p.designNumber}</p>
-                {/* Weight on its own non-truncating line so narrow phone
-                    cards can't clip it (it was last on one truncated line). */}
-                <p className="truncate text-xs text-muted-foreground">
-                  {p.category ? `${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}
-                </p>
-                {formatWeight(p.weightGrams) && <p className="text-xs font-medium text-muted-foreground">{formatWeight(p.weightGrams)}{p.size ? ` · Size ${p.size}` : ''}</p>}
-                {p.expectedDate && <p className="text-[11px] text-muted-foreground/80">Estimated Order Time: {p.expectedDate}</p>}
-                {salesMap[p.id] ? (
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <StarRating count={salesMap[p.id].stars} size="sm" />
-                    <span className="text-[10px] text-muted-foreground">{salesMap[p.id].unitsLast30d} sold · 30d</span>
-                  </div>
-                ) : null}
-              </button>
-              <CartQtyControl
-                size="sm"
-                designNumber={p.designNumber}
-                quantity={inCartQty}
-                onAdd={() => cart.add({ productId: p.id, name: p.designNumber, designNumber: p.designNumber, imageUrl: img?.secureUrl, purity: p.purity ?? undefined })}
-                onSetQuantity={(quantity) => (quantity <= 0 ? cart.remove(p.id) : cart.setQty(p.id, quantity))}
-              />
-            </div>
-          </div>
-        );
-      })}
+      {products.map((p) => (
+        <ProductCard
+          key={p.id}
+          product={p}
+          inCartQty={cartQtyById.get(p.id) ?? 0}
+          isFavorite={favorites.isFavorite(p.id)}
+          salesInfo={salesMap[p.id]}
+          onOpen={onOpen}
+          onAdd={onAdd}
+          onSetQuantity={onSetQuantity}
+          onToggleFavorite={onToggleFavorite}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Horizontal-scrolling row of the SAME designs the grid below shows (not a
+ * separate subset) — a second, swipeable way to browse without scrolling the
+ * whole page down, sitting directly above the normal vertical grid. Plain
+ * native overflow-x scroll (not the home page's auto-animated marquee) —
+ * this is user-driven browsing, not a decorative strip.
+ */
+function HorizontalProductStrip({
+  products, cartQtyById, favorites, salesMap, onOpen, onAdd, onSetQuantity, onToggleFavorite,
+}: {
+  products: Product[];
+  cartQtyById: Map<string, number>;
+  favorites: ReturnType<typeof useFavorites>;
+  salesMap: Record<string, SalesInfo>;
+} & GridCallbacks) {
+  return (
+    <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2 snap-x snap-mandatory no-scrollbar">
+      {products.map((p) => (
+        <div key={p.id} className="w-[168px] shrink-0 snap-start sm:w-[200px]">
+          <ProductCard
+            product={p}
+            inCartQty={cartQtyById.get(p.id) ?? 0}
+            isFavorite={favorites.isFavorite(p.id)}
+            salesInfo={salesMap[p.id]}
+            onOpen={onOpen}
+            onAdd={onAdd}
+            onSetQuantity={onSetQuantity}
+            onToggleFavorite={onToggleFavorite}
+          />
+        </div>
+      ))}
     </div>
   );
 }

@@ -344,7 +344,10 @@ function CategoryMosaic({
               key={category}
               type="button"
               onClick={() => onSelect(category)}
-              className={`group relative ${span} ${height} overflow-hidden rounded-2xl bg-[#efe7da] text-left ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_44px_rgba(31,24,15,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a84c]`}
+              // active: gives an instant tap-down confirmation on touch devices
+              // (hover: never fires there), so a tap reads as "registered" right
+              // away instead of only once the catalogue navigation finishes.
+              className={`group relative ${span} ${height} overflow-hidden rounded-2xl bg-[#efe7da] text-left ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_44px_rgba(31,24,15,0.18)] active:scale-[0.97] active:shadow-[0_6px_16px_rgba(31,24,15,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a84c]`}
             >
               <Image
                 src={cover!}
@@ -433,7 +436,10 @@ function SubCategoryPanel({
                   key={sub}
                   type="button"
                   onClick={() => onPick(sub)}
-                  className="group flex min-h-[62px] items-center justify-between gap-2 rounded-xl border border-[#e8e0d2] bg-white px-3 py-2.5 text-left text-sm font-medium text-[#37302a] transition-all hover:-translate-y-0.5 hover:border-[#c9a84c] hover:shadow-[0_8px_20px_rgba(31,24,15,0.1)]"
+                  // active: same instant tap-down confirmation as the category
+                  // tiles above — hover: alone leaves a touch tap feeling
+                  // unregistered until the next page finishes loading.
+                  className="group flex min-h-[62px] items-center justify-between gap-2 rounded-xl border border-[#e8e0d2] bg-white px-3 py-2.5 text-left text-sm font-medium text-[#37302a] transition-all hover:-translate-y-0.5 hover:border-[#c9a84c] hover:shadow-[0_8px_20px_rgba(31,24,15,0.1)] active:scale-[0.96] active:border-[#c9a84c] active:bg-[#faf5e9]"
                 >
                   <span className="min-w-0">
                     <span className="block leading-snug">{sub}</span>
@@ -454,7 +460,7 @@ function SubCategoryPanel({
           <button
             type="button"
             onClick={onViewAll}
-            className="metal-sheen flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-[#17120b] transition-transform hover:scale-[1.01]"
+            className="metal-sheen flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-[#17120b] transition-transform hover:scale-[1.01] active:scale-[0.97]"
           >
             View all {category} <ArrowRight className="h-4 w-4" />
           </button>

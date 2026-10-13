@@ -77,6 +77,36 @@ export function productMetaLine(opts: {
 }
 
 /**
+ * Full taxonomy chain for a catalogue card: "Set › Choker Set › Antique".
+ * Skips any missing level instead of leaving a dangling "›".
+ */
+export function categoryHierarchy(opts: {
+  category?: string | null;
+  subCategory?: string | null;
+  subCategory2?: string | null;
+}): string {
+  return [opts.category, opts.subCategory, opts.subCategory2].filter(Boolean).join(' › ');
+}
+
+/**
+ * Gross/Net weight line for a catalogue card, falling back to the legacy
+ * single `weightGrams` field when neither gross nor net is set — same
+ * fallback the order-detail modals already use (see Core rules in
+ * CLAUDE.md: Plain/Studded was replaced by gross+net on every category,
+ * but older rows may only have the single value).
+ */
+export function grossNetWeightSummary(opts: {
+  grossWeightGrams?: string | number | null;
+  netWeightGrams?: string | number | null;
+  weightGrams?: string | number | null;
+}): string | null {
+  const gross = formatWeight(opts.grossWeightGrams);
+  const net = formatWeight(opts.netWeightGrams);
+  if (gross || net) return [gross && `Gross: ${gross}`, net && `Net: ${net}`].filter(Boolean).join(' · ');
+  return formatWeight(opts.weightGrams);
+}
+
+/**
  * Split version of {@link productMetaLine} for narrow catalogue cards.
  *
  * On a phone the single-line variant is `truncate`d, and because the weight is

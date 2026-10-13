@@ -3,7 +3,7 @@
 import { Award, Check, ChevronDown, Gem, Heart, Loader2, Minus, Plus, Search, ShoppingCart, SlidersHorizontal, SortAsc, Trash2, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { StoreManagerProductDetailModal, type StoreManagerProduct } from '@/components/kiosk/StoreManagerProductDetailModal';
 import { CartQtyControl } from '@/components/orders/CartQtyControl';
@@ -19,7 +19,7 @@ import { useStoreManagerKioskCart, useStoreManagerRestockCart } from '@/hooks/us
 import { useTaxonomy } from '@/hooks/use-taxonomy';
 import { buildCatalogCounts, subCategories1WithStock, subCategories2WithStock } from '@/lib/catalog-counts';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
-import { formatWeight } from '@/lib/format';
+import { categoryHierarchy, formatWeight, grossNetWeightSummary } from '@/lib/format';
 import { matchesDescriptionQuery, rankSimilar } from '@/lib/product-similarity';
 import { SORT_OPTIONS, weightExtent, matchWeightRange, sortByWeight, type SortOption } from '@/lib/weight-filter';
 import { useStoreManager } from './store-manager-context';
@@ -192,7 +192,20 @@ export function CatalogOrderPanel({
   const cart = orderCart.items;
   const count = orderCart.count;
 
-  function add(p: Product) {
+  // O(1) per-card cart lookup instead of cart.find() inside the grid's map —
+  // same fix as the Retailer Admin catalogue: with hundreds of designs on
+  // screen, a linear scan per card on every render made a single Add click
+  // feel like it froze the page for a couple of seconds.
+  const cartQtyById = useMemo(() => {
+    const m = new Map<string, number>();
+    cart.forEach((l) => m.set(l.productId, l.quantity));
+    return m;
+  }, [cart]);
+
+  // useCallback so ProductCard's React.memo can skip re-rendering cards whose
+  // own quantity/favorite didn't change (orderCart.add/.setQuantity are
+  // themselves stable — see hooks/use-store-manager-cart.ts).
+  const add = useCallback((p: Product) => {
     orderCart.add({
       productId: p.id,
       name: p.designNumber,
@@ -200,13 +213,20 @@ export function CatalogOrderPanel({
       imageUrl: (p.images.find((i) => i.isPrimary) ?? p.images[0])?.secureUrl,
       purity: p.purity ?? undefined,
     });
-  }
-  function setQty(id: string, qty: number) {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderCart.add]);
+  const setQty = useCallback((id: string, qty: number) => {
     orderCart.setQuantity(id, qty);
-  }
-  function setPurity(id: string, purity: string) {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderCart.setQuantity]);
+  const setPurity = useCallback((id: string, purity: string) => {
     orderCart.setItemPurity(id, purity);
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderCart.setItemPurity]);
+  const toggleFavorite = useCallback((id: string) => {
+    void favorites.toggle(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favorites.toggle]);
 
   async function place() {
     setPlaceError(null);
@@ -492,61 +512,35 @@ export function CatalogOrderPanel({
       {loading ? (
         <div className={`grid gap-4 md:gap-6 ${gridCols}`}>{Array.from({ length: 8 }).map((_, index) => <div key={index} className="aspect-[3/4] animate-pulse rounded-lg bg-[#ece5da]" />)}</div>
       ) : data && filtered.length > 0 ? (
-        <div className={`grid gap-4 md:gap-6 ${gridCols}`}>
-          {filtered.map((p) => {
-            const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
-            const inCartQty = cart.find((l) => l.productId === p.id)?.quantity ?? 0;
-            return (
-              <motion.article key={p.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="group">
-                <button type="button" onClick={() => setDetail(p)} className="relative block aspect-[3/4] w-full overflow-hidden rounded-lg bg-[#ece5da] shadow-[0_1px_0_rgba(25,21,17,0.08)] ring-1 ring-black/5 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_18px_40px_rgba(31,24,15,0.16)]" title="View details">
-                  {img ? (
-                    <Image src={img.secureUrl} alt={p.designNumber} fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
-                  ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-8 w-8" /></div>}
-                  <span className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
-                  {p.hasTryon && <span className="metal-sheen absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-semibold text-[#17120b]">AR</span>}
-                  <span
-                    role="button"
-                    tabIndex={-1}
-                    onClick={(event) => { event.stopPropagation(); void favorites.toggle(p.id); }}
-                    className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-colors hover:bg-black/60"
-                    aria-label={favorites.isFavorite(p.id) ? 'Remove from favorites' : 'Add to favorites'}
-                  >
-                    <Heart className={`h-3.5 w-3.5 ${favorites.isFavorite(p.id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-                  </span>
-                  <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-[#f7fff8]/90 px-1.5 py-0.5 text-[9px] font-semibold text-[#15803d]"><Award className="h-2.5 w-2.5" /> BIS</span>
-                </button>
-                <div className="mt-3 space-y-1.5">
-                  <button type="button" onClick={() => setDetail(p)} className="flex w-full items-start justify-between gap-2 text-left">
-                    <p className="line-clamp-1 text-sm font-semibold text-[#211c17] hover:text-[#b68a3e]">{p.designNumber}</p>
-                    {inCartQty > 0 ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#15803d]" /> : null}
-                  </button>
-                    {/* Weight gets its own non-truncating line so it stays visible
-                        on narrow phone cards, where it used to be clipped first. */}
-                    <p className="truncate text-xs text-muted-foreground">{p.category ? `${p.category}` : ''}{p.subCategory ? ` › ${p.subCategory}` : ''}</p>
-                    {formatWeight(p.weightGrams) && <p className="text-xs font-medium text-muted-foreground">{formatWeight(p.weightGrams)}{p.size ? ` · Size ${p.size}` : ''}</p>}
-                    {p.expectedDate && <p className="text-[11px] text-muted-foreground/80">Estimated Order Time: {p.expectedDate}</p>}
-                    {showPopularity && salesMap[p.id] ? (
-                      <div className="flex items-center gap-1.5 pt-0.5">
-                        <StarRating count={salesMap[p.id].stars} size="sm" />
-                        <span className="text-[10px] text-muted-foreground">{salesMap[p.id].unitsLast30d} sold · 30d</span>
-                      </div>
-                    ) : null}
-                    {/* Always visible, not hover-only: these run on touch screens,
-                        and the stepper is the only way back out of the order. */}
-                    <CartQtyControl
-                      size="sm"
-                      className="mt-1"
-                      designNumber={p.designNumber}
-                      quantity={inCartQty}
-                      addLabel="Add to Order"
-                      onAdd={() => add(p)}
-                      onSetQuantity={(quantity) => setQty(p.id, quantity)}
-                    />
-                </div>
-              </motion.article>
-            );
-          })}
-        </div>
+        <>
+          {/* Same designs as the grid below, just a horizontally-swipeable
+              row above it — a second way to browse without scrolling down. */}
+          <HorizontalProductStrip
+            products={filtered}
+            cartQtyById={cartQtyById}
+            favorites={favorites}
+            salesMap={showPopularity ? salesMap : undefined}
+            onOpen={setDetail}
+            onAdd={add}
+            onSetQuantity={setQty}
+            onToggleFavorite={toggleFavorite}
+          />
+          <div className={`grid gap-4 md:gap-6 ${gridCols}`}>
+            {filtered.map((p) => (
+              <ProductCard
+                key={p.id}
+                product={p}
+                inCartQty={cartQtyById.get(p.id) ?? 0}
+                isFavorite={favorites.isFavorite(p.id)}
+                salesInfo={showPopularity ? salesMap[p.id] : undefined}
+                onOpen={setDetail}
+                onAdd={add}
+                onSetQuantity={setQty}
+                onToggleFavorite={toggleFavorite}
+              />
+            ))}
+          </div>
+        </>
       ) : <div className="py-20 text-center"><Gem className="mx-auto h-9 w-9 text-[#b68a3e]/35" /><p className="mt-3 text-sm text-[#746b62]">No designs match these filters.</p></div>}
         </div>
       </div>
@@ -576,6 +570,116 @@ export function CatalogOrderPanel({
           }}
         />
       ) : null}
+    </div>
+  );
+}
+
+type GridCallbacks = {
+  onOpen: (product: Product) => void;
+  onAdd: (product: Product) => void;
+  onSetQuantity: (id: string, qty: number) => void;
+  onToggleFavorite: (id: string) => void;
+};
+
+/**
+ * One catalogue card, memoized. With hundreds of designs on screen at once
+ * (no pagination here either), adding a single design to the order used to
+ * force every other card's heavy JSX (image, motion wrapper, buttons) to
+ * re-render too — React.memo plus primitive-only props (`inCartQty`,
+ * `isFavorite`) lets it skip every card except the one that actually changed.
+ */
+const ProductCard = memo(function ProductCard({
+  product: p, inCartQty, isFavorite, salesInfo, onOpen, onAdd, onSetQuantity, onToggleFavorite,
+}: {
+  product: Product;
+  inCartQty: number;
+  isFavorite: boolean;
+  salesInfo?: SalesInfo;
+} & GridCallbacks) {
+  const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
+  const hierarchy = categoryHierarchy(p);
+  const weight = grossNetWeightSummary(p);
+  return (
+    <motion.article initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="group">
+      <button type="button" onClick={() => onOpen(p)} className="relative block aspect-[3/4] w-full overflow-hidden rounded-lg bg-[#ece5da] shadow-[0_1px_0_rgba(25,21,17,0.08)] ring-1 ring-black/5 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-[0_18px_40px_rgba(31,24,15,0.16)]" title="View details">
+        {img ? (
+          <Image src={img.secureUrl} alt={p.designNumber} fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
+        ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-8 w-8" /></div>}
+        <span className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+        {p.hasTryon && <span className="metal-sheen absolute right-3 top-3 rounded-full px-2 py-0.5 text-[10px] font-semibold text-[#17120b]">AR</span>}
+        <span
+          role="button"
+          tabIndex={-1}
+          onClick={(event) => { event.stopPropagation(); onToggleFavorite(p.id); }}
+          className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm transition-colors hover:bg-black/60"
+          aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          <Heart className={`h-3.5 w-3.5 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+        </span>
+        <span className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-[#f7fff8]/90 px-1.5 py-0.5 text-[9px] font-semibold text-[#15803d]"><Award className="h-2.5 w-2.5" /> BIS</span>
+      </button>
+      <div className="mt-3 space-y-1.5">
+        <button type="button" onClick={() => onOpen(p)} className="flex w-full items-start justify-between gap-2 text-left">
+          <p className="line-clamp-1 text-sm font-semibold text-[#211c17] hover:text-[#b68a3e]">{p.designNumber}</p>
+          {inCartQty > 0 ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#15803d]" /> : null}
+        </button>
+          {/* Weight gets its own non-truncating line so it stays visible
+              on narrow phone cards, where it used to be clipped first. */}
+          <p className="truncate text-xs text-muted-foreground">{hierarchy}</p>
+          {weight && <p className="text-xs font-medium text-muted-foreground">{weight}{p.size ? ` · Size ${p.size}` : ''}</p>}
+          {p.expectedDate && <p className="text-[11px] text-muted-foreground/80">Estimated Order Time: {p.expectedDate}</p>}
+          {salesInfo ? (
+            <div className="flex items-center gap-1.5 pt-0.5">
+              <StarRating count={salesInfo.stars} size="sm" />
+              <span className="text-[10px] text-muted-foreground">{salesInfo.unitsLast30d} sold · 30d</span>
+            </div>
+          ) : null}
+          {/* Always visible, not hover-only: these run on touch screens,
+              and the stepper is the only way back out of the order. */}
+          <CartQtyControl
+            size="sm"
+            className="mt-1"
+            designNumber={p.designNumber}
+            quantity={inCartQty}
+            addLabel="Add to Order"
+            onAdd={() => onAdd(p)}
+            onSetQuantity={(quantity) => onSetQuantity(p.id, quantity)}
+          />
+      </div>
+    </motion.article>
+  );
+});
+
+/**
+ * Horizontal-scrolling row of the SAME designs the grid below shows — a
+ * second, swipeable way to browse without scrolling the whole page down.
+ * Plain native overflow-x scroll, not an auto-animated marquee — this is
+ * user-driven browsing.
+ */
+function HorizontalProductStrip({
+  products, cartQtyById, favorites, salesMap, onOpen, onAdd, onSetQuantity, onToggleFavorite,
+}: {
+  products: Product[];
+  cartQtyById: Map<string, number>;
+  favorites: ReturnType<typeof useFavorites>;
+  salesMap?: Record<string, SalesInfo>;
+} & GridCallbacks) {
+  return (
+    <div className="-mx-1 mb-4 flex gap-4 overflow-x-auto px-1 pb-2 snap-x snap-mandatory no-scrollbar md:gap-6">
+      {products.map((p) => (
+        <div key={p.id} className="w-[168px] shrink-0 snap-start sm:w-[200px]">
+          <ProductCard
+            product={p}
+            inCartQty={cartQtyById.get(p.id) ?? 0}
+            isFavorite={favorites.isFavorite(p.id)}
+            salesInfo={salesMap?.[p.id]}
+            onOpen={onOpen}
+            onAdd={onAdd}
+            onSetQuantity={onSetQuantity}
+            onToggleFavorite={onToggleFavorite}
+          />
+        </div>
+      ))}
     </div>
   );
 }
