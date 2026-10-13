@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Gem, Heart, ShoppingCart, Minus, Plus, Trash2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Loader2, Gem, Heart, ShoppingCart, Minus, Plus, Trash2, Sparkles, CheckCircle2, ArrowLeftRight } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -485,6 +485,7 @@ function CatalogBrowse() {
             onSetQuantity={handleSetQuantity}
             onToggleFavorite={handleToggleFavorite}
           />
+          <h2 className="text-sm font-semibold">All Designs</h2>
           <ProductGrid
             products={filtered}
             cartQtyById={cartQtyById}
@@ -709,21 +710,36 @@ function HorizontalProductStrip({
   salesMap: Record<string, SalesInfo>;
 } & GridCallbacks) {
   return (
-    <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2 snap-x snap-mandatory no-scrollbar">
-      {products.map((p) => (
-        <div key={p.id} className="w-[168px] shrink-0 snap-start sm:w-[200px]">
-          <ProductCard
-            product={p}
-            inCartQty={cartQtyById.get(p.id) ?? 0}
-            isFavorite={favorites.isFavorite(p.id)}
-            salesInfo={salesMap[p.id]}
-            onOpen={onOpen}
-            onAdd={onAdd}
-            onSetQuantity={onSetQuantity}
-            onToggleFavorite={onToggleFavorite}
-          />
+    <section aria-label="Quick browse">
+      {/* A heading + "Swipe/scroll" hint so this reads as a distinct,
+          horizontally-scrollable row — without it, it looked identical to
+          the vertical grid right below (same card size, no label), so
+          retailers couldn't tell it was a separate scrollable feature. */}
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-sm font-semibold">Quick Browse</h2>
+        <span className="flex items-center gap-1 text-[11px] text-muted-foreground"><ArrowLeftRight className="h-3 w-3" /> Scroll for more</span>
+      </div>
+      <div className="relative">
+        {/* Right-edge fade signals there's more off-screen to scroll to — same
+            affordance as the home page's auto-scrolling strip. */}
+        <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-background to-transparent" />
+        <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2 snap-x snap-mandatory no-scrollbar">
+          {products.map((p) => (
+            <div key={p.id} className="w-[148px] shrink-0 snap-start sm:w-[180px]">
+              <ProductCard
+                product={p}
+                inCartQty={cartQtyById.get(p.id) ?? 0}
+                isFavorite={favorites.isFavorite(p.id)}
+                salesInfo={salesMap[p.id]}
+                onOpen={onOpen}
+                onAdd={onAdd}
+                onSetQuantity={onSetQuantity}
+                onToggleFavorite={onToggleFavorite}
+              />
+            </div>
+          ))}
         </div>
-      ))}
-    </div>
+      </div>
+    </section>
   );
 }
