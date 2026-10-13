@@ -29,7 +29,12 @@ const TOP_NAV = [
 ];
 
 // Dashboard drawer — operations/admin/account pages, opened via the "Dashboard" button.
+// Home is repeated here (already in TOP_NAV, always visible in the header)
+// so it's reachable without closing the drawer first — the drawer covers
+// the whole screen while open, and the header's own Home button sits
+// behind it.
 const DRAWER_NAV = [
+  { label: 'Home', href: '/store/home', icon: Home, section: 'Overview' },
   { label: 'Dashboard', href: '/store/dashboard', icon: LayoutDashboard, section: 'Overview' },
   // Operations runs in the order the work actually flows: browse the orders that
   // came in, then the bespoke ones, then what still needs signing off. Kiosk

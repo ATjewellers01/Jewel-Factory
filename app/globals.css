@@ -209,13 +209,11 @@
 }
 
 .jf-marquee-track {
-  /* Speed was tuned against a variable-length track (240s -> 400s per loop,
-     2026-08-24), back when the strip rendered the whole catalogue. Since the
-     strip was capped to a fixed 12-highlight (24-card, de-duplicated at 12)
-     track, that 400s became glacial — a short, fixed-length track now covers
-     the same -50% distance far too slowly. Retuned for this fixed length,
-     then sped up again on feedback that 70s still felt slow. */
-  animation: jf-marquee 40s linear infinite;
+  /* Speed history: 240s -> 400s (2026-08-24, tuned for the old variable-
+     length full-catalogue track) -> 70s -> 40s -> 22s, after the strip was
+     capped to a fixed 12-highlight (24-card) track and repeated feedback
+     that each prior speed still felt too slow for that short a track. */
+  animation: jf-marquee 22s linear infinite;
   width: max-content;
 }
 
