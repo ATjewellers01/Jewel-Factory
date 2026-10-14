@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Gem, Heart, ShoppingCart, Minus, Plus, Trash2, Sparkles, CheckCircle2, ArrowLeftRight } from 'lucide-react';
+import { Loader2, Gem, Heart, ShoppingCart, Minus, Plus, Trash2, Sparkles, CheckCircle2 } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -470,34 +470,19 @@ function CatalogBrowse() {
 
       {/* Normal catalogue grid — hidden while Cart or Favorites is open, since
           that's not what's on screen there (the "You may also like" grid
-          below takes this exact spot instead when the cart is open). A
-          horizontal-scrolling row of the same designs sits above the grid —
-          same data, just a second way to browse without scrolling down. */}
+          below takes this exact spot instead when the cart is open). */}
       {!showCart && !showFavorites && data && filtered.length > 0 && (
-        <>
-          <HorizontalProductStrip
-            products={filtered}
-            cartQtyById={cartQtyById}
-            favorites={favorites}
-            salesMap={salesMap}
-            onOpen={setDetail}
-            onAdd={handleAdd}
-            onSetQuantity={handleSetQuantity}
-            onToggleFavorite={handleToggleFavorite}
-          />
-          <h2 className="text-sm font-semibold">All Designs</h2>
-          <ProductGrid
-            products={filtered}
-            cartQtyById={cartQtyById}
-            favorites={favorites}
-            salesMap={salesMap}
-            cols={`${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`}
-            onOpen={setDetail}
-            onAdd={handleAdd}
-            onSetQuantity={handleSetQuantity}
-            onToggleFavorite={handleToggleFavorite}
-          />
-        </>
+        <ProductGrid
+          products={filtered}
+          cartQtyById={cartQtyById}
+          favorites={favorites}
+          salesMap={salesMap}
+          cols={`${MOBILE_COLS[mobileCols]} ${WIDE_COLS[wideCols]}`}
+          onOpen={setDetail}
+          onAdd={handleAdd}
+          onSetQuantity={handleSetQuantity}
+          onToggleFavorite={handleToggleFavorite}
+        />
       )}
 
       {/* "You may also like" — one group per unique cart line, ranked by
@@ -694,52 +679,3 @@ function ProductGrid({
   );
 }
 
-/**
- * Horizontal-scrolling row of the SAME designs the grid below shows (not a
- * separate subset) — a second, swipeable way to browse without scrolling the
- * whole page down, sitting directly above the normal vertical grid. Plain
- * native overflow-x scroll (not the home page's auto-animated marquee) —
- * this is user-driven browsing, not a decorative strip.
- */
-function HorizontalProductStrip({
-  products, cartQtyById, favorites, salesMap, onOpen, onAdd, onSetQuantity, onToggleFavorite,
-}: {
-  products: Product[];
-  cartQtyById: Map<string, number>;
-  favorites: ReturnType<typeof useFavorites>;
-  salesMap: Record<string, SalesInfo>;
-} & GridCallbacks) {
-  return (
-    <section aria-label="Quick browse">
-      {/* A heading + "Swipe/scroll" hint so this reads as a distinct,
-          horizontally-scrollable row — without it, it looked identical to
-          the vertical grid right below (same card size, no label), so
-          retailers couldn't tell it was a separate scrollable feature. */}
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Quick Browse</h2>
-        <span className="flex items-center gap-1 text-[11px] text-muted-foreground"><ArrowLeftRight className="h-3 w-3" /> Scroll for more</span>
-      </div>
-      <div className="relative">
-        {/* Right-edge fade signals there's more off-screen to scroll to — same
-            affordance as the home page's auto-scrolling strip. */}
-        <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-background to-transparent" />
-        <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2 snap-x snap-mandatory no-scrollbar">
-          {products.map((p) => (
-            <div key={p.id} className="w-[148px] shrink-0 snap-start sm:w-[180px]">
-              <ProductCard
-                product={p}
-                inCartQty={cartQtyById.get(p.id) ?? 0}
-                isFavorite={favorites.isFavorite(p.id)}
-                salesInfo={salesMap[p.id]}
-                onOpen={onOpen}
-                onAdd={onAdd}
-                onSetQuantity={onSetQuantity}
-                onToggleFavorite={onToggleFavorite}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}

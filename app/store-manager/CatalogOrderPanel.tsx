@@ -1,6 +1,6 @@
 'use client';
 
-import { Award, Check, ChevronDown, Gem, Heart, Loader2, Minus, Plus, Search, ShoppingCart, SlidersHorizontal, SortAsc, Trash2, X, ArrowLeftRight } from 'lucide-react';
+import { Award, Check, ChevronDown, Gem, Heart, Loader2, Minus, Plus, Search, ShoppingCart, SlidersHorizontal, SortAsc, Trash2, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -512,36 +512,21 @@ export function CatalogOrderPanel({
       {loading ? (
         <div className={`grid gap-4 md:gap-6 ${gridCols}`}>{Array.from({ length: 8 }).map((_, index) => <div key={index} className="aspect-[3/4] animate-pulse rounded-lg bg-[#ece5da]" />)}</div>
       ) : data && filtered.length > 0 ? (
-        <>
-          {/* Same designs as the grid below, just a horizontally-swipeable
-              row above it — a second way to browse without scrolling down. */}
-          <HorizontalProductStrip
-            products={filtered}
-            cartQtyById={cartQtyById}
-            favorites={favorites}
-            salesMap={showPopularity ? salesMap : undefined}
-            onOpen={setDetail}
-            onAdd={add}
-            onSetQuantity={setQty}
-            onToggleFavorite={toggleFavorite}
-          />
-          <h2 className="mb-3 mt-6 text-sm font-semibold text-[#211c17]">All Designs</h2>
-          <div className={`grid gap-4 md:gap-6 ${gridCols}`}>
-            {filtered.map((p) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                inCartQty={cartQtyById.get(p.id) ?? 0}
-                isFavorite={favorites.isFavorite(p.id)}
-                salesInfo={showPopularity ? salesMap[p.id] : undefined}
-                onOpen={setDetail}
-                onAdd={add}
-                onSetQuantity={setQty}
-                onToggleFavorite={toggleFavorite}
-              />
-            ))}
-          </div>
-        </>
+        <div className={`grid gap-4 md:gap-6 ${gridCols}`}>
+          {filtered.map((p) => (
+            <ProductCard
+              key={p.id}
+              product={p}
+              inCartQty={cartQtyById.get(p.id) ?? 0}
+              isFavorite={favorites.isFavorite(p.id)}
+              salesInfo={showPopularity ? salesMap[p.id] : undefined}
+              onOpen={setDetail}
+              onAdd={add}
+              onSetQuantity={setQty}
+              onToggleFavorite={toggleFavorite}
+            />
+          ))}
+        </div>
       ) : <div className="py-20 text-center"><Gem className="mx-auto h-9 w-9 text-[#b68a3e]/35" /><p className="mt-3 text-sm text-[#746b62]">No designs match these filters.</p></div>}
         </div>
       </div>
@@ -650,53 +635,6 @@ const ProductCard = memo(function ProductCard({
     </motion.article>
   );
 });
-
-/**
- * Horizontal-scrolling row of the SAME designs the grid below shows — a
- * second, swipeable way to browse without scrolling the whole page down.
- * Plain native overflow-x scroll, not an auto-animated marquee — this is
- * user-driven browsing.
- */
-function HorizontalProductStrip({
-  products, cartQtyById, favorites, salesMap, onOpen, onAdd, onSetQuantity, onToggleFavorite,
-}: {
-  products: Product[];
-  cartQtyById: Map<string, number>;
-  favorites: ReturnType<typeof useFavorites>;
-  salesMap?: Record<string, SalesInfo>;
-} & GridCallbacks) {
-  return (
-    <section aria-label="Quick browse">
-      {/* A heading + "Scroll for more" hint so this reads as a distinct,
-          horizontally-scrollable row — without it, it looked identical to
-          the vertical grid right below (same card size, no label). */}
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-[#211c17]">Quick Browse</h2>
-        <span className="flex items-center gap-1 text-[11px] text-[#8d8174]"><ArrowLeftRight className="h-3 w-3" /> Scroll for more</span>
-      </div>
-      <div className="relative">
-        {/* Right-edge fade signals there's more off-screen to scroll to. */}
-        <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-background to-transparent" />
-        <div className="-mx-1 mb-4 flex gap-3 overflow-x-auto px-1 pb-2 snap-x snap-mandatory no-scrollbar md:gap-4">
-          {products.map((p) => (
-            <div key={p.id} className="w-[148px] shrink-0 snap-start sm:w-[180px]">
-              <ProductCard
-                product={p}
-                inCartQty={cartQtyById.get(p.id) ?? 0}
-                isFavorite={favorites.isFavorite(p.id)}
-                salesInfo={salesMap?.[p.id]}
-                onOpen={onOpen}
-                onAdd={onAdd}
-                onSetQuantity={onSetQuantity}
-                onToggleFavorite={onToggleFavorite}
-              />
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
 
 function CatalogFilters({
   categories,

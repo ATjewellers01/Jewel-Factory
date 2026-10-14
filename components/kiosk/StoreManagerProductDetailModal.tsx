@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeftRight, Gem, Sparkles, X } from 'lucide-react';
+import { ChevronDown, Gem, Sparkles, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -41,10 +41,7 @@ export function StoreManagerProductDetailModal({
   tryOnBack: string;
 }) {
   const [zoom, setZoom] = useState<string | null>(null);
-  // Which design the main block currently shows — starts as the opened
-  // product, but switches in-place when a thumbnail below is tapped, so
-  // browsing alternatives never needs closing/reopening the modal.
-  const [active, setActive] = useState(product);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -61,9 +58,6 @@ export function StoreManagerProductDetailModal({
     };
   }, [onClose, zoom]);
 
-  // Similar designs are always relative to the ORIGINALLY opened product, not
-  // whichever one is currently active — switching the main view shouldn't
-  // also reshuffle the thumbnail strip out from under the thumb mid-browse.
   const similar = products
     .filter((candidate) => candidate.id !== product.id && (
       (product.subCategory && candidate.subCategory === product.subCategory) ||
@@ -74,7 +68,7 @@ export function StoreManagerProductDetailModal({
       const bSub = product.subCategory && b.subCategory === product.subCategory ? 0 : 1;
       return aSub - bSub;
     })
-    .slice(0, 10);
+    .slice(0, 6);
 
   return (
     <>
@@ -83,48 +77,36 @@ export function StoreManagerProductDetailModal({
         onClick={onClose}
         role="dialog"
         aria-modal="true"
-        aria-label={`${active.designNumber} details`}
+        aria-label={`${product.designNumber} details`}
       >
-        <div className="flex w-full max-w-[28rem] flex-col items-center gap-3 sm:max-w-[52rem]" onClick={(event) => event.stopPropagation()}>
+        <div className="flex w-full max-w-[28rem] flex-col items-center gap-2.5 sm:max-w-[52rem]" onClick={(event) => event.stopPropagation()}>
           <div
             className="relative h-[min(32rem,calc(100dvh-5rem))] w-full overflow-hidden rounded-[1.4rem] border border-white/60 bg-[#fdfcf9] shadow-[0_30px_100px_rgba(0,0,0,0.38)] sm:h-[min(32rem,calc(100dvh-5rem))] sm:rounded-[1.6rem]"
           >
             <button type="button" onClick={onClose} aria-label="Close product details" className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-[#211b16]/75 text-white shadow-lg backdrop-blur-md transition hover:rotate-90 hover:bg-[#211b16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d2a84a] focus-visible:ring-offset-2 sm:right-5 sm:top-5"><X className="h-5 w-5" /></button>
-            <ProductBlock product={active} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
+
+            <div
+              className="h-full snap-y snap-mandatory overflow-y-auto overscroll-contain scrollbar-auto [scrollbar-color:#c9a84c_#ece5d8] [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#c9a84c] [&::-webkit-scrollbar-track]:bg-[#ece5d8]"
+              onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 24)}
+            >
+              <div className="h-full snap-start snap-always">
+                <ProductBlock product={product} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
+              </div>
+
+              {similar.map((candidate) => (
+                <div key={candidate.id} className="h-full snap-start snap-always border-t border-[#d8c8aa]/55">
+                  <ProductBlock product={candidate} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Similar designs — a horizontally-scrollable thumbnail strip
-              instead of a full-screen block per design (previously required
-              one vertical scroll-snap per alternative to see each one). Tap
-              a thumbnail to swap it into the main block above. */}
           {similar.length > 0 ? (
-            <div className="w-full rounded-2xl border border-white/50 bg-[#fdfcf9]/95 p-2.5 shadow-[0_18px_50px_rgba(0,0,0,0.2)] backdrop-blur-md sm:p-3">
-              <div className="mb-2 flex items-center justify-between px-0.5">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#9b7e3f]">Similar designs</span>
-                <span className="flex items-center gap-1 text-[10px] text-[#8d8174]"><ArrowLeftRight className="h-3 w-3" /> Scroll for more</span>
-              </div>
-              <div className="relative">
-                <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[#fdfcf9] to-transparent" />
-                <div className="flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory no-scrollbar">
-                  {similar.map((candidate) => (
-                    <button
-                      key={candidate.id}
-                      type="button"
-                      onClick={() => setActive(candidate)}
-                      aria-label={`View ${candidate.designNumber}`}
-                      aria-current={active.id === candidate.id}
-                      className={`w-16 shrink-0 snap-start overflow-hidden rounded-xl border-2 bg-white text-left transition-colors sm:w-20 ${active.id === candidate.id ? 'border-[#c9a84c]' : 'border-transparent hover:border-[#c9a84c]/50'}`}
-                    >
-                      <div className="relative aspect-square bg-[#ece5da]">
-                        {(candidate.images.find((i) => i.isPrimary) ?? candidate.images[0]) ? (
-                          <Image src={(candidate.images.find((i) => i.isPrimary) ?? candidate.images[0])!.secureUrl} alt={candidate.designNumber} fill className="object-cover" />
-                        ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-4 w-4" /></div>}
-                      </div>
-                      <p className="truncate px-1 py-1 text-[10px] font-medium text-[#3d3529]">{candidate.designNumber}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div aria-hidden className="pointer-events-none flex h-11 items-center justify-center">
+              <span className={`flex items-center gap-2 rounded-full border border-[#f0d99a]/60 bg-[#211b16]/90 px-4 py-2 text-xs font-semibold text-white shadow-[0_8px_28px_rgba(0,0,0,0.35)] backdrop-blur-md transition-all sm:text-sm ${scrolled ? 'translate-y-1 opacity-0' : 'animate-pulse opacity-100'}`}>
+                Scroll down to see similar designs
+                <ChevronDown className="h-4 w-4 animate-bounce text-[#f0d99a] sm:h-5 sm:w-5" />
+              </span>
             </div>
           ) : null}
         </div>
