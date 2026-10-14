@@ -77,46 +77,49 @@ export function useB2bCart() {
     return () => window.removeEventListener(CART_CHANGED_EVENT, onChanged);
   }, [load]);
 
+  // Every mutator below broadcasts ONLY after its own request resolves, not
+  // right alongside the optimistic setItems() — broadcasting immediately
+  // raced the in-flight write: every useB2bCart() instance (including this
+  // one) reacts to the broadcast by re-fetching from the server, and if that
+  // GET landed before the server had processed the still-in-flight POST/
+  // PATCH, it came back without the change and clobbered the optimistic
+  // state straight back to "not added" (the stepper flashed, then reverted
+  // to the bare "Add" button). Waiting for the write to actually land first
+  // means every re-fetch it triggers sees the real, updated cart.
   const add = useCallback((item: Omit<B2bCartItem, 'quantity'>, qty = 1) => {
     setItems((cur) => {
       const found = cur.find((i) => i.productId === item.productId);
       if (found) return cur.map((i) => (i.productId === item.productId ? { ...i, quantity: i.quantity + qty } : i));
       return [...cur, { ...item, quantity: qty }];
     });
-    broadcastCartChanged();
-    void apiPost(`${BASE}/${item.productId}`, { quantity: qty }).catch(() => void load());
+    void apiPost(`${BASE}/${item.productId}`, { quantity: qty }).then(broadcastCartChanged, () => void load());
   }, [load]);
 
   const setQty = useCallback((productId: string, qty: number) => {
     const quantity = Math.max(1, qty);
     setItems((cur) => cur.map((i) => (i.productId === productId ? { ...i, quantity } : i)));
-    broadcastCartChanged();
-    void apiSend('PATCH', `${BASE}/${productId}`, { quantity }).catch(() => void load());
+    void apiSend('PATCH', `${BASE}/${productId}`, { quantity }).then(broadcastCartChanged, () => void load());
   }, [load]);
 
   const setPurity = useCallback((productId: string, purity: string) => {
     setItems((cur) => cur.map((i) => (i.productId === productId ? { ...i, purity } : i)));
-    broadcastCartChanged();
-    void apiSend('PATCH', `${BASE}/${productId}/purity`, { purity }).catch(() => void load());
+    void apiSend('PATCH', `${BASE}/${productId}/purity`, { purity }).then(broadcastCartChanged, () => void load());
   }, [load]);
 
   const setSize = useCallback((productId: string, size: string) => {
     setItems((cur) => cur.map((i) => (i.productId === productId ? { ...i, size } : i)));
-    broadcastCartChanged();
-    void apiSend('PATCH', `${BASE}/${productId}/size`, { size }).catch(() => void load());
+    void apiSend('PATCH', `${BASE}/${productId}/size`, { size }).then(broadcastCartChanged, () => void load());
   }, [load]);
 
   const remove = useCallback((productId: string) => {
     setItems((cur) => cur.filter((i) => i.productId !== productId));
-    broadcastCartChanged();
-    void apiSend('DELETE', `${BASE}/${productId}`).catch(() => void load());
+    void apiSend('DELETE', `${BASE}/${productId}`).then(broadcastCartChanged, () => void load());
   }, [load]);
 
   const clear = useCallback(() => {
     setItems([]);
     setNoteState('');
-    broadcastCartChanged();
-    void apiSend('DELETE', BASE).catch(() => void load());
+    void apiSend('DELETE', BASE).then(broadcastCartChanged, () => void load());
   }, [load]);
 
   const setNote = useCallback((value: string) => {
