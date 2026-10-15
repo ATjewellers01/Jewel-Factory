@@ -137,6 +137,10 @@ model Store {
   registrationStatus      RegistrationStatus @default(PENDING) @map("registration_status")
   registrationSubmittedAt DateTime?          @map("registration_submitted_at")
   registrationReviewedAt  DateTime?          @map("registration_reviewed_at")
+  // "Hold" — manufacturer parks a PENDING registration to decide later. Status
+  // stays PENDING (login still blocked); approve/reject clear these.
+  registrationOnHoldAt    DateTime?          @map("registration_on_hold_at")
+  registrationHoldNote    String?            @map("registration_hold_note")
   ownerName               String?            @map("owner_name")
   ownerPhone              String?            @map("owner_phone")
 

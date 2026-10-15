@@ -7,7 +7,8 @@ export async function getManufacturerDashboard(manufacturerId: string) {
       prisma.manufacturerProduct.count({ where: { manufacturerId, status: 'ACTIVE' } }),
       prisma.b2bOrder.count({ where: { manufacturerId, status: 'PENDING', pendingManagerApproval: false } }),
       prisma.kioskOrder.count({ where: { manufacturerId, status: 'PENDING', pendingStoreApproval: false } }),
-      prisma.store.count({ where: { manufacturerId: null, registrationStatus: 'PENDING' } }),
+      // Held registrations are parked on purpose — not counted as new work.
+      prisma.store.count({ where: { manufacturerId: null, registrationStatus: 'PENDING', registrationOnHoldAt: null } }),
       prisma.store.count({ where: { manufacturerId, isActive: true } }),
       prisma.b2bOrder.findMany({
         where: { manufacturerId, pendingManagerApproval: false },
