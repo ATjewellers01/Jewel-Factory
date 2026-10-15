@@ -143,6 +143,38 @@ export async function setManufacturerProductsStatus(
   });
 }
 
+/**
+ * Apply the SAME field values to many designs at once (the catalogue's
+ * "Bulk Edit" — select several designs, tick only the fields you want to
+ * change, one value per ticked field applies to every selected design).
+ * `fields` only ever contains keys the caller explicitly ticked — any field
+ * not present here is left untouched on every row, same "undefined means
+ * don't touch it" contract as updateManufacturerProduct. Images and the
+ * design number are never part of this — those stay per-design.
+ */
+export async function bulkUpdateManufacturerProducts(
+  manufacturerId: string,
+  ids: string[],
+  fields: UpdateProductInput,
+) {
+  if (ids.length === 0) return { count: 0 };
+  return prisma.manufacturerProduct.updateMany({
+    where: { id: { in: ids }, manufacturerId },
+    data: {
+      ...(fields.category !== undefined ? { category: fields.category } : {}),
+      ...(fields.subCategory !== undefined ? { subCategory: fields.subCategory } : {}),
+      ...(fields.subCategory2 !== undefined ? { subCategory2: fields.subCategory2 } : {}),
+      ...(fields.description !== undefined ? { description: fields.description } : {}),
+      ...(fields.grossWeightGrams !== undefined ? { grossWeightGrams: fields.grossWeightGrams } : {}),
+      ...(fields.netWeightGrams !== undefined ? { netWeightGrams: fields.netWeightGrams } : {}),
+      ...(fields.purity !== undefined ? { purity: fields.purity } : {}),
+      ...(fields.size !== undefined ? { size: fields.size } : {}),
+      ...(fields.karigarCode !== undefined ? { karigarCode: fields.karigarCode } : {}),
+      ...(fields.expectedDate !== undefined ? { expectedDate: fields.expectedDate } : {}),
+    },
+  });
+}
+
 export type UpdateProductInput = Partial<CreateProductInput>;
 
 export async function updateManufacturerProduct(
