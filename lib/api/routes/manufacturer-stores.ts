@@ -7,6 +7,8 @@ import {
   listPendingRegistrations,
   approveRegistration,
   rejectRegistration,
+  holdRegistration,
+  unholdRegistration,
   updateStoreByManufacturer,
   resetStorePassword,
   setStoreActive,
@@ -59,6 +61,18 @@ manufacturerStoreRoutes.post('/store-registrations/:id/approve', async (c) => {
 manufacturerStoreRoutes.post('/store-registrations/:id/reject', async (c) => {
   const result = await rejectRegistration(c.req.param('id'));
   if (!result) return sendError(c, 'not_found', 'Pending registration not found', 404);
+  return sendData(c, result);
+});
+
+manufacturerStoreRoutes.post('/store-registrations/:id/hold', async (c) => {
+  const result = await holdRegistration(c.req.param('id'));
+  if (!result) return sendError(c, 'not_found', 'Pending registration not found', 404);
+  return sendData(c, result);
+});
+
+manufacturerStoreRoutes.post('/store-registrations/:id/unhold', async (c) => {
+  const result = await unholdRegistration(c.req.param('id'));
+  if (!result) return sendError(c, 'not_found', 'On-hold registration not found', 404);
   return sendData(c, result);
 });
 

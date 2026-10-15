@@ -20,6 +20,12 @@ enum RegistrationStatus {
   PENDING
   APPROVED
   REJECTED
+  // Manufacturer has set this registration aside without deciding yet —
+  // still shown on the Customer Registrations screen (a separate toggle
+  // from PENDING), can move back to PENDING or go straight to
+  // APPROVED/REJECTED. Never blocks/unblocks login differently than
+  // PENDING does (store-auth.ts only special-cases APPROVED).
+  ON_HOLD
 }
 
 enum ResetRole {
