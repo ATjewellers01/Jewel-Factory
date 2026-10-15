@@ -1,9 +1,9 @@
 'use client';
 
-import { ChevronDown, Gem, Sparkles, X } from 'lucide-react';
+import { ArrowLeftRight, Gem, Sparkles, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { formatWeight } from '@/lib/format';
@@ -41,7 +41,11 @@ export function StoreManagerProductDetailModal({
   tryOnBack: string;
 }) {
   const [zoom, setZoom] = useState<string | null>(null);
-  const [scrolled, setScrolled] = useState(false);
+  // Per-design DOM nodes inside the vertical scroll-snap stack, so the
+  // horizontal thumbnail strip below can jump the vertical scroll position
+  // to any design — both ways of browsing stay available together, neither
+  // replaces the other.
+  const blockRefs = useRef(new Map<string, HTMLDivElement>());
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -70,6 +74,8 @@ export function StoreManagerProductDetailModal({
     })
     .slice(0, 6);
 
+  const jumpTo = (id: string) => blockRefs.current.get(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
   return (
     <>
       <div
@@ -87,26 +93,53 @@ export function StoreManagerProductDetailModal({
 
             <div
               className="h-full snap-y snap-mandatory overflow-y-auto overscroll-contain scrollbar-auto [scrollbar-color:#c9a84c_#ece5d8] [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#c9a84c] [&::-webkit-scrollbar-track]:bg-[#ece5d8]"
-              onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 24)}
             >
-              <div className="h-full snap-start snap-always">
+              <div ref={(el) => { if (el) blockRefs.current.set(product.id, el); }} className="h-full snap-start snap-always">
                 <ProductBlock product={product} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
               </div>
 
               {similar.map((candidate) => (
-                <div key={candidate.id} className="h-full snap-start snap-always border-t border-[#d8c8aa]/55">
+                <div key={candidate.id} ref={(el) => { if (el) blockRefs.current.set(candidate.id, el); }} className="h-full snap-start snap-always border-t border-[#d8c8aa]/55">
                   <ProductBlock product={candidate} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
                 </div>
               ))}
             </div>
           </div>
 
+          {/* Horizontal thumbnail strip — a second, quick way to jump straight
+              to any similar design, alongside (not instead of) the vertical
+              scroll-snap stack above. Tapping a thumbnail smooth-scrolls the
+              box above to that design. */}
           {similar.length > 0 ? (
-            <div aria-hidden className="pointer-events-none flex h-11 items-center justify-center">
-              <span className={`flex items-center gap-2 rounded-full border border-[#f0d99a]/60 bg-[#211b16]/90 px-4 py-2 text-xs font-semibold text-white shadow-[0_8px_28px_rgba(0,0,0,0.35)] backdrop-blur-md transition-all sm:text-sm ${scrolled ? 'translate-y-1 opacity-0' : 'animate-pulse opacity-100'}`}>
-                Scroll down to see similar designs
-                <ChevronDown className="h-4 w-4 animate-bounce text-[#f0d99a] sm:h-5 sm:w-5" />
-              </span>
+            <div className="w-full rounded-2xl border border-white/50 bg-[#211b16]/90 p-2.5 shadow-[0_18px_50px_rgba(0,0,0,0.3)] backdrop-blur-md sm:p-3">
+              <div className="mb-2 flex items-center justify-between px-0.5">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#f0d99a]">Similar designs</span>
+                <span className="flex items-center gap-1 text-[10px] text-white/60"><ArrowLeftRight className="h-3 w-3" /> Scroll for more</span>
+              </div>
+              <div className="relative">
+                <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[#211b16] to-transparent" />
+                <div className="flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory no-scrollbar">
+                  {[product, ...similar].map((candidate) => {
+                    const img = candidate.images.find((i) => i.isPrimary) ?? candidate.images[0];
+                    return (
+                      <button
+                        key={candidate.id}
+                        type="button"
+                        onClick={() => jumpTo(candidate.id)}
+                        aria-label={`Scroll to ${candidate.designNumber}`}
+                        className="w-16 shrink-0 snap-start overflow-hidden rounded-xl border-2 border-transparent bg-white text-left transition-colors hover:border-[#c9a84c] sm:w-20"
+                      >
+                        <div className="relative aspect-square bg-[#ece5da]">
+                          {img ? (
+                            <Image src={img.secureUrl} alt={candidate.designNumber} fill className="object-cover" />
+                          ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-4 w-4" /></div>}
+                        </div>
+                        <p className="truncate px-1 py-1 text-[10px] font-medium text-[#3d3529]">{candidate.designNumber}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           ) : null}
         </div>
