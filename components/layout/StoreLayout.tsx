@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  LayoutDashboard, Package, PencilLine, ClipboardCheck,
+  LayoutDashboard, LayoutGrid, Package, PencilLine, ClipboardCheck,
   Lightbulb, Store as StoreIcon, Settings, Building2, Search,
   Home, X, LogOut, Heart, ShoppingCart,
 } from 'lucide-react';
@@ -19,13 +19,11 @@ const FALLBACK_STORE_LOGO = '/storeRe-logo.avif';
 // Top navbar — the Retailer's day-to-day browsing/discovery actions, always
 // visible. The full label always shows, at every screen width (no shortLabel
 // abbreviation) — new users need the whole name to know what an icon does.
-// mobileBreakLines: below `sm`, the label renders as these lines stacked
-// (falls back to the single `label` string above `sm`) — an explicit break
-// point instead of a guessed max-width, so "Search Similar Design" always
-// wraps as "Search" / "Similar Design", never a 3rd line.
+// Below `sm` these render as full-width tabs on their own row under the
+// header, so every label fits on one line without crowding Dashboard.
 const TOP_NAV = [
-  { label: 'Home', href: '/store/home', icon: Home, mobileBreakLines: undefined as string[] | undefined },
-  { label: 'Search Similar Design', href: '/store/similar-search', icon: Search, mobileBreakLines: ['Search', 'Similar Design'] },
+  { label: 'Home', href: '/store/home', icon: Home },
+  { label: 'Search Similar Design', href: '/store/similar-search', icon: Search },
 ];
 
 // Dashboard drawer — operations/admin/account pages, opened via the "Dashboard" button.
@@ -35,6 +33,8 @@ const TOP_NAV = [
 // behind it.
 const DRAWER_NAV = [
   { label: 'Home', href: '/store/home', icon: Home, section: 'Overview' },
+  // The catalogue's direct link (the header logo now goes Home instead).
+  { label: 'Product Catalogue', href: '/store/manufacturer-catalog', icon: LayoutGrid, section: 'Overview' },
   { label: 'Dashboard', href: '/store/dashboard', icon: LayoutDashboard, section: 'Overview' },
   // Operations runs in the order the work actually flows: browse the orders that
   // came in, then the bespoke ones, then what still needs signing off. Kiosk
@@ -96,7 +96,10 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
 
   useDocumentIdentity(pageLabel, { storeName, logoUrl: store.logoUrl });
 
-  const drawerSections = Array.from(new Set(DRAWER_NAV.map((item) => item.section)));
+  // The catalogue's own search box has a camera shortcut to similar-design
+  // search — don't show a second "Search" there.
+  const navItems = TOP_NAV.filter((item) => !(item.href === '/store/similar-search' && isActive('/store/manufacturer-catalog')));
+  const drawerSections =Array.from(new Set(DRAWER_NAV.map((item) => item.section)));
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f8f7f3] text-[#26221e]">
@@ -105,7 +108,8 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
 
       <header className="sticky top-0 z-30 border-b border-[#e8e3da] bg-white/90 backdrop-blur-xl">
         <div className="flex h-[66px] items-center gap-1.5 px-2.5 sm:gap-3 sm:px-6 lg:px-8">
-          <Link href="/store/manufacturer-catalog" className="flex min-w-0 shrink-0 items-center gap-2.5">
+          {/* Logo + store name go Home — the usual "tap the logo" shortcut. */}
+          <Link href="/store/home" aria-label={`${storeName} — home`} className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none sm:shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={store.logoUrl || FALLBACK_STORE_LOGO}
@@ -113,40 +117,26 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
               className="h-9 w-9 shrink-0 rounded-lg border border-[#eadfca] bg-[#fbf6ea] object-contain p-1"
               onError={(e) => { e.currentTarget.src = FALLBACK_STORE_LOGO; }}
             />
-            {/* Below `sm` the name moves to its own row underneath the
-                header (see the second row below) so it never fights the
-                Home/Search/Dashboard icons for space on the same line. */}
-            <span className="hidden min-w-0 sm:block">
-              <span className="block whitespace-nowrap text-base font-bold text-[#c9a84c] lg:text-lg">{storeName}</span>
+            <span className="min-w-0">
+              <span className="block truncate text-base font-bold text-[#c9a84c] lg:text-lg">{storeName}</span>
               <span className="hidden text-[11px] font-bold uppercase tracking-[0.14em] text-[#9b8f82] sm:block">Retailer Admin portal</span>
             </span>
           </Link>
 
-          {/* Browsing pages sit next to the logo — the full label is always
-              visible at every screen width so new users can tell what each
-              icon does; the bar scrolls horizontally on the narrowest phones
-              rather than clipping or abbreviating a label. */}
-          <nav className="ml-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto sm:ml-2 sm:flex-initial" aria-label="Primary navigation">
-            {TOP_NAV.map(({ label, href, icon: Icon, mobileBreakLines }) => {
+          {/* Browsing pages sit next to the logo from `sm` up; below `sm`
+              they move to their own tab row under the header (see below). */}
+          <nav className="ml-2 hidden items-center gap-1 sm:flex" aria-label="Primary navigation">
+            {navItems.map(({ label, href, icon: Icon }) => {
               const active = isActive(href);
               return (
                 <Link
                   key={href}
                   href={href}
                   aria-current={active ? 'page' : undefined}
-                  className={`flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 text-[12px] font-medium transition-colors sm:h-10 sm:gap-2 sm:px-2.5 sm:text-[13px] lg:px-4 ${active ? 'bg-[#c99d37] text-white shadow-[0_5px_16px_rgba(174,127,30,0.18)]' : 'text-[#5f5750] hover:bg-[#f3efe8] hover:text-[#26221e]'}`}
+                  className={`flex h-10 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full px-2.5 text-[13px] font-medium transition-colors lg:px-4 ${active ? 'bg-[#c99d37] text-white shadow-[0_5px_16px_rgba(174,127,30,0.18)]' : 'text-[#5f5750] hover:bg-[#f3efe8] hover:text-[#26221e]'}`}
                 >
-                  <Icon className="h-4 w-4 shrink-0 lg:h-4 lg:w-4" />
-                  {mobileBreakLines ? (
-                    // Explicit break point (not a guessed max-width) so
-                    // "Search Similar Design" always wraps as exactly two
-                    // lines — "Search" / "Similar Design" — below `sm`,
-                    // and as one line above it.
-                    <span className="text-center leading-tight sm:hidden">
-                      {mobileBreakLines.map((line, i) => <span key={i} className="block">{line}</span>)}
-                    </span>
-                  ) : null}
-                  <span className={mobileBreakLines ? 'hidden sm:inline' : undefined}>{label}</span>
+                  <Icon className="h-4 w-4 shrink-0" />
+                  <span>{label}</span>
                 </Link>
               );
             })}
@@ -191,12 +181,25 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        {/* Mobile-only second row: the full store name, given its own line
-            so it never has to share space with the Home/Search/Dashboard
-            icons above (that row stays icon-only and uncrowded below `sm`). */}
-        <div className="border-t border-[#eee9e1] px-2.5 py-2.5 sm:hidden">
-          <span className="block break-words text-xl font-bold leading-tight text-[#c9a84c]">{storeName}</span>
-        </div>
+        {/* Mobile-only tab row: Home / Search Similar Design as equal-width
+            tabs, each label on one line — the header row above keeps only
+            the logo, store name and Dashboard, so nothing gets clipped. */}
+        <nav className="flex gap-1.5 border-t border-[#eee9e1] px-2.5 py-2 sm:hidden" aria-label="Primary navigation">
+          {navItems.map(({ label, href, icon: Icon }) => {
+            const active = isActive(href);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? 'page' : undefined}
+                className={`flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition-colors active:scale-[0.98] ${navItems.length === 1 ? 'max-w-[50%]' : ''} ${active ? 'bg-[#c99d37] text-white shadow-[0_5px_16px_rgba(174,127,30,0.18)]' : 'border border-[#e3ddd3] bg-white text-[#5f5750]'}`}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </header>
 
       <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
