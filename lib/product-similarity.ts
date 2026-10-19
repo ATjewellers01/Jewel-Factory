@@ -37,15 +37,15 @@ type DescribableProduct = {
   designNumber: string;
   category: string | null;
   subCategory: string | null;
+  subCategory2?: string | null;
   description?: string | null;
 };
 
-/** Keyword search across design number, category/sub-category, and the free-
- *  text description — a looser match than the exact-designNumber search box
- *  this sits alongside, so "gold necklace" or "antique" finds pieces the
- *  design-number box can't. Splits the query on whitespace and requires
- *  every word to appear somewhere (AND, not OR), so multi-word queries
- *  narrow rather than widen the results. */
+/** The catalogue's single keyword search, across design number, category,
+ *  both sub-category levels, and the free-text description — so "JF-0916",
+ *  "gold necklace" or "antique" all work from one box. Splits the query on
+ *  whitespace and requires every word to appear somewhere (AND, not OR), so
+ *  multi-word queries narrow rather than widen the results. */
 export function matchesDescriptionQuery(product: DescribableProduct, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
@@ -53,6 +53,7 @@ export function matchesDescriptionQuery(product: DescribableProduct, query: stri
     product.designNumber,
     product.category ?? '',
     product.subCategory ?? '',
+    product.subCategory2 ?? '',
     product.description ?? '',
   ].join(' ').toLowerCase();
   return q.split(/\s+/).every((word) => haystack.includes(word));

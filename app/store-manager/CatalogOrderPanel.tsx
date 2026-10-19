@@ -1,17 +1,17 @@
 'use client';
 
-import { Award, Check, ChevronDown, Gem, Heart, Loader2, Minus, Plus, Search, ShoppingCart, SlidersHorizontal, SortAsc, Trash2, X } from 'lucide-react';
+import { Award, Check, ChevronDown, Gem, Heart, Loader2, Minus, Plus, ShoppingCart, SlidersHorizontal, SortAsc, Trash2, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import Image from 'next/image';
 import { memo, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { StoreManagerProductDetailModal, type StoreManagerProduct } from '@/components/kiosk/StoreManagerProductDetailModal';
 import { CartQtyControl } from '@/components/orders/CartQtyControl';
+import { CatalogSearchBar } from '@/components/orders/CatalogSearchBar';
 import { ItemsPerRowControl } from '@/components/orders/ItemsPerRowControl';
 import { WeightRangeSlider } from '@/components/orders/WeightRangeSlider';
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { StarRating } from '@/components/ui/StarRating';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { useFavorites } from '@/hooks/use-favorites';
@@ -86,7 +86,6 @@ export function CatalogOrderPanel({
   const subCategories1WithDesigns = (cat: string) => subCategories1WithStock(catalogCounts, cat, taxonomy.subCategories1For(cat));
   const subCategories2WithDesigns = (cat: string, sub1: string) => subCategories2WithStock(catalogCounts, cat, sub1, taxonomy.subCategories2For(cat, sub1));
   const favorites = useFavorites('/api/branch-manager/favorites', showPopularity ? 'RESTOCK' : 'KIOSK');
-  const [search, setSearch] = useState('');
   const [descQuery, setDescQuery] = useState('');
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
@@ -159,14 +158,13 @@ export function CatalogOrderPanel({
   // describe what's actually on screen (bangles 10-100 g vs pendants 1-8 g).
   const preWeight = useMemo(
     () => (data ?? []).filter((p) =>
-      (!search || p.designNumber.toLowerCase().includes(search.toLowerCase())) &&
       matchesDescriptionQuery(p, descQuery) &&
       (!category || p.category === category) &&
       (!subCategory || p.subCategory === subCategory) &&
       (!subCategory2 || p.subCategory2 === subCategory2) &&
       (!size || p.size === size),
     ),
-    [category, data, descQuery, search, size, subCategory, subCategory2],
+    [category, data, descQuery, size, subCategory, subCategory2],
   );
 
   const weightBounds = useMemo(
@@ -265,18 +263,12 @@ export function CatalogOrderPanel({
       </section>
 
       <div className="mx-auto max-w-[1400px] px-4 py-8 md:px-6 lg:px-12">
-        {/* Description search — a looser match than the design-number box
-            below (category/sub-category/description text) so "gold necklace"
-            or "antique" surfaces pieces that box can't. Its own row, above
-            the design-number search, at every width. */}
-        <div className="relative mb-3 w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8174]" />
-          <Input placeholder="Search by description, category…" value={descQuery} onChange={(event) => setDescQuery(event.target.value)} className="rounded-lg border-black/15 bg-white/50 pl-9" />
-        </div>
+        {/* The one search box: design no. / category / sub-categories / description
+            text, plus a camera shortcut to the photo similar-design search. */}
+        <CatalogSearchBar value={descQuery} onChange={setDescQuery} photoSearchHref="/store-manager/search" className="mb-3 sm:max-w-md" inputClassName="rounded-lg border-black/15 bg-white/50" />
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-black/10 pb-4">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <button onClick={() => setMobileFilters((value) => !value)} className="flex items-center gap-2 rounded-lg border border-black/15 bg-white/50 px-3 py-2 text-sm lg:hidden"><SlidersHorizontal className="h-4 w-4" /> Filters</button>
-            <div className="relative w-full max-w-sm"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8d8174]" /><Input placeholder="Search by design number…" value={search} onChange={(event) => setSearch(event.target.value)} className="rounded-lg border-black/15 bg-white/50 pl-9" /></div>
             <span className="hidden text-sm text-[#746b62] sm:inline">{loading ? 'Loading…' : `${filtered.length} designs`}</span>
           </div>
           <div className="flex items-center gap-2">

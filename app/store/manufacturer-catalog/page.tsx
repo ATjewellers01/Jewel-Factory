@@ -7,6 +7,7 @@ import { Suspense, memo, useCallback, useEffect, useMemo, useState } from 'react
 
 import { StoreManagerProductDetailModal } from '@/components/kiosk/StoreManagerProductDetailModal';
 import { CartQtyControl } from '@/components/orders/CartQtyControl';
+import { CatalogSearchBar } from '@/components/orders/CatalogSearchBar';
 import { ItemsPerRowControl } from '@/components/orders/ItemsPerRowControl';
 import { WeightRangeSlider } from '@/components/orders/WeightRangeSlider';
 import { Button } from '@/components/ui/button';
@@ -72,7 +73,6 @@ function CatalogBrowse() {
   // Seeded from the URL so /store/home category tiles can deep-link into a
   // pre-filtered catalog (?category=Bangles&subCategory=Fusion%20Bangle).
   const params = useSearchParams();
-  const [search, setSearch] = useState('');
   const [descQuery, setDescQuery] = useState('');
   const [category, setCategory] = useState(params.get('category') ?? '');
   const [subCategory, setSubCategory] = useState(params.get('subCategory') ?? '');
@@ -127,13 +127,12 @@ function CatalogBrowse() {
   // retailer is actually looking at (Bangles run 10-100 g, pendants 1-8 g — one
   // fixed range would leave most options empty).
   const preWeight = (data ?? []).filter((p) => {
-    const matchSearch = !search || p.designNumber.toLowerCase().includes(search.toLowerCase());
     const matchDesc = matchesDescriptionQuery(p, descQuery);
     const matchCat = !category || p.category === category;
     const matchSub = !subCategory || p.subCategory === subCategory;
     const matchSub2 = !subCategory2 || p.subCategory2 === subCategory2;
     const matchSize = !size || p.size === size;
-    return matchSearch && matchDesc && matchCat && matchSub && matchSub2 && matchSize;
+    return matchDesc && matchCat && matchSub && matchSub2 && matchSize;
   });
 
   const weightBounds = weightExtent(preWeight.map((p) => p.weightGrams));
@@ -201,18 +200,6 @@ function CatalogBrowse() {
           <h1 className="text-2xl font-medium tracking-tight">Product Catalogue</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">Browse designs and place a restock order.</p>
         </div>
-        {/* Description search — a looser match than the design-number box below
-            (category/sub-category/description text, not just the exact design
-            number) so "gold necklace" or "antique" surfaces pieces that box
-            can't. Sits above the design-number search on mobile (its own row,
-            full width) and between the heading and Favorites/Cart on desktop. */}
-        <div className="order-first w-full sm:order-none sm:w-auto sm:max-w-xs sm:flex-1">
-          <Input
-            placeholder="Search by description, category…"
-            value={descQuery}
-            onChange={(e) => setDescQuery(e.target.value)}
-          />
-        </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => { setShowFavorites((v) => !v); setShowCart(false); }}>
             <Heart className="mr-1.5 h-4 w-4" />Favorites ({favorites.count})
@@ -223,10 +210,13 @@ function CatalogBrowse() {
         </div>
       </div>
 
+      {/* The one search box: design no. / category / sub-categories / description
+          text, plus a camera shortcut to the photo similar-design search. */}
+      <CatalogSearchBar value={descQuery} onChange={setDescQuery} photoSearchHref="/store/similar-search" className="sm:max-w-md" />
+
       {!showCart && !showFavorites && (
         <>
           <div className="flex flex-wrap gap-2">
-            <Input placeholder="Search designs…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
             <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={category} onChange={(e) => { setCategory(e.target.value); setSubCategory(''); setSubCategory2(''); }}>
               <option value="">All categories</option>
               {taxonomy.categories.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -258,8 +248,8 @@ function CatalogBrowse() {
             <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={sort} onChange={(e) => setSort(e.target.value as SortOption)} aria-label="Sort by">
               {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            {(category || subCategory || subCategory2 || search || descQuery || size || sort || weightRange) && (
-              <button type="button" onClick={() => { setSearch(''); setDescQuery(''); setCategory(''); setSubCategory(''); setSubCategory2(''); setSize(''); setWeightRange(null); setSort(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+            {(category || subCategory || subCategory2 || descQuery || size || sort || weightRange) && (
+              <button type="button" onClick={() => { setDescQuery(''); setCategory(''); setSubCategory(''); setSubCategory2(''); setSize(''); setWeightRange(null); setSort(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
             )}
             {/* Items per row — 1 or 2 on phones, 2–4 from tablet up. Each set is
                 only rendered at the size it applies to, so the choice is unambiguous. */}

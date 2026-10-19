@@ -61,6 +61,13 @@ const nav = [
   { href: '/store-manager/my-orders', label: 'My Orders', icon: ClipboardList },
 ];
 
+// Desktop top nav leads with Home so it's one click from any page (the
+// mobile menu already has its own "Storefront Home" entry below).
+const desktopNav = [
+  { href: '/store-manager', label: 'Home', icon: Home, exact: true },
+  ...nav,
+];
+
 const mobileNav = [
   { href: '/store-manager', label: 'Storefront Home', icon: Home, exact: true },
   ...nav,
@@ -172,8 +179,8 @@ function Shell({ children }: { children: ReactNode }) {
               </Link>
 
               <nav className="hidden items-center rounded-full border border-black/[0.06] bg-white/55 p-1 shadow-[0_2px_12px_rgba(49,38,24,0.035)] lg:flex" aria-label="Storefront navigation">
-                {nav.map((item) => {
-                  const active = isActiveRoute(pathname, item.href);
+                {desktopNav.map((item) => {
+                  const active = isActiveRoute(pathname, item.href, 'exact' in item && item.exact);
                   return (
                     <Link
                       key={item.href}
@@ -190,6 +197,15 @@ function Shell({ children }: { children: ReactNode }) {
               <div className="flex shrink-0 items-center gap-1.5">
                 <Link href="/store-manager/try-on" className="metal-sheen hidden items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-semibold text-[#17120b] shadow-sm transition-transform hover:scale-[1.02] sm:flex">
                   <Sparkles className="h-3.5 w-3.5" /> Try On
+                </Link>
+                {/* Mobile/tablet: one-tap Home, so it isn't buried in the menu. */}
+                <Link
+                  href="/store-manager"
+                  aria-label="Home"
+                  aria-current={pathname === '/store-manager' ? 'page' : undefined}
+                  className={`inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors lg:hidden ${pathname === '/store-manager' ? 'border-[#211c17] bg-[#211c17] text-[#fffaf0]' : 'border-black/10 bg-white/70 text-[#211c17] hover:border-[#c9a84c]/50 hover:bg-white'}`}
+                >
+                  <Home className="h-4 w-4" />
                 </Link>
                 <Link
                   href="/store-manager/kiosk?cart=open"
