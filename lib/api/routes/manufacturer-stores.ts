@@ -64,20 +64,15 @@ manufacturerStoreRoutes.post('/store-registrations/:id/reject', async (c) => {
   return sendData(c, result);
 });
 
-// Body is optional ({ note?: string }) — parsed best-effort so a bare POST works.
-const HoldBody = z.object({ note: z.string().trim().max(500).optional() });
-
 manufacturerStoreRoutes.post('/store-registrations/:id/hold', async (c) => {
-  const parsed = HoldBody.safeParse(await c.req.json().catch(() => ({})));
-  if (!parsed.success) return sendError(c, 'validation_failed', 'Hold reason is too long (max 500 characters).', 400);
-  const result = await holdRegistration(c.req.param('id'), parsed.data.note || null);
+  const result = await holdRegistration(c.req.param('id'));
   if (!result) return sendError(c, 'not_found', 'Pending registration not found', 404);
   return sendData(c, result);
 });
 
 manufacturerStoreRoutes.post('/store-registrations/:id/unhold', async (c) => {
   const result = await unholdRegistration(c.req.param('id'));
-  if (!result) return sendError(c, 'not_found', 'Pending registration not found', 404);
+  if (!result) return sendError(c, 'not_found', 'On-hold registration not found', 404);
   return sendData(c, result);
 });
 

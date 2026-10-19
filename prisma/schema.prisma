@@ -20,6 +20,12 @@ enum RegistrationStatus {
   PENDING
   APPROVED
   REJECTED
+  // Manufacturer has set this registration aside without deciding yet —
+  // still shown on the Customer Registrations screen (a separate toggle
+  // from PENDING), can move back to PENDING or go straight to
+  // APPROVED/REJECTED. Never blocks/unblocks login differently than
+  // PENDING does (store-auth.ts only special-cases APPROVED).
+  ON_HOLD
 }
 
 enum ResetRole {
@@ -137,10 +143,6 @@ model Store {
   registrationStatus      RegistrationStatus @default(PENDING) @map("registration_status")
   registrationSubmittedAt DateTime?          @map("registration_submitted_at")
   registrationReviewedAt  DateTime?          @map("registration_reviewed_at")
-  // "Hold" — manufacturer parks a PENDING registration to decide later. Status
-  // stays PENDING (login still blocked); approve/reject clear these.
-  registrationOnHoldAt    DateTime?          @map("registration_on_hold_at")
-  registrationHoldNote    String?            @map("registration_hold_note")
   ownerName               String?            @map("owner_name")
   ownerPhone              String?            @map("owner_phone")
 

@@ -8,6 +8,7 @@ import {
   createManufacturerProduct,
   updateManufacturerProduct,
   setManufacturerProductsStatus,
+  bulkUpdateManufacturerProducts,
   deleteManufacturerProduct,
   addProductImage,
   removeProductImage,
@@ -144,6 +145,33 @@ const BulkStatusBody = z.object({
 manufacturerCatalogRoutes.post('/products/bulk-status', jsonValidator(BulkStatusBody), async (c) => {
   const { ids, status } = c.req.valid('json');
   const result = await setManufacturerProductsStatus(c.get('manufacturerId'), ids, status);
+  return sendData(c, { updated: result.count });
+});
+
+// Bulk edit — select several designs, tick only the fields you want to
+// change, apply one value per ticked field to all of them at once. `fields`
+// only contains keys the client actually ticked; the frontend never sends a
+// key for an untouched field, so there's no "blank means clear" ambiguity.
+// Image and design number are never part of this body — those stay per-design.
+const BulkUpdateBody = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(500),
+  fields: z.object({
+    category: z.string().optional(),
+    subCategory: z.string().optional(),
+    subCategory2: z.string().nullish(),
+    description: z.string().optional(),
+    grossWeightGrams: z.number().positive().nullish(),
+    netWeightGrams: z.number().positive().nullish(),
+    purity: z.string().optional(),
+    size: z.string().max(40).nullish(),
+    karigarCode: z.string().nullish(),
+    expectedDate: z.string().nullish(),
+  }).partial(),
+});
+
+manufacturerCatalogRoutes.post('/products/bulk-update', jsonValidator(BulkUpdateBody), async (c) => {
+  const { ids, fields } = c.req.valid('json');
+  const result = await bulkUpdateManufacturerProducts(c.get('manufacturerId'), ids, fields);
   return sendData(c, { updated: result.count });
 });
 

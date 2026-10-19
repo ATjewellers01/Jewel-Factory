@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Loader2, Package, Sparkles, Check, CheckSquare, Square, FileDown } from 'lucide-react';
+import { Plus, Loader2, Package, Sparkles, Check, CheckSquare, Square, FileDown, PencilLine, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -12,6 +12,25 @@ import { useTaxonomy } from '@/hooks/use-taxonomy';
 import { downloadCataloguePdf } from '@/lib/catalogue-pdf';
 import { SORT_OPTIONS, weightExtent, matchWeightRange, sortProducts, type SortOption } from '@/lib/weight-filter';
 import { formatWeight } from '@/lib/format';
+
+// Fields the "Bulk Edit" panel can apply to many designs at once. Each is
+// opt-in (its own checkbox) — a field the manufacturer never ticks is left
+// untouched on every selected design. Image and design number are never
+// part of this; they stay per-design everywhere else in the app.
+type BulkField = 'category' | 'subCategory' | 'subCategory2' | 'purity' | 'grossWeightGrams' | 'netWeightGrams' | 'size' | 'karigarCode' | 'expectedDate' | 'description';
+const BULK_FIELD_LABELS: Record<BulkField, string> = {
+  category: 'Category',
+  subCategory: 'Sub-category',
+  subCategory2: 'Type (Sub-category 2)',
+  purity: 'Purity',
+  grossWeightGrams: 'Gross Weight (gm)',
+  netWeightGrams: 'Net Weight (gm)',
+  size: 'Size',
+  karigarCode: 'Karigar Code',
+  expectedDate: 'Estimated Order Time',
+  description: 'Description',
+};
+const BULK_FIELDS: BulkField[] = ['category', 'subCategory', 'subCategory2', 'purity', 'grossWeightGrams', 'netWeightGrams', 'size', 'karigarCode', 'expectedDate', 'description'];
 
 type ProductImage = { id: string; secureUrl: string; isPrimary: boolean };
 type Product = {
@@ -83,6 +102,17 @@ export default function ManufacturerCatalogPage() {
   const [pdfSelected, setPdfSelected] = useState<Set<string>>(new Set());
   const [pdfTopN, setPdfTopN] = useState('10');
 
+  // Bulk Edit — independent of the Inactive-only bulk-activate selection and
+  // the PDF-export selection above; available on any status filter, picks
+  // its own designs. `bulkChecked` is which fields are ticked ON for this
+  // round; `bulkValues` holds the one value per ticked field that will be
+  // applied to every design in `bulkSelected`.
+  const [bulkEditing, setBulkEditing] = useState(false);
+  const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
+  const [bulkChecked, setBulkChecked] = useState<Partial<Record<BulkField, boolean>>>({});
+  const [bulkValues, setBulkValues] = useState<Partial<Record<BulkField, string>>>({});
+  const [bulkSaving, setBulkSaving] = useState(false);
+
   async function load() {
     try {
       const res = await fetch('/api/manufacturer/products', { cache: 'no-store' });
@@ -139,6 +169,57 @@ export default function ManufacturerCatalogPage() {
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
+  }
+
+  function toggleBulkSelected(id: string) {
+    setBulkSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function startBulkEdit() {
+    setBulkEditing(true);
+    setPdfSelecting(false);
+    setSelected(new Set());
+  }
+
+  function cancelBulkEdit() {
+    setBulkEditing(false);
+    setBulkSelected(new Set());
+    setBulkChecked({});
+    setBulkValues({});
+  }
+
+  async function applyBulkEdit() {
+    const tickedFields = BULK_FIELDS.filter((f) => bulkChecked[f]);
+    if (bulkSelected.size === 0 || tickedFields.length === 0) return;
+    setBulkSaving(true);
+    setError(null);
+    try {
+      const fields: Record<string, string | number | null> = {};
+      for (const f of tickedFields) {
+        const raw = (bulkValues[f] ?? '').trim();
+        if (f === 'grossWeightGrams' || f === 'netWeightGrams') {
+          fields[f] = raw === '' ? null : Number(raw);
+        } else {
+          fields[f] = raw === '' ? null : raw;
+        }
+      }
+      const res = await fetch('/api/manufacturer/products/bulk-update', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(bulkSelected), fields }),
+      });
+      const json = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+      if (!res.ok || json?.error) { setError(json?.error?.message ?? 'Could not update the selected designs.'); return; }
+      cancelBulkEdit();
+      await load();
+    } catch {
+      setError('Network error — the selected designs were not updated.');
+    } finally { setBulkSaving(false); }
   }
 
   const pdfTopNNum = Math.max(1, parseInt(pdfTopN, 10) || 0);
@@ -287,6 +368,15 @@ export default function ManufacturerCatalogPage() {
               )}
             </span>
           )}
+          {bulkEditing ? (
+            <Button type="button" variant="outline" onClick={cancelBulkEdit}>
+              <X className="mr-1.5 h-4 w-4" /> Cancel Bulk Edit
+            </Button>
+          ) : (
+            <Button type="button" variant="outline" onClick={startBulkEdit}>
+              <PencilLine className="mr-1.5 h-4 w-4" /> Bulk Edit
+            </Button>
+          )}
           <Link href="/manufacturer/catalog/new">
             <Button className="metal-sheen text-[#17120b] font-semibold">
               <Plus className="mr-1.5 h-4 w-4" /> Add Design
@@ -366,9 +456,91 @@ export default function ManufacturerCatalogPage() {
         </div>
       )}
 
+      {/* Bulk Edit panel — tick which fields to change, fill one value per
+          ticked field, apply to every selected design. Independent of the
+          status filter (works on any mix of designs currently in view). */}
+      {bulkEditing && (
+        <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setBulkSelected(bulkSelected.size === filtered.length ? new Set() : new Set(filtered.map((p) => p.id)))}
+              className="inline-flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary"
+            >
+              {filtered.length > 0 && bulkSelected.size === filtered.length ? <CheckSquare className="h-4 w-4 text-primary" /> : <Square className="h-4 w-4 text-muted-foreground" />}
+              {filtered.length > 0 && bulkSelected.size === filtered.length ? 'Clear selection' : `Select all ${filtered.length}`}
+            </button>
+            <span className="text-sm text-muted-foreground">
+              {bulkSelected.size > 0 ? `${bulkSelected.size} design(s) selected` : 'Tap designs below to select them'}
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Tick a field to change it on every selected design — untouched fields keep their own per-design value.</p>
+            {BULK_FIELDS.map((f) => {
+              const isChecked = !!bulkChecked[f];
+              const value = bulkValues[f] ?? '';
+              const setValue = (v: string) => setBulkValues((cur) => ({ ...cur, [f]: v }));
+              return (
+                <div key={f} className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2">
+                  <label className="flex min-w-[11rem] items-center gap-2 text-sm font-medium">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => setBulkChecked((cur) => ({ ...cur, [f]: e.target.checked }))}
+                      className="h-4 w-4"
+                    />
+                    {BULK_FIELD_LABELS[f]}
+                  </label>
+                  {f === 'category' ? (
+                    <select disabled={!isChecked} value={value} onChange={(e) => setValue(e.target.value)} className="h-9 flex-1 min-w-[10rem] rounded-md border border-input bg-transparent px-3 text-sm disabled:opacity-50">
+                      <option value="">—</option>
+                      {taxonomy.categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  ) : f === 'subCategory' ? (
+                    <select disabled={!isChecked} value={value} onChange={(e) => setValue(e.target.value)} className="h-9 flex-1 min-w-[10rem] rounded-md border border-input bg-transparent px-3 text-sm disabled:opacity-50">
+                      <option value="">—</option>
+                      {taxonomy.subCategories1For(bulkValues.category).map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  ) : f === 'subCategory2' ? (
+                    <select disabled={!isChecked} value={value} onChange={(e) => setValue(e.target.value)} className="h-9 flex-1 min-w-[10rem] rounded-md border border-input bg-transparent px-3 text-sm disabled:opacity-50">
+                      <option value="">—</option>
+                      {taxonomy.subCategories2For(bulkValues.category, bulkValues.subCategory).map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  ) : f === 'purity' ? (
+                    <select disabled={!isChecked} value={value} onChange={(e) => setValue(e.target.value)} className="h-9 flex-1 min-w-[10rem] rounded-md border border-input bg-transparent px-3 text-sm disabled:opacity-50">
+                      <option value="">—</option>
+                      {taxonomy.purities.map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  ) : f === 'grossWeightGrams' || f === 'netWeightGrams' ? (
+                    <Input disabled={!isChecked} type="number" step="0.01" min="0" placeholder="e.g. 12.5" value={value} onChange={(e) => setValue(e.target.value)} className="h-9 flex-1 min-w-[10rem]" />
+                  ) : f === 'description' ? (
+                    <textarea disabled={!isChecked} value={value} onChange={(e) => setValue(e.target.value)} placeholder="Design description" className="h-16 flex-1 min-w-[12rem] rounded-md border border-input bg-transparent px-3 py-1.5 text-sm disabled:opacity-50" />
+                  ) : (
+                    <Input disabled={!isChecked} value={value} onChange={(e) => setValue(e.target.value)} placeholder={f === 'expectedDate' ? 'e.g. 7-10 days' : f === 'size' ? 'e.g. 2.4' : 'Karigar code'} className="h-9 flex-1 min-w-[10rem]" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              onClick={applyBulkEdit}
+              disabled={bulkSaving || bulkSelected.size === 0 || BULK_FIELDS.every((f) => !bulkChecked[f])}
+              className="metal-sheen font-semibold text-[#17120b]"
+            >
+              {bulkSaving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Check className="mr-1.5 h-4 w-4" />}
+              Apply to {bulkSelected.size} design(s)
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Bulk bar — only on the Inactive filter, where "make active" is the
           one action that applies to every design in view. */}
-      {selectionMode && filtered.length > 0 && (
+      {!bulkEditing && selectionMode && filtered.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 px-4 py-3">
           <div className="flex items-center gap-3">
             <button
@@ -421,8 +593,13 @@ export default function ManufacturerCatalogPage() {
             const img = p.images.find((i) => i.isPrimary) ?? p.images[0];
             const isSelected = selected.has(p.id);
             const isPdfSelected = pdfSelected.has(p.id);
-            const showCheck = selectionMode || pdfSelecting;
-            const checked = selectionMode ? isSelected : isPdfSelected;
+            const isBulkSelected = bulkSelected.has(p.id);
+            // Bulk Edit takes priority over the other two selection modes if
+            // somehow more than one were active — in practice starting Bulk
+            // Edit turns PDF-selection off, and it works on any status filter
+            // so it doesn't depend on leaving the Inactive-only mode either.
+            const showCheck = bulkEditing || selectionMode || pdfSelecting;
+            const checked = bulkEditing ? isBulkSelected : selectionMode ? isSelected : isPdfSelected;
             const card = (
                 <div className={`group overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md ${checked ? 'border-primary ring-2 ring-primary/30' : ''}`}>
                   <div className="relative aspect-[3/4] bg-[#ece5da]">
@@ -456,10 +633,14 @@ export default function ManufacturerCatalogPage() {
                   </div>
                 </div>
             );
-            // On the Inactive filter, or while picking designs for the PDF,
-            // the card selects instead of navigating — editing a design is
-            // still one click away from anywhere else.
-            return selectionMode ? (
+            // On the Inactive filter, while picking designs for the PDF, or
+            // while Bulk Editing, the card selects instead of navigating —
+            // editing a design is still one click away from anywhere else.
+            return bulkEditing ? (
+              <button key={p.id} type="button" onClick={() => toggleBulkSelected(p.id)} aria-pressed={isBulkSelected} className="text-left">
+                {card}
+              </button>
+            ) : selectionMode ? (
               <button key={p.id} type="button" onClick={() => toggle(p.id)} aria-pressed={isSelected} className="text-left">
                 {card}
               </button>

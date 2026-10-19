@@ -40,43 +40,44 @@ export async function listStoresByManufacturer(manufacturerId: string) {
   }));
 }
 
+// Includes both PENDING ("New Approval") and ON_HOLD rows — the Customer
+// Registrations screen toggles between the two buckets client-side rather
+// than making two requests.
 export async function listPendingRegistrations() {
   return prisma.store.findMany({
-    where: { registrationStatus: 'PENDING' },
+    where: { registrationStatus: { in: ['PENDING', 'ON_HOLD'] } },
     orderBy: { registrationSubmittedAt: 'desc' },
     select: {
       id: true, name: true, slug: true, email: true, city: true,
       ownerName: true, ownerPhone: true,
       addressStreet: true, addressCity: true, addressState: true, addressPincode: true, addressLandmark: true,
-      registrationSubmittedAt: true, registrationOnHoldAt: true, registrationHoldNote: true,
+      registrationSubmittedAt: true, registrationStatus: true,
     },
   });
 }
 
-/** Park a pending registration on the "On Hold" list (status stays PENDING). */
-export async function holdRegistration(storeId: string, note: string | null) {
-  const store = await prisma.store.findFirst({ where: { id: storeId, registrationStatus: 'PENDING' }, select: { id: true } });
+export async function holdRegistration(storeId: string) {
+  const store = await prisma.store.findFirst({ where: { id: storeId, registrationStatus: 'PENDING' } });
   if (!store) return null;
   return prisma.store.update({
     where: { id: storeId },
-    data: { registrationOnHoldAt: new Date(), registrationHoldNote: note },
-    select: { id: true, name: true, registrationOnHoldAt: true, registrationHoldNote: true },
+    data: { registrationStatus: 'ON_HOLD' },
+    select: { id: true, name: true, registrationStatus: true },
   });
 }
 
-/** Move a held registration back to the normal Pending list. */
 export async function unholdRegistration(storeId: string) {
-  const store = await prisma.store.findFirst({ where: { id: storeId, registrationStatus: 'PENDING' }, select: { id: true } });
+  const store = await prisma.store.findFirst({ where: { id: storeId, registrationStatus: 'ON_HOLD' } });
   if (!store) return null;
   return prisma.store.update({
     where: { id: storeId },
-    data: { registrationOnHoldAt: null, registrationHoldNote: null },
-    select: { id: true, name: true },
+    data: { registrationStatus: 'PENDING' },
+    select: { id: true, name: true, registrationStatus: true },
   });
 }
 
 export async function approveRegistration(manufacturerId: string, storeId: string) {
-  const store = await prisma.store.findFirst({ where: { id: storeId, registrationStatus: 'PENDING' } });
+  const store = await prisma.store.findFirst({ where: { id: storeId, registrationStatus: { in: ['PENDING', 'ON_HOLD'] } } });
   if (!store) return null;
   // Login credentials are set on approval: email (already the username) +
   // mobile number as the password — no password was collected at registration.
@@ -87,8 +88,6 @@ export async function approveRegistration(manufacturerId: string, storeId: strin
     data: {
       registrationStatus: 'APPROVED',
       registrationReviewedAt: new Date(),
-      registrationOnHoldAt: null,
-      registrationHoldNote: null,
       manufacturerId,
       isActive: true,
       passwordHash,
@@ -104,11 +103,11 @@ export async function approveRegistration(manufacturerId: string, storeId: strin
 }
 
 export async function rejectRegistration(storeId: string) {
-  const store = await prisma.store.findFirst({ where: { id: storeId, registrationStatus: 'PENDING' } });
+  const store = await prisma.store.findFirst({ where: { id: storeId, registrationStatus: { in: ['PENDING', 'ON_HOLD'] } } });
   if (!store) return null;
   return prisma.store.update({
     where: { id: storeId },
-    data: { registrationStatus: 'REJECTED', registrationReviewedAt: new Date(), registrationOnHoldAt: null, registrationHoldNote: null, isActive: false },
+    data: { registrationStatus: 'REJECTED', registrationReviewedAt: new Date(), isActive: false },
     select: { id: true, name: true, registrationStatus: true },
   });
 }
