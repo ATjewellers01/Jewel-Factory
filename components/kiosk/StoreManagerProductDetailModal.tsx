@@ -81,17 +81,19 @@ export function StoreManagerProductDetailModal({
   return (
     <>
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-[#17130f]/65 p-2.5 backdrop-blur-[3px] sm:p-5"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-[#17130f]/65 backdrop-blur-[3px] sm:p-5"
         onClick={onClose}
         role="dialog"
         aria-modal="true"
         aria-label={`${product.designNumber} details`}
       >
-        <div className="flex w-full max-w-[30rem] flex-col items-center gap-2 sm:max-w-[54rem] sm:gap-2.5" onClick={(event) => event.stopPropagation()}>
+        {/* Mobile: a full-screen sheet (no outer gap / rounded corners) so the
+            product photo can use the whole screen width. Desktop: floating card. */}
+        <div className="flex h-full w-full flex-col items-center sm:h-auto sm:max-w-[60rem] sm:gap-2.5" onClick={(event) => event.stopPropagation()}>
           <div
-            className={`relative w-full overflow-hidden rounded-[1.3rem] border border-white/60 bg-[#fdfcf9] shadow-[0_30px_100px_rgba(0,0,0,0.38)] sm:rounded-[1.6rem] ${similar.length > 0 ? 'h-[calc(100dvh-10.5rem)] sm:h-[min(34rem,calc(100dvh-12rem))]' : 'h-[calc(100dvh-1.25rem)] sm:h-[min(34rem,calc(100dvh-2.5rem))]'}`}
+            className={`relative min-h-0 w-full flex-1 overflow-hidden bg-[#fdfcf9] sm:flex-none sm:rounded-[1.6rem] sm:border sm:border-white/60 sm:shadow-[0_30px_100px_rgba(0,0,0,0.38)] ${similar.length > 0 ? 'sm:h-[min(38rem,calc(100dvh-12rem))]' : 'sm:h-[min(38rem,calc(100dvh-2.5rem))]'}`}
           >
-            <button type="button" onClick={onClose} aria-label="Close product details" className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-[#211b16]/75 text-white shadow-lg backdrop-blur-md transition hover:rotate-90 hover:bg-[#211b16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d2a84a] focus-visible:ring-offset-2 sm:right-5 sm:top-5"><X className="h-5 w-5" /></button>
+            <button type="button" onClick={onClose} aria-label="Close product details" className="absolute right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-[#211b16]/75 text-white shadow-lg backdrop-blur-md transition hover:rotate-90 hover:bg-[#211b16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d2a84a] focus-visible:ring-offset-2 sm:right-5 sm:top-5"><X className="h-5 w-5" /></button>
 
             {/* Mobile: each design is one naturally tall page (image → specs → actions)
                 and the whole card scrolls once — no nested scroll area, so reading the
@@ -124,8 +126,8 @@ export function StoreManagerProductDetailModal({
               scroll-snap stack above. Tapping a thumbnail smooth-scrolls the
               box above to that design. */}
           {similar.length > 0 ? (
-            <div className="w-full rounded-2xl border border-white/50 bg-[#211b16]/90 p-2.5 shadow-[0_18px_50px_rgba(0,0,0,0.3)] backdrop-blur-md sm:p-3">
-              <div className="mb-2 flex items-center justify-between px-0.5">
+            <div className="w-full shrink-0 bg-[#211b16] px-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.3)] backdrop-blur-md sm:rounded-2xl sm:border sm:border-white/50 sm:bg-[#211b16]/90 sm:p-3">
+              <div className="mb-1 flex items-center justify-between px-0.5 sm:mb-2">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#f0d99a]">Similar designs</span>
                 <span className="flex items-center gap-1 text-[10px] text-white/60"><ArrowLeftRight className="h-3 w-3" /> Scroll for more</span>
               </div>
@@ -140,14 +142,14 @@ export function StoreManagerProductDetailModal({
                         type="button"
                         onClick={() => jumpTo(candidate.id)}
                         aria-label={`Scroll to ${candidate.designNumber}`}
-                        className="w-16 shrink-0 snap-start overflow-hidden rounded-xl border-2 border-transparent bg-white text-left transition-colors hover:border-[#c9a84c] sm:w-20"
+                        className="w-14 shrink-0 snap-start overflow-hidden rounded-xl border-2 border-transparent bg-white text-left transition-colors hover:border-[#c9a84c] sm:w-20"
                       >
                         <div className="relative aspect-square bg-[#ece5da]">
                           {img ? (
-                            <Image src={img.secureUrl} alt={candidate.designNumber} fill className="object-cover" />
+                            <Image src={img.secureUrl} alt={candidate.designNumber} fill sizes="80px" className="object-cover" />
                           ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-4 w-4" /></div>}
                         </div>
-                        <p className="truncate px-1 py-1 text-[10px] font-medium text-[#3d3529]">{candidate.designNumber}</p>
+                        <p className="truncate px-1 py-0.5 text-[10px] sm:py-1 font-medium text-[#3d3529]">{candidate.designNumber}</p>
                       </button>
                     );
                   })}
@@ -218,13 +220,16 @@ function ProductBlock({
   const openZoom = () => onZoom({ images: product.images.map((image) => image.secureUrl), index: Math.max(0, product.images.indexOf(selectedImage!)) });
 
   return (
-    <article className="flex flex-1 flex-col bg-[#fdfcf9] sm:grid sm:h-full sm:min-h-0 sm:grid-cols-[0.96fr_1.04fr]">
-      <div className="flex h-[45dvh] min-h-60 shrink-0 flex-col bg-[#ede5d8] p-2 sm:h-full sm:min-h-0 sm:border-r sm:border-[#d8c8aa]/55 sm:p-3.5 lg:p-4">
-        <div className="flex min-h-0 flex-1 items-center justify-center">
-          <div className="relative aspect-square h-full max-w-full overflow-hidden rounded-[1.1rem]">
+    <article className="flex flex-1 flex-col bg-[#fdfcf9] sm:grid sm:h-full sm:min-h-0 sm:grid-cols-2 md:grid-cols-[1.15fr_0.85fr]">
+      <div className="flex shrink-0 flex-col bg-[#ede5d8] sm:h-full sm:min-h-0 sm:border-r sm:border-[#d8c8aa]/55 sm:p-3.5 lg:p-4">
+        {/* Mobile: edge-to-edge photo, as tall as the screen width (capped at 65%
+            of the screen height) — a square catalogue photo fills the full width.
+            object-contain everywhere, so the design is never cropped. */}
+        <div className="flex h-[min(100vw,65dvh)] items-center justify-center sm:h-auto sm:min-h-0 sm:flex-1">
+          <div className="relative h-full w-full overflow-hidden sm:aspect-square sm:w-auto sm:max-w-full sm:rounded-[1.1rem]">
             {selectedImage ? (
               <button type="button" onClick={openZoom} aria-label="Open zoom view" className="group absolute inset-0 cursor-zoom-in">
-                <Image src={selectedImage.secureUrl} alt={product.designNumber} fill sizes="(min-width: 640px) 420px, 92vw" className="object-contain transition duration-500 group-hover:scale-[1.015]" />
+                <Image src={selectedImage.secureUrl} alt={product.designNumber} fill sizes="(min-width: 640px) 560px, 100vw" className="object-contain transition duration-500 group-hover:scale-[1.015]" />
                 <span className="pointer-events-none absolute bottom-2.5 left-2.5 flex items-center gap-1.5 rounded-full border border-white/40 bg-white/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6f5731] shadow-sm backdrop-blur-md">
                   <Maximize2 className="h-3 w-3" />Tap to zoom
                 </span>
@@ -233,7 +238,7 @@ function ProductBlock({
           </div>
         </div>
         {product.images.length > 1 ? (
-          <div className="mt-2 flex shrink-0 justify-center gap-2 overflow-x-auto pb-0.5">
+          <div className="flex shrink-0 justify-center gap-2 overflow-x-auto px-2 py-2 sm:mt-2 sm:px-0 sm:pb-0.5 sm:pt-0">
             {product.images.map((image, index) => (
               <button key={image.secureUrl} type="button" onClick={() => setImageIndex(index)} aria-label={`View image ${index + 1}`} className={`relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg border-2 bg-white transition-colors sm:h-12 sm:w-12 ${index === imageIndex ? 'border-primary' : 'border-transparent hover:border-primary/40'}`}>
                 <Image src={image.secureUrl} alt="" fill sizes="48px" className="object-cover" />
