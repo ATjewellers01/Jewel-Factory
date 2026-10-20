@@ -20,6 +20,7 @@ enum RegistrationStatus {
   PENDING
   APPROVED
   REJECTED
+  ON_HOLD
 }
 
 enum ResetRole {
@@ -364,7 +365,7 @@ model ManufacturerProductEmbedding {
   embeddingModel String              @map("embedding_model")
   dimensions     Int
   imageUrl       String?             @map("image_url")
-  vector         Unsupported("vector(512)")? @map("embedding")
+  vector         Unsupported("text")? @map("embedding")
   metadata       Json?
   indexedAt      DateTime            @default(now()) @map("indexed_at")
 

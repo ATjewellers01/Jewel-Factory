@@ -1,6 +1,19 @@
 'use client';
 
-import { ArrowLeftRight, ChevronLeft, ChevronRight, Gem, Maximize2, RotateCcw, Sparkles, X, ZoomIn, ZoomOut } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Gem,
+  Maximize2,
+  RotateCcw,
+  Sparkles,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -42,12 +55,16 @@ export function StoreManagerProductDetailModal({
   primaryAction: (product: StoreManagerProduct) => ReactNode;
   tryOnBack: string;
 }) {
+  const [activeProduct, setActiveProduct] = useState<StoreManagerProduct>(product);
+  const [imageIndex, setImageIndex] = useState(0);
   const [zoom, setZoom] = useState<ZoomState | null>(null);
-  // Per-design DOM nodes inside the vertical scroll-snap stack, so the
-  // horizontal thumbnail strip below can jump the vertical scroll position
-  // to any design — both ways of browsing stay available together, neither
-  // replaces the other.
-  const blockRefs = useRef(new Map<string, HTMLDivElement>());
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Sync active product when prop changes
+  useEffect(() => {
+    setActiveProduct(product);
+    setImageIndex(0);
+  }, [product]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -64,97 +81,319 @@ export function StoreManagerProductDetailModal({
     };
   }, [onClose, zoom]);
 
+  const selectedImage = activeProduct.images[imageIndex] ?? activeProduct.images[0];
+
+  const studded = Boolean(activeProduct.grossWeightGrams || activeProduct.netWeightGrams);
+  const formattedWeight = formatWeight(activeProduct.weightGrams);
+  const formattedGross = formatWeight(activeProduct.grossWeightGrams ?? null);
+  const formattedNet = formatWeight(activeProduct.netWeightGrams ?? null);
+
+  const specs: { label: string; value: string }[] = [];
+  if (activeProduct.purity) specs.push({ label: 'Purity', value: activeProduct.purity });
+  if (studded) {
+    if (formattedGross) specs.push({ label: 'Gross Weight', value: formattedGross });
+    if (formattedNet) specs.push({ label: 'Net Weight', value: formattedNet });
+  } else if (formattedWeight) {
+    specs.push({ label: 'Weight', value: formattedWeight });
+  }
+  if (activeProduct.size) specs.push({ label: 'Size', value: activeProduct.size });
+
+  const rawExpectedDate = activeProduct.expectedDate?.trim();
+  const formattedOrderTime = rawExpectedDate
+    ? /days?/i.test(rawExpectedDate)
+      ? rawExpectedDate.toUpperCase()
+      : `${rawExpectedDate.toUpperCase()} DAYS`
+    : null;
+
+  // Full taxonomy path — Category · Sub-category · Sub-category 2.
+  const categoryPath = [activeProduct.category, activeProduct.subCategory, activeProduct.subCategory2].filter(
+    (part): part is string => Boolean(part && part.trim())
+  );
+  const categoryRows = [
+    { label: 'Category', value: activeProduct.category },
+    { label: 'Sub-category', value: activeProduct.subCategory },
+    { label: 'Type', value: activeProduct.subCategory2 },
+  ].filter((row): row is { label: string; value: string } => Boolean(row.value && row.value.trim()));
+
   const similar = products
-    .filter((candidate) => candidate.id !== product.id && (
-      (product.subCategory && candidate.subCategory === product.subCategory) ||
-      (product.category && candidate.category === product.category)
-    ))
+    .filter(
+      (candidate) =>
+        candidate.id !== activeProduct.id &&
+        ((activeProduct.subCategory && candidate.subCategory === activeProduct.subCategory) ||
+          (activeProduct.category && candidate.category === activeProduct.category))
+    )
     .sort((a, b) => {
-      const aSub = product.subCategory && a.subCategory === product.subCategory ? 0 : 1;
-      const bSub = product.subCategory && b.subCategory === product.subCategory ? 0 : 1;
+      const aSub = activeProduct.subCategory && a.subCategory === activeProduct.subCategory ? 0 : 1;
+      const bSub = activeProduct.subCategory && b.subCategory === activeProduct.subCategory ? 0 : 1;
       return aSub - bSub;
     })
-    .slice(0, 6);
+    .slice(0, 10);
 
-  const jumpTo = (id: string) => blockRefs.current.get(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const openZoom = () =>
+    setZoom({
+      images: activeProduct.images.map((img) => img.secureUrl),
+      index: Math.max(0, activeProduct.images.indexOf(selectedImage!)),
+    });
+
+  const selectCandidate = (candidate: StoreManagerProduct) => {
+    setActiveProduct(candidate);
+    setImageIndex(0);
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <>
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-[#17130f]/65 p-2.5 backdrop-blur-[3px] sm:p-5"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-[#17130f]/75 p-2 backdrop-blur-[4px] sm:p-5"
         onClick={onClose}
         role="dialog"
         aria-modal="true"
-        aria-label={`${product.designNumber} details`}
+        aria-label={`${activeProduct.designNumber} details`}
       >
-        <div className="flex w-full max-w-[30rem] flex-col items-center gap-2 sm:max-w-[54rem] sm:gap-2.5" onClick={(event) => event.stopPropagation()}>
-          <div
-            className={`relative w-full overflow-hidden rounded-[1.3rem] border border-white/60 bg-[#fdfcf9] shadow-[0_30px_100px_rgba(0,0,0,0.38)] sm:rounded-[1.6rem] ${similar.length > 0 ? 'h-[calc(100dvh-10.5rem)] sm:h-[min(34rem,calc(100dvh-12rem))]' : 'h-[calc(100dvh-1.25rem)] sm:h-[min(34rem,calc(100dvh-2.5rem))]'}`}
+        <div
+          className="relative flex h-[calc(100dvh-1rem)] w-full max-w-[28rem] flex-col overflow-hidden rounded-[1.3rem] border border-white/60 bg-[#fdfcf9] shadow-[0_30px_100px_rgba(0,0,0,0.42)] sm:h-[min(38rem,calc(100dvh-3rem))] sm:max-w-[54rem] sm:rounded-[1.6rem]"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {/* Close button - floating top-right */}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close product details"
+            className="absolute right-3 top-3 z-30 flex h-9 w-9 items-center justify-center rounded-full border border-white/30 bg-[#211b16]/75 text-white shadow-lg backdrop-blur-md transition hover:rotate-90 hover:bg-[#211b16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d2a84a] sm:right-5 sm:top-5 sm:h-10 sm:w-10"
           >
-            <button type="button" onClick={onClose} aria-label="Close product details" className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-[#211b16]/75 text-white shadow-lg backdrop-blur-md transition hover:rotate-90 hover:bg-[#211b16] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d2a84a] focus-visible:ring-offset-2 sm:right-5 sm:top-5"><X className="h-5 w-5" /></button>
+            <X className="h-5 w-5" />
+          </button>
 
-            {/* Mobile: each design is one naturally tall page (image → specs → actions)
-                and the whole card scrolls once — no nested scroll area, so reading the
-                specs never jumps to the next design. Proximity snap only settles at a
-                design's start when you're already near it. Desktop keeps one full-height
-                two-column panel per design with a mandatory snap. */}
-            <div
-              className="h-full snap-y snap-proximity overflow-y-auto overscroll-contain scrollbar-auto [scrollbar-color:#c9a84c_#ece5d8] sm:snap-mandatory [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#c9a84c] [&::-webkit-scrollbar-track]:bg-[#ece5d8]"
-            >
-              <div ref={(el) => { if (el) blockRefs.current.set(product.id, el); }} className="flex min-h-full snap-start flex-col sm:h-full sm:snap-always">
-                <ProductBlock product={product} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
+          {/* Main Content Area: Responsive Split (Desktop 2-col, Mobile unified vertical scroll) */}
+          <div
+            ref={scrollContainerRef}
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain [scrollbar-color:#c9a84c_#ece5d8] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#c9a84c] [&::-webkit-scrollbar-track]:bg-[#ece5d8] sm:grid sm:grid-cols-[0.96fr_1.04fr] sm:overflow-hidden"
+          >
+            {/* ── 1. Full-Screen Image Section (Full View initially on mobile, Left column on desktop) ── */}
+            <div className="relative flex h-[calc(100dvh-5.25rem)] min-h-[calc(100dvh-5.25rem)] w-full shrink-0 flex-col justify-between bg-[#f4eee5] p-2.5 sm:h-full sm:min-h-0 sm:border-r sm:border-[#d8c8aa]/55 sm:p-4">
+              <div className="flex min-h-0 flex-1 w-full items-center justify-center p-1 sm:p-2">
+                <div className="relative h-full w-full max-h-full max-w-full overflow-hidden rounded-[1.1rem]">
+                  {selectedImage ? (
+                    <button
+                      type="button"
+                      onClick={openZoom}
+                      aria-label="Open zoom view"
+                      className="group absolute inset-0 cursor-zoom-in"
+                    >
+                      <Image
+                        src={selectedImage.secureUrl}
+                        alt={activeProduct.designNumber}
+                        fill
+                        priority
+                        sizes="(min-width: 640px) 420px, 95vw"
+                        className="object-contain transition duration-500 group-hover:scale-[1.015]"
+                      />
+                      <span className="pointer-events-none absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full border border-white/50 bg-white/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6f5731] shadow-sm backdrop-blur-md">
+                        <Maximize2 className="h-3 w-3" />
+                        Tap to zoom
+                      </span>
+                    </button>
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-muted-foreground/40">
+                      <Gem className="h-10 w-10" />
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {similar.length > 0 ? (
-                <div className="border-t border-[#d8c8aa]/55 bg-[#f3ece0] px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-[#8a6a2e] sm:hidden">
-                  Similar designs
+              {/* Multiple photo selector */}
+              {activeProduct.images.length > 1 ? (
+                <div className="mt-1 flex shrink-0 justify-center gap-1.5 overflow-x-auto pb-0.5">
+                  {activeProduct.images.map((image, index) => (
+                    <button
+                      key={image.secureUrl}
+                      type="button"
+                      onClick={() => setImageIndex(index)}
+                      aria-label={`View image ${index + 1}`}
+                      className={`relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg border-2 bg-white transition-colors sm:h-11 sm:w-11 ${
+                        index === imageIndex ? 'border-[#b48228]' : 'border-transparent hover:border-[#b48228]/40'
+                      }`}
+                    >
+                      <Image src={image.secureUrl} alt="" fill sizes="44px" className="object-cover" />
+                    </button>
+                  ))}
                 </div>
               ) : null}
 
-              {similar.map((candidate) => (
-                <div key={candidate.id} ref={(el) => { if (el) blockRefs.current.set(candidate.id, el); }} className="flex min-h-full snap-start flex-col border-t border-[#d8c8aa]/55 sm:h-full sm:snap-always">
-                  <ProductBlock product={candidate} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
+              {/* Mobile visual cue to scroll down for details */}
+              <div className="mt-1 flex shrink-0 items-center justify-center gap-1.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#8a6a2e] sm:hidden animate-bounce">
+                <span>Scroll for details</span>
+                <ChevronDown className="h-3.5 w-3.5" />
+              </div>
+            </div>
+
+            {/* ── 2 & 3. Product Details Section (Scroll-based: revealed when user scrolls down) ── */}
+            <div className="flex flex-1 flex-col bg-[#fdfcf9] sm:h-full sm:min-h-0 sm:overflow-hidden">
+              <div className="flex-1 px-4 pt-3.5 pb-28 sm:overflow-y-auto sm:px-5 sm:pt-5 sm:pb-4 md:px-6">
+                {/* Header: Category, Design ID & Estimated Order Time */}
+                <div className="border-b border-[#ece4d7] pb-2 pr-12 sm:pr-0">
+                  <p className="truncate text-[9.5px] font-semibold uppercase tracking-[0.14em] text-[#b48228]">
+                    {categoryPath.length ? categoryPath.join(' · ') : 'Jewellery'}
+                  </p>
+                  <h2 className="mt-0.5 font-display text-base font-bold leading-tight text-[#211b16] sm:text-lg">
+                    Design {activeProduct.designNumber}
+                  </h2>
+                  {formattedOrderTime ? (
+                    <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-md border border-[#e8dfd1] bg-[#fcfaf6] px-2 py-0.5 text-[10.5px] text-[#6b5836]">
+                      <Clock className="h-3.5 w-3.5 shrink-0 text-[#b48228]" />
+                      <span className="font-medium text-[#7c694a]">Estimated Order Time:</span>
+                      <span className="font-bold uppercase tracking-wide text-[#8a6318]">
+                        {formattedOrderTime}
+                      </span>
+                    </div>
+                  ) : null}
                 </div>
-              ))}
+
+                {/* Compact Specs Grid (Purity, Gross Weight, Net Weight in a single sleek row) */}
+                {specs.length > 0 ? (
+                  <div
+                    className={`mt-2 grid overflow-hidden rounded-xl border border-[#ded3c3] bg-white shadow-xs ${
+                      specs.length === 1
+                        ? 'grid-cols-1'
+                        : specs.length === 2
+                        ? 'grid-cols-2 divide-x divide-[#ece4d7]'
+                        : specs.length === 3
+                        ? 'grid-cols-3 divide-x divide-[#ece4d7]'
+                        : 'grid-cols-4 divide-x divide-[#ece4d7]'
+                    }`}
+                  >
+                    {specs.map((spec) => (
+                      <div key={spec.label} className="min-w-0 px-2 py-1.5 text-center">
+                        <span className="block truncate text-[8.5px] font-semibold uppercase tracking-[0.1em] text-[#978b7f]">
+                          {spec.label}
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs font-bold text-[#29231e] sm:text-[13px]">
+                          {spec.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                {/* Category / Sub-category / Type (Compact badges) */}
+                {categoryRows.length > 0 ? (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {categoryRows.map((row) => (
+                      <span
+                        key={row.label}
+                        className="inline-flex items-center gap-1 rounded-md border border-[#ded3c3]/70 bg-white/70 px-1.5 py-0.5 text-[9.5px] text-[#6f665e]"
+                      >
+                        <span className="font-semibold uppercase text-[#978b7f]">{row.label}:</span>
+                        <span className="font-medium text-[#29231e]">{row.value}</span>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+
+                {/* Description */}
+                {activeProduct.description && activeProduct.description.trim().length >= 4 ? (
+                  <p className="mt-1.5 text-[11px] leading-relaxed text-[#6f665e]">
+                    {activeProduct.description}
+                  </p>
+                ) : null}
+
+                {/* ── 5. Similar Designs (Below product details, dark luxury styling) ── */}
+                {similar.length > 0 ? (
+                  <div className="mt-3.5 rounded-2xl border border-[#3d3327] bg-[#1a1511] p-2.5 text-white shadow-md sm:mt-4 sm:p-3">
+                    <div className="mb-2 flex items-center justify-between px-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10.5px] font-bold uppercase tracking-[0.15em] text-[#edd592]">
+                          Similar Designs
+                        </span>
+                        <span className="rounded-full bg-white/10 px-1.5 py-0.2 text-[8.5px] font-semibold text-[#edd592]">
+                          {similar.length}
+                        </span>
+                      </div>
+                      <span className="flex items-center gap-1 text-[9.5px] text-white/50">
+                        <ArrowLeftRight className="h-3 w-3" /> Scroll for more
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2 overflow-x-auto pb-1 pt-0.5 no-scrollbar snap-x">
+                      {similar.map((candidate) => {
+                        const img = candidate.images.find((i) => i.isPrimary) ?? candidate.images[0];
+                        return (
+                          <button
+                            key={candidate.id}
+                            type="button"
+                            onClick={() => selectCandidate(candidate)}
+                            aria-label={`View ${candidate.designNumber}`}
+                            className="group w-20 shrink-0 snap-start overflow-hidden rounded-xl border border-white/20 bg-white text-center shadow-xs transition hover:border-[#c9a84c] sm:w-22"
+                          >
+                            <div className="relative aspect-square bg-[#f3ede5] overflow-hidden">
+                              {img ? (
+                                <Image
+                                  src={img.secureUrl}
+                                  alt={candidate.designNumber}
+                                  fill
+                                  sizes="88px"
+                                  className="object-cover transition duration-300 group-hover:scale-105"
+                                />
+                              ) : (
+                                <div className="flex h-full items-center justify-center text-muted-foreground/40">
+                                  <Gem className="h-4 w-4" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="px-1 py-1 bg-white">
+                              <p className="truncate text-[10px] font-bold text-[#211b16] group-hover:text-[#b48228]">
+                                {candidate.designNumber}
+                              </p>
+                              <p className="truncate text-[9px] text-[#8a6a2e]">
+                                {candidate.purity ?? (candidate.weightGrams ? `${candidate.weightGrams}g` : candidate.category)}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Extra spacer on mobile so scrolling content never gets cut off by fixed Add button */}
+                <div className="h-24 shrink-0 sm:hidden" />
+              </div>
+
+              {/* ── Desktop Pinned Footer (+ Add button pinned at bottom of details column) ── */}
+              <footer className="hidden shrink-0 border-t border-[#e7dfd3] bg-[#fdfcf9]/95 px-5 py-3 shadow-[0_-8px_24px_rgba(73,52,26,0.08)] backdrop-blur-md sm:block md:px-6">
+                <div className="flex flex-row gap-2 [&>*]:min-h-10">
+                  {primaryAction(activeProduct)}
+                  {activeProduct.hasTryon ? (
+                    <Button asChild variant="outline" className="border-primary/40 text-primary">
+                      <Link
+                        href={`/store-manager/try-on?product=${activeProduct.id}&back=${encodeURIComponent(tryOnBack)}`}
+                      >
+                        <Sparkles className="mr-1.5 h-4 w-4" />
+                        Try On
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
+              </footer>
             </div>
           </div>
 
-          {/* Horizontal thumbnail strip — a second, quick way to jump straight
-              to any similar design, alongside (not instead of) the vertical
-              scroll-snap stack above. Tapping a thumbnail smooth-scrolls the
-              box above to that design. */}
-          {similar.length > 0 ? (
-            <div className="w-full rounded-2xl border border-white/50 bg-[#211b16]/90 p-2.5 shadow-[0_18px_50px_rgba(0,0,0,0.3)] backdrop-blur-md sm:p-3">
-              <div className="mb-2 flex items-center justify-between px-0.5">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#f0d99a]">Similar designs</span>
-                <span className="flex items-center gap-1 text-[10px] text-white/60"><ArrowLeftRight className="h-3 w-3" /> Scroll for more</span>
-              </div>
-              <div className="relative">
-                <div aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[#211b16] to-transparent" />
-                <div className="flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory no-scrollbar">
-                  {[product, ...similar].map((candidate) => {
-                    const img = candidate.images.find((i) => i.isPrimary) ?? candidate.images[0];
-                    return (
-                      <button
-                        key={candidate.id}
-                        type="button"
-                        onClick={() => jumpTo(candidate.id)}
-                        aria-label={`Scroll to ${candidate.designNumber}`}
-                        className="w-16 shrink-0 snap-start overflow-hidden rounded-xl border-2 border-transparent bg-white text-left transition-colors hover:border-[#c9a84c] sm:w-20"
-                      >
-                        <div className="relative aspect-square bg-[#ece5da]">
-                          {img ? (
-                            <Image src={img.secureUrl} alt={candidate.designNumber} fill className="object-cover" />
-                          ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-4 w-4" /></div>}
-                        </div>
-                        <p className="truncate px-1 py-1 text-[10px] font-medium text-[#3d3529]">{candidate.designNumber}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+          {/* ── Fixed Mobile Footer (+ Add button fixed at bottom of modal) ── */}
+          <footer className="shrink-0 border-t border-[#e7dfd3] bg-[#fdfcf9]/95 px-3 py-2.5 shadow-[0_-8px_24px_rgba(73,52,26,0.08)] backdrop-blur-md sm:hidden">
+            <div className="flex flex-col gap-1.5 [&>*]:min-h-11">
+              {primaryAction(activeProduct)}
+              {activeProduct.hasTryon ? (
+                <Button asChild variant="outline" className="border-primary/40 text-primary">
+                  <Link
+                    href={`/store-manager/try-on?product=${activeProduct.id}&back=${encodeURIComponent(tryOnBack)}`}
+                  >
+                    <Sparkles className="mr-1.5 h-4 w-4" />
+                    Try On
+                  </Link>
+                </Button>
+              ) : null}
             </div>
-          ) : null}
+          </footer>
         </div>
       </div>
 
@@ -170,140 +409,11 @@ export function StoreManagerProductDetailModal({
   );
 }
 
-/** One design: gallery + specs + description + actions. Used for the opened design
- *  and for every similar design below it, so they look and behave identically. */
-function ProductBlock({
-  product,
-  primaryAction,
-  tryOnBack,
-  onZoom,
-}: {
-  product: StoreManagerProduct;
-  primaryAction: (product: StoreManagerProduct) => ReactNode;
-  tryOnBack: string;
-  onZoom: (zoom: ZoomState) => void;
-}) {
-  const [imageIndex, setImageIndex] = useState(0);
-  const selectedImage = product.images[imageIndex] ?? product.images[0];
-  // Studded (non-Set categories) and every Set-specific Sub-category 2 value
-  // (Antique/Handmade/Casting/Turkish/Temple Set) both store Gross/Net Weight
-  // instead of a single Weight — detect via the data itself rather than
-  // duplicating ProductForm's Set-options list here.
-  const studded = Boolean(product.grossWeightGrams || product.netWeightGrams);
-  const formattedWeight = formatWeight(product.weightGrams);
-  const formattedGross = formatWeight(product.grossWeightGrams ?? null);
-  const formattedNet = formatWeight(product.netWeightGrams ?? null);
-
-  const specs: { label: string; value: string; wide?: boolean }[] = [];
-  if (product.purity) specs.push({ label: 'Purity', value: product.purity });
-  if (studded) {
-    if (formattedGross) specs.push({ label: 'Gross Weight', value: formattedGross });
-    if (formattedNet) specs.push({ label: 'Net Weight', value: formattedNet });
-  } else if (formattedWeight) {
-    specs.push({ label: 'Weight', value: formattedWeight });
-  }
-  if (product.size) specs.push({ label: 'Size', value: product.size });
-  // Odd count → the last half-width spec spans the row so the grid has no hole.
-  if (specs.length % 2 === 1) specs[specs.length - 1]!.wide = true;
-  if (product.expectedDate) specs.push({ label: 'Estimated Order Time', value: product.expectedDate, wide: true });
-
-  // Full taxonomy path — Category › Sub-category › Sub-category 2.
-  const categoryPath = [product.category, product.subCategory, product.subCategory2].filter((part): part is string => Boolean(part && part.trim()));
-  const categoryRows = [
-    { label: 'Category', value: product.category },
-    { label: 'Sub-category', value: product.subCategory },
-    { label: 'Type', value: product.subCategory2 },
-  ].filter((row): row is { label: string; value: string } => Boolean(row.value && row.value.trim()));
-
-  const openZoom = () => onZoom({ images: product.images.map((image) => image.secureUrl), index: Math.max(0, product.images.indexOf(selectedImage!)) });
-
-  return (
-    <article className="flex flex-1 flex-col bg-[#fdfcf9] sm:grid sm:h-full sm:min-h-0 sm:grid-cols-[0.96fr_1.04fr]">
-      <div className="flex h-[45dvh] min-h-60 shrink-0 flex-col bg-[#ede5d8] p-2 sm:h-full sm:min-h-0 sm:border-r sm:border-[#d8c8aa]/55 sm:p-3.5 lg:p-4">
-        <div className="flex min-h-0 flex-1 items-center justify-center">
-          <div className="relative aspect-square h-full max-w-full overflow-hidden rounded-[1.1rem]">
-            {selectedImage ? (
-              <button type="button" onClick={openZoom} aria-label="Open zoom view" className="group absolute inset-0 cursor-zoom-in">
-                <Image src={selectedImage.secureUrl} alt={product.designNumber} fill sizes="(min-width: 640px) 420px, 92vw" className="object-contain transition duration-500 group-hover:scale-[1.015]" />
-                <span className="pointer-events-none absolute bottom-2.5 left-2.5 flex items-center gap-1.5 rounded-full border border-white/40 bg-white/85 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6f5731] shadow-sm backdrop-blur-md">
-                  <Maximize2 className="h-3 w-3" />Tap to zoom
-                </span>
-              </button>
-            ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-10 w-10" /></div>}
-          </div>
-        </div>
-        {product.images.length > 1 ? (
-          <div className="mt-2 flex shrink-0 justify-center gap-2 overflow-x-auto pb-0.5">
-            {product.images.map((image, index) => (
-              <button key={image.secureUrl} type="button" onClick={() => setImageIndex(index)} aria-label={`View image ${index + 1}`} className={`relative h-11 w-11 flex-shrink-0 overflow-hidden rounded-lg border-2 bg-white transition-colors sm:h-12 sm:w-12 ${index === imageIndex ? 'border-primary' : 'border-transparent hover:border-primary/40'}`}>
-                <Image src={image.secureUrl} alt="" fill sizes="48px" className="object-cover" />
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="flex flex-1 flex-col bg-[#fdfcf9] sm:h-full sm:min-h-0">
-        <div className="flex-1 px-4 pb-4 pt-4 sm:min-h-0 sm:overflow-y-auto sm:px-5 sm:pb-5 sm:pt-6 md:px-6 lg:px-8 lg:pt-8">
-          <div className="pr-10">
-            <p className="text-[11px] font-semibold uppercase leading-relaxed tracking-[0.18em] text-[#b48228] sm:text-xs">
-              {categoryPath.length ? categoryPath.join(' · ') : 'Jewellery'}
-            </p>
-            <h2 className="mt-1 font-display text-2xl font-medium leading-tight text-[#211b16] md:text-3xl lg:text-4xl">Design {product.designNumber}</h2>
-          </div>
-
-          {specs.length > 0 ? (
-            <div className="mt-3 grid grid-cols-2 overflow-hidden rounded-xl border border-[#ded3c3] bg-white text-sm shadow-[0_5px_22px_rgba(75,54,28,0.04)] sm:mt-4">
-              {specs.map((spec) => (
-                <Spec key={spec.label} label={spec.label} value={spec.value} wide={spec.wide} />
-              ))}
-            </div>
-          ) : null}
-
-          {categoryRows.length > 0 ? (
-            <dl className="mt-3 divide-y divide-[#ece4d7] overflow-hidden rounded-xl border border-[#ded3c3] bg-white text-sm shadow-[0_5px_22px_rgba(75,54,28,0.04)]">
-              {categoryRows.map((row) => (
-                <div key={row.label} className="flex items-baseline justify-between gap-4 px-3.5 py-2.5 lg:px-4">
-                  <dt className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#978b7f]">{row.label}</dt>
-                  <dd className="min-w-0 break-words text-right font-medium text-[#29231e]">{row.value}</dd>
-                </div>
-              ))}
-            </dl>
-          ) : null}
-
-          {product.description && product.description.trim().length >= 4 ? <p className="mt-3 text-sm leading-6 text-[#6f665e] sm:mt-4 lg:text-base lg:leading-7">{product.description}</p> : null}
-        </div>
-
-        {/* Sticky on mobile so Add stays reachable while the whole card scrolls. */}
-        <footer className="sticky bottom-0 z-10 shrink-0 border-t border-[#e7dfd3] bg-[#fdfcf9]/95 px-3 py-2 shadow-[0_-10px_28px_rgba(73,52,26,0.06)] backdrop-blur sm:static sm:px-5 sm:py-3 md:px-6 lg:px-8">
-          <div className="flex flex-col gap-1.5 [&>*]:min-h-12 sm:flex-row sm:gap-2 sm:[&>*]:min-h-10">
-            {primaryAction(product)}
-            {product.hasTryon ? (
-              <Button asChild variant="outline" className="border-primary/40 text-primary">
-                <Link href={`/store-manager/try-on?product=${product.id}&back=${encodeURIComponent(tryOnBack)}`}><Sparkles className="mr-1.5 h-4 w-4" />Try On</Link>
-              </Button>
-            ) : null}
-          </div>
-        </footer>
-      </div>
-    </article>
-  );
-}
-
-function Spec({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
-  return (
-    <div className={`min-w-0 border-b border-r border-[#e7dfd3] px-3.5 py-2.5 lg:px-4 lg:py-3 ${wide ? 'col-span-2' : ''}`}>
-      <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-[#978b7f]">{label}</span>
-      <span className="mt-1 block break-words text-[15px] font-medium leading-snug text-[#29231e]">{value}</span>
-    </div>
-  );
-}
-
 const MIN_SCALE = 1;
 const MAX_SCALE = 5;
 const DOUBLE_TAP_SCALE = 2.5;
 
-/** Full-screen image viewer: pinch / wheel / +− / double-tap zoom, drag to pan,
+/** Full-screen image viewer: pinch / wheel / +/- / double-tap zoom, drag to pan,
  *  swipe or arrows between a design's photos. No external gesture library. */
 function ImageZoomViewer({
   images,
@@ -320,7 +430,15 @@ function ImageZoomViewer({
   const [view, setView] = useState({ scale: 1, x: 0, y: 0 });
   const [gesturing, setGesturing] = useState(false);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const gesture = useRef<{ startDist: number; startScale: number; lastMid: { x: number; y: number }; startX: number; startY: number; moved: boolean; startedAt: number } | null>(null);
+  const gesture = useRef<{
+    startDist: number;
+    startScale: number;
+    lastMid: { x: number; y: number };
+    startX: number;
+    startY: number;
+    moved: boolean;
+    startedAt: number;
+  } | null>(null);
   const lastTap = useRef(0);
 
   const clampView = useCallback((scale: number, x: number, y: number) => {
@@ -332,24 +450,30 @@ function ImageZoomViewer({
     return { scale: s, x: Math.min(maxX, Math.max(-maxX, x)), y: Math.min(maxY, Math.max(-maxY, y)) };
   }, []);
 
-  const zoomBy = useCallback((factor: number) => {
-    setView((v) => clampView(v.scale * factor, v.x * factor, v.y * factor));
-  }, [clampView]);
+  const zoomBy = useCallback(
+    (factor: number) => {
+      setView((v) => clampView(v.scale * factor, v.x * factor, v.y * factor));
+    },
+    [clampView]
+  );
 
-  const go = useCallback((delta: number) => {
-    if (images.length < 2) return;
-    onIndexChange((index + delta + images.length) % images.length);
-  }, [images.length, index, onIndexChange]);
+  const go = useCallback(
+    (delta: number) => {
+      if (images.length < 2) return;
+      onIndexChange((index + delta + images.length) % images.length);
+    },
+    [images.length, index, onIndexChange]
+  );
 
-  // Fresh photo → fresh zoom.
+  // Fresh photo -> fresh zoom.
   useEffect(() => setView({ scale: 1, x: 0, y: 0 }), [index]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'ArrowRight') go(1);
       else if (event.key === 'ArrowLeft') go(-1);
-      else if (event.key === '+' || event.key === '=') zoomBy(1.4);
-      else if (event.key === '-') zoomBy(1 / 1.4);
+      else if (event.key === '+' || event.key === '=') zoomBy(1.3);
+      else if (event.key === '-') zoomBy(1 / 1.3);
       else if (event.key === '0') setView({ scale: 1, x: 0, y: 0 });
     };
     window.addEventListener('keydown', onKeyDown);
@@ -371,7 +495,11 @@ function ImageZoomViewer({
 
   const midpoint = () => {
     const pts = [...pointers.current.values()];
-    return { x: (pts[0]!.x + pts[1]!.x) / 2, y: (pts[0]!.y + pts[1]!.y) / 2, dist: Math.hypot(pts[0]!.x - pts[1]!.x, pts[0]!.y - pts[1]!.y) };
+    return {
+      x: (pts[0]!.x + pts[1]!.x) / 2,
+      y: (pts[0]!.y + pts[1]!.y) / 2,
+      dist: Math.hypot(pts[0]!.x - pts[1]!.x, pts[0]!.y - pts[1]!.y),
+    };
   };
 
   const onPointerDown = (event: React.PointerEvent) => {
@@ -380,9 +508,25 @@ function ImageZoomViewer({
     setGesturing(true);
     if (pointers.current.size === 2) {
       const mid = midpoint();
-      gesture.current = { startDist: mid.dist, startScale: view.scale, lastMid: mid, startX: mid.x, startY: mid.y, moved: true, startedAt: Date.now() };
+      gesture.current = {
+        startDist: mid.dist,
+        startScale: view.scale,
+        lastMid: mid,
+        startX: mid.x,
+        startY: mid.y,
+        moved: true,
+        startedAt: Date.now(),
+      };
     } else if (pointers.current.size === 1) {
-      gesture.current = { startDist: 0, startScale: view.scale, lastMid: { x: event.clientX, y: event.clientY }, startX: event.clientX, startY: event.clientY, moved: false, startedAt: Date.now() };
+      gesture.current = {
+        startDist: 0,
+        startScale: view.scale,
+        lastMid: { x: event.clientX, y: event.clientY },
+        startX: event.clientX,
+        startY: event.clientY,
+        moved: false,
+        startedAt: Date.now(),
+      };
     }
   };
 
@@ -415,7 +559,10 @@ function ImageZoomViewer({
     if (pointers.current.size > 0) {
       // One finger lifted mid-pinch — continue as a pan from the remaining finger.
       const [remaining] = [...pointers.current.values()];
-      if (g && remaining) { g.lastMid = remaining; g.startDist = 0; }
+      if (g && remaining) {
+        g.lastMid = remaining;
+        g.startDist = 0;
+      }
       return;
     }
     setGesturing(false);
@@ -448,21 +595,35 @@ function ImageZoomViewer({
 
   const src = images[index];
   const zoomed = view.scale > 1;
-  const iconButton = 'flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition hover:bg-white/25 disabled:opacity-35 disabled:hover:bg-white/15';
+  const iconButton =
+    'flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition hover:bg-white/25 disabled:opacity-35 disabled:hover:bg-white/15';
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-black/95" role="dialog" aria-modal="true" aria-label="Zoomed product image" onClick={onClose}>
-      <div className="flex shrink-0 items-center justify-between px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5" onClick={(event) => event.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-[60] flex flex-col bg-black/95"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Zoomed product image"
+      onClick={onClose}
+    >
+      <div
+        className="flex shrink-0 items-center justify-between px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-5"
+        onClick={(event) => event.stopPropagation()}
+      >
         <span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold tabular-nums text-white/85">
           {images.length > 1 ? `${index + 1} / ${images.length}` : `${Math.round(view.scale * 100)}%`}
         </span>
-        <button type="button" onClick={onClose} aria-label="Close zoom view" className={iconButton}><X className="h-5 w-5" /></button>
+        <button type="button" onClick={onClose} aria-label="Close zoom view" className={iconButton}>
+          <X className="h-5 w-5" />
+        </button>
       </div>
 
       <div className="relative min-h-0 flex-1 px-2 sm:px-16">
         <div
           ref={stageRef}
-          className={`relative h-full w-full touch-none select-none overflow-hidden ${zoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
+          className={`relative h-full w-full touch-none select-none overflow-hidden ${
+            zoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'
+          }`}
           onClick={(event) => event.stopPropagation()}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -482,23 +643,82 @@ function ImageZoomViewer({
 
         {images.length > 1 ? (
           <>
-            <button type="button" onClick={(event) => { event.stopPropagation(); go(-1); }} aria-label="Previous image" className={`${iconButton} absolute left-2 top-1/2 hidden -translate-y-1/2 sm:flex`}><ChevronLeft className="h-6 w-6" /></button>
-            <button type="button" onClick={(event) => { event.stopPropagation(); go(1); }} aria-label="Next image" className={`${iconButton} absolute right-2 top-1/2 hidden -translate-y-1/2 sm:flex`}><ChevronRight className="h-6 w-6" /></button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                go(-1);
+              }}
+              aria-label="Previous image"
+              className={`${iconButton} absolute left-2 top-1/2 hidden -translate-y-1/2 sm:flex`}
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                go(1);
+              }}
+              aria-label="Next image"
+              className={`${iconButton} absolute right-2 top-1/2 hidden -translate-y-1/2 sm:flex`}
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
           </>
         ) : null}
       </div>
 
-      <div className="flex shrink-0 flex-col items-center gap-2 px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3" onClick={(event) => event.stopPropagation()}>
+      <div
+        className="flex shrink-0 flex-col items-center gap-2 px-3 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex items-center gap-2">
-          {images.length > 1 ? <button type="button" onClick={() => go(-1)} aria-label="Previous image" className={`${iconButton} sm:hidden`}><ChevronLeft className="h-5 w-5" /></button> : null}
-          <button type="button" onClick={() => zoomBy(1 / 1.4)} disabled={view.scale <= MIN_SCALE} aria-label="Zoom out" className={iconButton}><ZoomOut className="h-5 w-5" /></button>
-          <button type="button" onClick={() => setView({ scale: 1, x: 0, y: 0 })} disabled={!zoomed} aria-label="Reset zoom" className={iconButton}><RotateCcw className="h-5 w-5" /></button>
-          <button type="button" onClick={() => zoomBy(1.4)} disabled={view.scale >= MAX_SCALE} aria-label="Zoom in" className={iconButton}><ZoomIn className="h-5 w-5" /></button>
-          {images.length > 1 ? <button type="button" onClick={() => go(1)} aria-label="Next image" className={`${iconButton} sm:hidden`}><ChevronRight className="h-5 w-5" /></button> : null}
+          {images.length > 1 ? (
+            <button type="button" onClick={() => go(-1)} aria-label="Previous image" className={`${iconButton} sm:hidden`}>
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => zoomBy(1 / 1.4)}
+            disabled={view.scale <= MIN_SCALE}
+            aria-label="Zoom out"
+            className={iconButton}
+          >
+            <ZoomOut className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setView({ scale: 1, x: 0, y: 0 })}
+            disabled={!zoomed}
+            aria-label="Reset zoom"
+            className={iconButton}
+          >
+            <RotateCcw className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => zoomBy(1.4)}
+            disabled={view.scale >= MAX_SCALE}
+            aria-label="Zoom in"
+            className={iconButton}
+          >
+            <ZoomIn className="h-5 w-5" />
+          </button>
+          {images.length > 1 ? (
+            <button type="button" onClick={() => go(1)} aria-label="Next image" className={`${iconButton} sm:hidden`}>
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          ) : null}
         </div>
         <p className="text-center text-[11px] text-white/55">
-          <span className="sm:hidden">Pinch or double-tap to zoom · drag to move{images.length > 1 ? ' · swipe for next photo' : ''}</span>
-          <span className="hidden sm:inline">Scroll or double-click to zoom · drag to move{images.length > 1 ? ' · ← → for next photo' : ''}</span>
+          <span className="sm:hidden">
+            Pinch or double-tap to zoom · drag to move{images.length > 1 ? ' · swipe for next photo' : ''}
+          </span>
+          <span className="hidden sm:inline">
+            Scroll or double-click to zoom · drag to move{images.length > 1 ? ' · ← / → for next photo' : ''}
+          </span>
         </p>
       </div>
     </div>

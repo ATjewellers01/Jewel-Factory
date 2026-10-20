@@ -6,9 +6,9 @@ export default function nextConfig(phase: string): NextConfig {
     reactStrictMode: true,
     distDir: phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next',
     ...(process.env.DOCKER_BUILD === '1' ? { output: 'standalone' as const } : {}),
-    api: {
-      bodyParser: {
-        sizeLimit: '20mb',
+    experimental: {
+      serverActions: {
+        bodySizeLimit: '20mb',
       },
     },
     images: {
