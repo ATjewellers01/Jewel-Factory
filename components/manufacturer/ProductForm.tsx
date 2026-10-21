@@ -11,6 +11,7 @@ import { Required, Optional } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { uploadToObjectStorage } from '@/lib/upload-client';
 import { toFieldErrors } from '@/lib/field-error';
+import { formatWeight3, isWeightInput } from '@/lib/weight-input';
 import { EditableSelect, type TaxonomyOption } from '@/components/manufacturer/EditableSelect';
 import { apiPost } from '@/hooks/use-api';
 
@@ -692,12 +693,12 @@ export function ProductForm({ initial }: { initial?: ProductFormData }) {
               there is no more single Weight field / Plain-Studded switch. */}
           <div>
             <label className="text-xs font-medium text-muted-foreground">Gross Weight (gm)<Optional /></label>
-            <Input className="mt-1" type="number" step="0.001" placeholder="12.5" value={form.grossWeightGrams} onChange={set('grossWeightGrams')} />
+            <Input className="mt-1" type="number" step="0.001" placeholder="12.5" inputMode="decimal" value={form.grossWeightGrams} onChange={(e) => { if (isWeightInput(e.target.value)) set('grossWeightGrams')(e); }} onBlur={(e) => setForm((p) => ({ ...p, grossWeightGrams: formatWeight3(e.target.value) }))} />
             <FieldError errors={toFieldErrors(fieldErrors.grossWeightGrams)} />
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">Net Weight (gm)<Optional /></label>
-            <Input className="mt-1" type="number" step="0.001" placeholder="10.2" value={form.netWeightGrams} onChange={set('netWeightGrams')} />
+            <Input className="mt-1" type="number" step="0.001" placeholder="10.2" inputMode="decimal" value={form.netWeightGrams} onChange={(e) => { if (isWeightInput(e.target.value)) set('netWeightGrams')(e); }} onBlur={(e) => setForm((p) => ({ ...p, netWeightGrams: formatWeight3(e.target.value) }))} />
             <FieldError errors={toFieldErrors(fieldErrors.netWeightGrams)} />
           </div>
           <div>

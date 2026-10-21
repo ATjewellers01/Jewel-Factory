@@ -11,22 +11,12 @@ import { Optional, Required } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { apiPost } from '@/hooks/use-api';
 import { useTaxonomy } from '@/hooks/use-taxonomy';
+import { PAST_DELIVERY_DATE_MESSAGE, isPastDeliveryDate, localTodayIso } from '@/lib/delivery-date';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
+import { formatWeight3, isWeightInput } from '@/lib/weight-input';
 
 const MEENA_OPTIONS = ['Yes', 'No'];
 const SCREW_OPTIONS = ['English', 'Pongli'];
-
-/** Formats a weight input to exactly 3 decimal places on blur (e.g. "20.350"). */
-function formatWeight3(value: string): string {
-  const n = Number(value);
-  return value.trim() && Number.isFinite(n) ? n.toFixed(3) : value;
-}
-
-/** Today's date as YYYY-MM-DD, for the delivery-date input's `min` attribute. */
-function todayIso(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
 
 const MAX_IMAGES = 10;
 
@@ -99,6 +89,8 @@ export default function StoreCustomDesignNewPage() {
     setError(null);
     setSubmitErr(null);
 
+    if (form.deliveryDate && isPastDeliveryDate(form.deliveryDate, localTodayIso())) { setError(PAST_DELIVERY_DATE_MESSAGE); return; }
+    if (!form.purity) { setError('Please choose the melting / purity.'); return; }
     if (images.length === 0) { setError('Please add at least one reference image.'); return; }
 
     const from = form.weightFrom ? Number(form.weightFrom) : undefined;
@@ -177,8 +169,11 @@ export default function StoreCustomDesignNewPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="text-xs font-medium text-muted-foreground">Delivery date<Required /></label>
-              <Input required type="date" min={todayIso()} className="mt-1 h-10" value={form.deliveryDate} onChange={(e) => set('deliveryDate', e.target.value)} />
-              <FieldError errors={toFieldErrors(fieldError(submitErr, 'deliveryDate'))} />
+              <Input required type="date" min={localTodayIso()} className="mt-1 h-10 appearance-none" value={form.deliveryDate} onChange={(e) => set('deliveryDate', e.target.value)} />
+              <FieldError errors={toFieldErrors(
+                (form.deliveryDate && isPastDeliveryDate(form.deliveryDate, localTodayIso()) ? PAST_DELIVERY_DATE_MESSAGE : undefined)
+                ?? fieldError(submitErr, 'deliveryDate'),
+              )} />
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -227,7 +222,7 @@ export default function StoreCustomDesignNewPage() {
                   inputMode="decimal"
                   placeholder="From"
                   value={form.weightFrom}
-                  onChange={(e) => set('weightFrom', e.target.value)}
+                  onChange={(e) => { if (isWeightInput(e.target.value)) set('weightFrom', e.target.value); }}
                   onBlur={(e) => set('weightFrom', formatWeight3(e.target.value))}
                   className="h-10"
                 />
@@ -239,7 +234,7 @@ export default function StoreCustomDesignNewPage() {
                   inputMode="decimal"
                   placeholder="To"
                   value={form.weightTo}
-                  onChange={(e) => set('weightTo', e.target.value)}
+                  onChange={(e) => { if (isWeightInput(e.target.value)) set('weightTo', e.target.value); }}
                   onBlur={(e) => set('weightTo', formatWeight3(e.target.value))}
                   className="h-10"
                 />
@@ -248,8 +243,8 @@ export default function StoreCustomDesignNewPage() {
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'weightGramsMin') ?? fieldError(submitErr, 'weightGramsMax'))} />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground">Melting / purity<Optional /></label>
-              <select className="mt-1 h-10 w-full rounded-lg border border-black/15 bg-white/60 px-3 text-sm" value={form.purity} onChange={(e) => set('purity', e.target.value)}>
+              <label className="text-xs font-medium text-muted-foreground">Melting / purity<Required /></label>
+              <select required className="mt-1 h-10 w-full rounded-lg border border-black/15 bg-white/60 px-3 text-sm" value={form.purity} onChange={(e) => set('purity', e.target.value)}>
                 <option value="">—</option>
                 {taxonomy.purities.map((p) => <option key={p} value={p}>{p}</option>)}
               </select>

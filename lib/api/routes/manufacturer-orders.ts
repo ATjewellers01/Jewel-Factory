@@ -19,6 +19,7 @@ import {
   createO2dOrder, isO2dIntegrationConfigured,
   type O2dDesignSourceItem, type CreateO2dOrderInput,
 } from '@/lib/integrations/o2d';
+import { roundWeight3 } from '@/lib/weight-input';
 import { sendData, sendError } from '../envelope';
 import { manufacturerGuard, type AppEnv } from '../guards';
 import type { OrderStatus, CustomOrderStatus } from '@prisma/client';
@@ -157,15 +158,15 @@ manufacturerOrderRoutes.patch('/custom-designs/:id/karigar-code', jsonValidator(
 // orderStage/orderType are free text for the same reason.
 const KarigarFormBody = z.object({
   category: z.string().min(1).optional(),
-  weightGramsMin: z.number().nullable().optional(),
-  weightGramsMax: z.number().nullable().optional(),
+  weightGramsMin: z.number().transform(roundWeight3).nullable().optional(),
+  weightGramsMax: z.number().transform(roundWeight3).nullable().optional(),
   purity: z.string().nullable().optional(),
   quantity: z.string().nullable().optional(),
   deliveryDate: z.string().nullable().optional(), // ISO date string
   karigarDeliveryDate: z.string().nullable().optional(), // ISO date string
   size: z.string().nullable().optional(),
-  sampleWeightGrams: z.number().nullable().optional(),
-  totalWeightGrams: z.number().nullable().optional(),
+  sampleWeightGrams: z.number().transform(roundWeight3).nullable().optional(),
+  totalWeightGrams: z.number().transform(roundWeight3).nullable().optional(),
   karigarNotes: z.string().nullable().optional(),
   meena: z.string().nullable().optional(),
   length: z.string().nullable().optional(),

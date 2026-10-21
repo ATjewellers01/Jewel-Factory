@@ -18,6 +18,7 @@ import {
 import { signUpload, manufacturerFolder, getPublicBaseUrl } from '@/lib/storage';
 import { getManufacturerDashboard } from '@/lib/db/manufacturer-dashboard';
 import { indexManufacturerProduct } from '@/lib/db/indexing';
+import { roundWeight3 } from '@/lib/weight-input';
 import { sendData, sendError } from '../envelope';
 import { manufacturerGuard, type AppEnv } from '../guards';
 import { jsonValidator } from '../validation';
@@ -100,11 +101,11 @@ const ProductBody = z.object({
   // Deprecated (2026-08-17) — every category now always captures Gross/Net
   // Weight instead (below); kept nullable so it can still be cleared on an
   // older row.
-  weightGrams: z.number().positive().nullish(),
+  weightGrams: z.number().positive().transform(roundWeight3).nullish(),
   // Manually entered, independent of each other. Nullable for the same
   // clear-on-update reason as subCategory2.
-  grossWeightGrams: z.number().positive().nullish(),
-  netWeightGrams: z.number().positive().nullish(),
+  grossWeightGrams: z.number().positive().transform(roundWeight3).nullish(),
+  netWeightGrams: z.number().positive().transform(roundWeight3).nullish(),
   purity: z.string().optional(),
   gemstones: z.array(z.string()).optional(),
   occasionTags: z.array(z.string()).optional(),
@@ -160,8 +161,8 @@ const BulkUpdateBody = z.object({
     subCategory: z.string().optional(),
     subCategory2: z.string().nullish(),
     description: z.string().optional(),
-    grossWeightGrams: z.number().positive().nullish(),
-    netWeightGrams: z.number().positive().nullish(),
+    grossWeightGrams: z.number().positive().transform(roundWeight3).nullish(),
+    netWeightGrams: z.number().positive().transform(roundWeight3).nullish(),
     purity: z.string().optional(),
     size: z.string().max(40).nullish(),
     karigarCode: z.string().nullish(),
