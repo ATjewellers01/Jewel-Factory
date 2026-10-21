@@ -16,6 +16,8 @@ import {
 } from '@/lib/db/custom-design';
 import { listOrderMessages, addOrderMessage } from '@/lib/db/messages';
 import { signUpload, storeFolder } from '@/lib/storage';
+import { PAST_DELIVERY_DATE_MESSAGE, indiaTodayIso, isPastDeliveryDate } from '@/lib/delivery-date';
+import { roundWeight3 } from '@/lib/weight-input';
 import { sendData, sendError } from '../envelope';
 import { managerGuard, approverIdOrNull, type AppEnv } from '../guards';
 
@@ -85,6 +87,9 @@ storeOpsRoutes.get('/kiosk-orders/:id', async (c) => {
 });
 storeOpsRoutes.post('/kiosk-orders/:id/approve', async (c) => {
   const deliveryDate = await optionalDeliveryDate(c);
+  if (deliveryDate && isPastDeliveryDate(deliveryDate.toISOString(), indiaTodayIso())) {
+    return sendError(c, 'bad_request', PAST_DELIVERY_DATE_MESSAGE, 400, { deliveryDate: PAST_DELIVERY_DATE_MESSAGE });
+  }
   const ok = await approveKioskOrder(c.get('storeId'), c.req.param('id'), approverIdOrNull(c), deliveryDate);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, { ok: true });
@@ -115,6 +120,9 @@ storeOpsRoutes.get('/b2b-orders/:id', async (c) => {
 });
 storeOpsRoutes.post('/b2b-orders/:id/approve', async (c) => {
   const deliveryDate = await optionalDeliveryDate(c);
+  if (deliveryDate && isPastDeliveryDate(deliveryDate.toISOString(), indiaTodayIso())) {
+    return sendError(c, 'bad_request', PAST_DELIVERY_DATE_MESSAGE, 400, { deliveryDate: PAST_DELIVERY_DATE_MESSAGE });
+  }
   const ok = await approveB2bOrder(c.get('storeId'), c.req.param('id'), approverIdOrNull(c), deliveryDate);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
   return sendData(c, { ok: true });
@@ -142,21 +150,26 @@ const optionalText = (max: number) => z.preprocess(emptyToUndefined, z.string().
 const StoreCustomBody = z.object({
   category: z.string().min(1),
   subCategory: optionalText(120),
-  weightGramsMin: z.number().positive().optional(),
-  weightGramsMax: z.number().positive().optional(),
-  purity: optionalText(40),
+  weightGramsMin: z.number().positive().transform(roundWeight3).optional(),
+  weightGramsMax: z.number().positive().transform(roundWeight3).optional(),
+  purity: z.string().trim().min(1, 'Choose the melting / purity').max(40),
   designNotes: optionalText(2000),
   referenceImageUrl: z.preprocess(emptyToUndefined, z.string().url().optional()),
   referenceImageUrls: z.array(z.string().url()).max(10).optional(),
   orderRef: optionalText(60),
-  deliveryDate: z.preprocess(emptyToUndefined, z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a valid date').optional()),
+  deliveryDate: z.preprocess(
+    emptyToUndefined,
+    z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a valid date')
+      .refine((v) => !isPastDeliveryDate(v, indiaTodayIso()), PAST_DELIVERY_DATE_MESSAGE)
+      .optional(),
+  ),
   quantity: optionalText(30),
   meena: optionalText(60),
   length: optionalText(60),
   size: optionalText(60),
   broadness: optionalText(60),
   screw: optionalText(60),
-  sampleWeightGrams: z.coerce.number().positive().max(99999).optional(),
+  sampleWeightGrams: z.coerce.number().positive().max(99999).transform(roundWeight3).optional(),
 });
 
 storeOpsRoutes.post('/custom-designs/upload-sign', async (c) => {

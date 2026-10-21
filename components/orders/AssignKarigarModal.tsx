@@ -9,6 +9,7 @@ import { ManufacturerOrderItemModal, type OrderItemProduct } from '@/components/
 import { Button } from '@/components/ui/button';
 import { Optional, Required } from '@/components/ui/field-mark';
 import { useApi } from '@/hooks/use-api';
+import { formatWeight3, isWeightInput } from '@/lib/weight-input';
 
 type O2dCompany = { id: string; name: string };
 type O2dKarigarOption = { id: string; code: string; name: string };
@@ -352,19 +353,19 @@ export function AssignKarigarModal({
             </label>
             <label className="space-y-1">
               <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">From Weight{o2dEnabled ? <Required /> : <Optional />}</span>
-              <input type="number" step="0.001" value={fields.weightFrom} onChange={(e) => set('weightFrom', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
+              <input type="number" step="0.001" inputMode="decimal" value={fields.weightFrom} onChange={(e) => { if (isWeightInput(e.target.value)) set('weightFrom', e.target.value); }} onBlur={(e) => set('weightFrom', formatWeight3(e.target.value))} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
             </label>
             <label className="space-y-1">
               <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">To Weight{o2dEnabled ? <Required /> : <Optional />}</span>
-              <input type="number" step="0.001" value={fields.weightTo} onChange={(e) => set('weightTo', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
+              <input type="number" step="0.001" inputMode="decimal" value={fields.weightTo} onChange={(e) => { if (isWeightInput(e.target.value)) set('weightTo', e.target.value); }} onBlur={(e) => set('weightTo', formatWeight3(e.target.value))} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
             </label>
             <label className="space-y-1">
               <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Total Weight{o2dEnabled ? <Required /> : <Optional />}</span>
-              <input type="number" step="0.001" value={fields.totalWeight} onChange={(e) => set('totalWeight', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
+              <input type="number" step="0.001" inputMode="decimal" value={fields.totalWeight} onChange={(e) => { if (isWeightInput(e.target.value)) set('totalWeight', e.target.value); }} onBlur={(e) => set('totalWeight', formatWeight3(e.target.value))} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
             </label>
             <label className="space-y-1">
               <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Sample Weight<Optional /></span>
-              <input type="number" step="0.001" value={fields.sampleWeight} onChange={(e) => set('sampleWeight', e.target.value)} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
+              <input type="number" step="0.001" inputMode="decimal" value={fields.sampleWeight} onChange={(e) => { if (isWeightInput(e.target.value)) set('sampleWeight', e.target.value); }} onBlur={(e) => set('sampleWeight', formatWeight3(e.target.value))} className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm" />
             </label>
             <label className="space-y-1">
               <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Size<Optional /></span>

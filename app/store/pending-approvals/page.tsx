@@ -11,6 +11,7 @@ import { FieldError } from '@/components/ui/field';
 import { Optional } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { useApi, apiPost, apiSend } from '@/hooks/use-api';
+import { PAST_DELIVERY_DATE_MESSAGE, isPastDeliveryDate, localTodayIso } from '@/lib/delivery-date';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { OrderChat } from '@/components/orders/OrderChat';
 
@@ -127,6 +128,7 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
   const [zoomItem, setZoomItem] = useState<Item | null>(null);
   const [productModal, setProductModal] = useState<OrderItemProductSafe | null>(null);
   const [deliveryDate, setDeliveryDate] = useState('');
+  const pastDate = !!deliveryDate && isPastDeliveryDate(deliveryDate, localTodayIso());
 
   async function saveNote() {
     setSaving(true);
@@ -155,13 +157,15 @@ function Row({ kind, id, title, branch, sub, note, items, busy, onApprove, onRej
               id={`delivery-date-${id}`}
               type="date"
               value={deliveryDate}
-              min={new Date().toISOString().slice(0, 10)}
+              min={localTodayIso()}
               onChange={(e) => setDeliveryDate(e.target.value)}
               title="Delivery date (optional)"
-              className="h-9 w-38 text-xs"
+              aria-invalid={pastDate || undefined}
+              className="h-9 w-38 appearance-none text-xs"
             />
+            {pastDate && <p className="mt-1 text-[11px] text-red-600">{PAST_DELIVERY_DATE_MESSAGE}</p>}
           </div>
-          <Button size="sm" disabled={busy} onClick={() => onApprove(deliveryDate || undefined)} className="metal-sheen text-[#17120b] font-semibold">
+          <Button size="sm" disabled={busy || pastDate} onClick={() => onApprove(deliveryDate || undefined)} className="metal-sheen text-[#17120b] font-semibold">
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><CheckCircle2 className="mr-1 h-3.5 w-3.5" />Approve</>}
           </Button>
           <Button size="sm" variant="outline" disabled={busy} onClick={onReject} className="border-red-200 text-red-700 hover:bg-red-50">

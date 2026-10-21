@@ -48,6 +48,11 @@ export function StoreManagerProductDetailModal({
   // to any design — both ways of browsing stay available together, neither
   // replaces the other.
   const blockRefs = useRef(new Map<string, HTMLDivElement>());
+  const thumbRefs = useRef(new Map<string, HTMLButtonElement>());
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // The design currently on screen in the vertical stack — its thumbnail is
+  // highlighted in the strip so it's clear which one "+ Add" applies to.
+  const [activeId, setActiveId] = useState(product.id);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -76,7 +81,30 @@ export function StoreManagerProductDetailModal({
     })
     .slice(0, 6);
 
-  const jumpTo = (id: string) => blockRefs.current.get(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const jumpTo = (id: string) => {
+    setActiveId(id);
+    blockRefs.current.get(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const similarKey = similar.map((candidate) => candidate.id).join(',');
+  useEffect(() => {
+    setActiveId(product.id);
+    const root = scrollRef.current;
+    if (!root || !similarKey) return;
+    // Whichever design block crosses a line ~40% down the box is the active one.
+    const observer = new IntersectionObserver((entries) => {
+      const hit = entries.find((entry) => entry.isIntersecting);
+      const id = hit ? (hit.target as HTMLElement).dataset.designId : undefined;
+      if (id) setActiveId(id);
+    }, { root, rootMargin: '-40% 0px -59% 0px', threshold: 0 });
+    blockRefs.current.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [product.id, similarKey]);
+
+  // Keep the highlighted thumbnail in view inside the horizontal strip.
+  useEffect(() => {
+    thumbRefs.current.get(activeId)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+  }, [activeId]);
 
   return (
     <>
@@ -101,9 +129,10 @@ export function StoreManagerProductDetailModal({
                 design's start when you're already near it. Desktop keeps one full-height
                 two-column panel per design with a mandatory snap. */}
             <div
+              ref={scrollRef}
               className="h-full snap-y snap-proximity overflow-y-auto overscroll-contain scrollbar-auto [scrollbar-color:#c9a84c_#ece5d8] sm:snap-mandatory [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#c9a84c] [&::-webkit-scrollbar-track]:bg-[#ece5d8]"
             >
-              <div ref={(el) => { if (el) blockRefs.current.set(product.id, el); }} className="flex min-h-full snap-start flex-col sm:h-full sm:snap-always">
+              <div ref={(el) => { if (el) blockRefs.current.set(product.id, el); }} data-design-id={product.id} className="flex min-h-full snap-start flex-col sm:h-full sm:snap-always">
                 <ProductBlock product={product} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
               </div>
 
@@ -114,7 +143,7 @@ export function StoreManagerProductDetailModal({
               ) : null}
 
               {similar.map((candidate) => (
-                <div key={candidate.id} ref={(el) => { if (el) blockRefs.current.set(candidate.id, el); }} className="flex min-h-full snap-start flex-col border-t border-[#d8c8aa]/55 sm:h-full sm:snap-always">
+                <div key={candidate.id} ref={(el) => { if (el) blockRefs.current.set(candidate.id, el); }} data-design-id={candidate.id} className="flex min-h-full snap-start flex-col border-t border-[#d8c8aa]/55 sm:h-full sm:snap-always">
                   <ProductBlock product={candidate} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
                 </div>
               ))}
@@ -136,20 +165,23 @@ export function StoreManagerProductDetailModal({
                 <div className="flex gap-2 overflow-x-auto pb-1 snap-x snap-mandatory no-scrollbar">
                   {[product, ...similar].map((candidate) => {
                     const img = candidate.images.find((i) => i.isPrimary) ?? candidate.images[0];
+                    const active = candidate.id === activeId;
                     return (
                       <button
                         key={candidate.id}
+                        ref={(el) => { if (el) thumbRefs.current.set(candidate.id, el); else thumbRefs.current.delete(candidate.id); }}
                         type="button"
                         onClick={() => jumpTo(candidate.id)}
                         aria-label={`Scroll to ${candidate.designNumber}`}
-                        className="w-14 shrink-0 snap-start overflow-hidden rounded-xl border-2 border-transparent bg-white text-left transition-colors hover:border-[#c9a84c] sm:w-20"
+                        aria-current={active || undefined}
+                        className={`w-14 shrink-0 snap-start overflow-hidden rounded-xl border-2 text-left transition-all sm:w-20 ${active ? 'border-[#e2bd62] bg-[#f6e3b0] shadow-[0_0_0_3px_rgba(226,189,98,0.35)]' : 'border-transparent bg-white opacity-75 hover:border-[#c9a84c] hover:opacity-100'}`}
                       >
                         <div className="relative aspect-square bg-[#ece5da]">
                           {img ? (
                             <Image src={img.secureUrl} alt={candidate.designNumber} fill sizes="80px" className="object-cover" />
                           ) : <div className="flex h-full items-center justify-center text-muted-foreground/40"><Gem className="h-4 w-4" /></div>}
                         </div>
-                        <p className="truncate px-1 py-0.5 text-[10px] sm:py-1 font-medium text-[#3d3529]">{candidate.designNumber}</p>
+                        <p className={`truncate px-1 py-0.5 text-[10px] sm:py-1 ${active ? 'font-bold text-[#5c3f0c]' : 'font-medium text-[#3d3529]'}`}>{candidate.designNumber}</p>
                       </button>
                     );
                   })}

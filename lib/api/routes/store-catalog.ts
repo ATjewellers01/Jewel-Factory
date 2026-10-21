@@ -9,6 +9,7 @@ import { placeB2bOrder } from '@/lib/db/orders';
 import { formatStoreAddress } from '@/lib/db/stores';
 import { listFavorites, addFavorite, removeFavorite } from '@/lib/db/favorites';
 import { listCart, addToCart, setCartQuantity, setCartItemPurity, setCartItemSize, clearCart, getCartNote, setCartNote } from '@/lib/db/cart';
+import { PAST_DELIVERY_DATE_MESSAGE, indiaTodayIso, isPastDeliveryDate } from '@/lib/delivery-date';
 import { sendData, sendError } from '../envelope';
 import { storeGuard, type AppEnv } from '../guards';
 
@@ -124,7 +125,7 @@ storeCatalogRoutes.put('/cart/note', storeGuard, jsonValidator(CartNoteBody), as
 // orders, via /api/branch-manager, still need the Retailer's approval.)
 const OrderBody = z.object({
   notes: z.string().optional(),
-  deliveryDate: z.string().optional(),
+  deliveryDate: z.string().refine((v) => !isPastDeliveryDate(v, indiaTodayIso()), PAST_DELIVERY_DATE_MESSAGE).optional(),
   items: z
     .array(z.object({ manufacturerProductId: z.string().uuid(), quantity: z.number().int().positive(), purity: z.string().max(40).optional() }))
     .min(1),

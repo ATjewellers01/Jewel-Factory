@@ -14,6 +14,7 @@ import { getTaxonomyForManufacturer } from '@/lib/db/taxonomy';
 import { placeKioskOrder, getKioskOrderPublic } from '@/lib/db/orders';
 import { placeCustomRequest } from '@/lib/db/custom-design';
 import { embedImageBase64, prepareQueryImageForSearch, searchSimilarProducts } from '@/lib/search';
+import { roundWeight3 } from '@/lib/weight-input';
 import { sendData, sendError } from '../envelope';
 import type { AppEnv } from '../guards';
 
@@ -255,7 +256,7 @@ const CustomBody = z.object({
   customerName: z.string().min(1).max(120),
   customerPhone: z.string().min(7).max(20),
   category: z.string().min(1).max(80),
-  weightGrams: z.number().positive().optional(),
+  weightGrams: z.number().positive().transform(roundWeight3).optional(),
   purity: z.string().max(20).optional(),
   notes: z.string().max(1000).optional(),
   referenceImageUrl: z.string().url().optional().or(z.literal('')),

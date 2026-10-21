@@ -149,10 +149,17 @@ export function CatalogOrderPanel({
     [data],
   );
 
+  // Size only applies to Bangles (same gating as the Add Design form), so the
+  // filter is offered for that category alone and cleared on switching away.
   const availableSizes = useMemo(
-    () => [...new Set((data ?? []).map((product) => product.size).filter((value): value is string => Boolean(value)))].sort(),
-    [data],
+    () => category === 'Bangles'
+      ? [...new Set((data ?? []).filter((product) => product.category === 'Bangles').map((product) => product.size).filter((value): value is string => Boolean(value)))].sort()
+      : [],
+    [category, data],
   );
+  useEffect(() => {
+    if (category !== 'Bangles') setSize('');
+  }, [category]);
 
   // Bands come from the set matching every OTHER filter, so the ranges on offer
   // describe what's actually on screen (bangles 10-100 g vs pendants 1-8 g).
@@ -667,7 +674,8 @@ function CatalogFilters({
   const [sizesOpen, setSizesOpen] = useState(true);
   const [weightsOpen, setWeightsOpen] = useState(true);
   const subCategories = subCategoriesFor(category);
-  const subCategories2 = subCategories2For(category, subCategory);
+  // Sub-category 2 hangs off Sub-category 1, so it only appears once one is picked.
+  const subCategories2 = subCategory ? subCategories2For(category, subCategory) : [];
 
   return (
     <div className="space-y-1">

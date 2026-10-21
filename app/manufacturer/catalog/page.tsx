@@ -12,6 +12,7 @@ import { useTaxonomy } from '@/hooks/use-taxonomy';
 import { downloadCataloguePdf } from '@/lib/catalogue-pdf';
 import { SORT_OPTIONS, weightExtent, matchWeightRange, sortProducts, type SortOption } from '@/lib/weight-filter';
 import { formatWeight } from '@/lib/format';
+import { formatWeight3, isWeightInput } from '@/lib/weight-input';
 
 // Fields the "Bulk Edit" panel can apply to many designs at once. Each is
 // opt-in (its own checkbox) — a field the manufacturer never ticks is left
@@ -513,7 +514,7 @@ export default function ManufacturerCatalogPage() {
                       {taxonomy.purities.map((p) => <option key={p} value={p}>{p}</option>)}
                     </select>
                   ) : f === 'grossWeightGrams' || f === 'netWeightGrams' ? (
-                    <Input disabled={!isChecked} type="number" step="0.01" min="0" placeholder="e.g. 12.5" value={value} onChange={(e) => setValue(e.target.value)} className="h-9 flex-1 min-w-[10rem]" />
+                    <Input disabled={!isChecked} type="number" step="0.001" min="0" inputMode="decimal" placeholder="e.g. 12.5" value={value} onChange={(e) => { if (isWeightInput(e.target.value)) setValue(e.target.value); }} onBlur={(e) => setValue(formatWeight3(e.target.value))} className="h-9 flex-1 min-w-[10rem]" />
                   ) : f === 'description' ? (
                     <textarea disabled={!isChecked} value={value} onChange={(e) => setValue(e.target.value)} placeholder="Design description" className="h-16 flex-1 min-w-[12rem] rounded-md border border-input bg-transparent px-3 py-1.5 text-sm disabled:opacity-50" />
                   ) : (
