@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 
+import { InstallAppMenuItem } from '@/components/pwa/InstallAppMenuItem';
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
 import { useB2bCart } from '@/hooks/use-b2b-cart';
 import { useFavorites } from '@/hooks/use-favorites';
@@ -253,6 +254,10 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
               ))}
             </nav>
             <div className="border-t border-[#eee9e1] p-3">
+              <InstallAppMenuItem
+                onSelect={() => setDrawerOpen(false)}
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[#5f5750] transition-colors hover:bg-[#f3efe8] hover:text-[#26221e]"
+              />
               <button type="button" onClick={signOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[#9f4037] transition-colors hover:bg-[#fff1ef]">
                 <LogOut className="h-4 w-4" /> Sign out
               </button>

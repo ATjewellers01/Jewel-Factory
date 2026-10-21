@@ -19,5 +19,18 @@ export default function nextConfig(phase: string): NextConfig {
         { protocol: 'https', hostname: 'images.unsplash.com' },
       ],
     },
+    // The service worker must never be served from cache, or installed apps
+    // would keep running an old worker after a deploy.
+    async headers() {
+      return [
+        {
+          source: '/sw.js',
+          headers: [
+            { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+            { key: 'Content-Type', value: 'application/javascript; charset=utf-8' },
+          ],
+        },
+      ];
+    },
   };
 }
