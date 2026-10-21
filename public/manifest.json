@@ -1,0 +1,55 @@
+{
+  "name": "Jewel Factory",
+  "short_name": "JewelFactory",
+  "description": "Private catalogue, assisted jewellery discovery, and restock orders powered by Jewel Factory.",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fbf8f1",
+  "theme_color": "#c99d37",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["business", "shopping", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "Browse Catalogue",
+      "short_name": "Catalogue",
+      "description": "Explore jewellery designs and build restock orders",
+      "url": "/store/manufacturer-catalog",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Search Similar Design",
+      "short_name": "Search",
+      "description": "AI visual search by photograph or sketch",
+      "url": "/store/similar-search",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

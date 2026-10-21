@@ -34,7 +34,9 @@ import { useApi, apiPost } from '@/hooks/use-api';
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
 import { useStoreManagerKioskCart } from '@/hooks/use-store-manager-cart';
 import { COMPANY_ADDRESS, COMPANY_NAME, SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
+import { InstallMenuItem } from '@/components/pwa/InstallMenuItem';
 import { StoreManagerProvider, type StoreManagerMe } from './store-manager-context';
+
 
 // Fallback store logo (gold medallion) when a retailer has no logoUrl set.
 const FALLBACK_STORE_LOGO = '/storeRe-logo.avif';
@@ -308,6 +310,9 @@ function Shell({ children }: { children: ReactNode }) {
                 <button onClick={() => setMobileOpen(false)} className="ml-3 rounded-full border border-black/10 bg-white/60 p-2 hover:bg-white" aria-label="Close menu"><X className="h-5 w-5" /></button>
               </div>
               <nav className="space-y-1 overflow-y-auto px-4 py-5" aria-label="Mobile storefront navigation">
+                <div className="mb-4">
+                  <InstallMenuItem variant="store-manager" onAfterClick={() => setMobileOpen(false)} />
+                </div>
                 <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a8f83]">Storefront</p>
                 {mobileNav.map((item) => {
                   const active = isActiveRoute(pathname, item.href, 'exact' in item && item.exact);

@@ -3,13 +3,15 @@
 import {
   LayoutDashboard, Package, PencilLine, ClipboardCheck,
   Lightbulb, Store as StoreIcon, Settings, Building2, Search,
-  Home, X, LogOut, Heart, ShoppingCart,
+  Home, X, LogOut, Heart, ShoppingCart, Menu,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 
+import { InstallMenuItem } from '@/components/pwa/InstallMenuItem';
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
+
 import { useB2bCart } from '@/hooks/use-b2b-cart';
 import { useFavorites } from '@/hooks/use-favorites';
 import { COMPANY_ADDRESS, COMPANY_NAME, SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
@@ -183,10 +185,13 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
               onClick={() => setDrawerOpen(true)}
               aria-haspopup="dialog"
               aria-expanded={drawerOpen}
-              className="flex h-9 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-[#e3ddd3] bg-white px-2 text-[12px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea] sm:h-10 sm:gap-2 sm:px-2.5 sm:text-[13px] lg:px-4"
+              aria-label="Open menu"
+              className="flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-[#e3ddd3] bg-white px-2.5 text-[12px] font-semibold text-[#554e47] shadow-sm transition-colors hover:border-[#c99d37]/50 hover:bg-[#fbf6ea] sm:h-10 sm:gap-2 sm:px-2.5 sm:text-[13px] lg:px-4"
             >
-              <LayoutDashboard className="h-4 w-4 shrink-0 lg:h-4 lg:w-4" />
-              <span>Dashboard</span>
+              <Menu className="h-4 w-4 shrink-0 sm:hidden" />
+              <LayoutDashboard className="hidden h-4 w-4 shrink-0 sm:block" />
+              <span className="sm:hidden">Menu</span>
+              <span className="hidden sm:inline">Dashboard</span>
             </button>
           </div>
         </div>
@@ -219,14 +224,17 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
 
       {/* Dashboard drawer — operations/admin pages, toggled via the Dashboard button */}
       {drawerOpen ? (
-        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Dashboard">
-          <button type="button" className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={() => setDrawerOpen(false)} aria-label="Close dashboard" />
+        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Menu">
+          <button type="button" className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={() => setDrawerOpen(false)} aria-label="Close menu" />
           <aside className="absolute right-0 top-0 flex h-full w-[min(90vw,320px)] flex-col bg-[#fffdfa] shadow-2xl">
             <div className="flex h-[66px] items-center justify-between border-b border-[#eee9e1] px-5">
-              <p className="text-sm font-semibold text-[#26221e]">Dashboard</p>
-              <button type="button" onClick={() => setDrawerOpen(false)} className="rounded-lg p-2 text-[#746b62] hover:bg-[#f2eee7]" aria-label="Close dashboard"><X className="h-4 w-4" /></button>
+              <p className="text-sm font-semibold text-[#26221e]">Menu & Dashboard</p>
+              <button type="button" onClick={() => setDrawerOpen(false)} className="rounded-lg p-2 text-[#746b62] hover:bg-[#f2eee7]" aria-label="Close menu"><X className="h-4 w-4" /></button>
             </div>
             <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Dashboard navigation">
+              <div className="mb-4">
+                <InstallMenuItem variant="drawer" onAfterClick={() => setDrawerOpen(false)} />
+              </div>
               {drawerSections.map((section) => (
                 <div key={section} className="mb-5 last:mb-0">
                   <p className="mb-1.5 px-3 text-[9px] font-bold uppercase tracking-[0.16em] text-[#aaa096]">{section}</p>

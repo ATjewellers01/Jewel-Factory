@@ -3,7 +3,7 @@
 import { Plus, Loader2, Package, Sparkles, Check, CheckSquare, Square, FileDown } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,7 @@ type Product = {
   name: string | null;
   category: string | null;
   subCategory: string | null;
+  subCategory2: string | null;
   // Deprecated (2026-08-17) — every category now always captures Gross/Net
   // Weight instead; kept only so an older product's legacy single-weight
   // value still displays/filters if it was never re-saved after that change.
@@ -61,6 +62,7 @@ export default function ManufacturerCatalogPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
+  const [subCategory2, setSubCategory2] = useState('');
   const [karigarCode, setKarigarCode] = useState('');
   const [size, setSize] = useState('');
   const [weightRange, setWeightRange] = useState<[number, number] | null>(null);
@@ -97,6 +99,45 @@ export default function ManufacturerCatalogPage() {
 
   useEffect(() => { void load(); }, []);
 
+  const isBangles = category.trim().toLowerCase() === 'bangles';
+
+  useEffect(() => {
+    if (!isBangles && size) {
+      setSize('');
+    }
+  }, [isBangles, size]);
+
+  useEffect(() => {
+    if (!category) {
+      if (subCategory) setSubCategory('');
+      if (subCategory2) setSubCategory2('');
+    }
+  }, [category, subCategory, subCategory2]);
+
+  useEffect(() => {
+    if (!subCategory && subCategory2) {
+      setSubCategory2('');
+    }
+  }, [subCategory, subCategory2]);
+
+  const subCategoryOptions = useMemo<string[]>(() => {
+    if (!category) return [];
+    const taxSubs = taxonomy.subCategories1For(category);
+    const fromData = (products ?? [])
+      .filter((p) => p.category === category && Boolean(p.subCategory))
+      .map((p) => p.subCategory as string);
+    return Array.from(new Set([...taxSubs, ...fromData])).sort();
+  }, [category, products, taxonomy]);
+
+  const subCategory2Options = useMemo<string[]>(() => {
+    if (!category || !subCategory) return [];
+    const taxSubs2 = taxonomy.subCategories2For(category, subCategory);
+    const fromData2 = (products ?? [])
+      .filter((p) => p.category === category && p.subCategory === subCategory && Boolean(p.subCategory2))
+      .map((p) => p.subCategory2 as string);
+    return Array.from(new Set([...taxSubs2, ...fromData2])).sort();
+  }, [category, subCategory, products, taxonomy]);
+
   // Everything except the weight band, so the bands describe the visible set.
   const preWeight = (products ?? []).filter((p) => {
     const matchSearch =
@@ -104,11 +145,12 @@ export default function ManufacturerCatalogPage() {
       p.designNumber.toLowerCase().includes(search.toLowerCase()) ||
       (p.name ?? '').toLowerCase().includes(search.toLowerCase());
     const matchCat = !category || p.category === category;
-    const matchSub = !subCategory || p.subCategory === subCategory;
+    const matchSub = !category || !subCategory || p.subCategory === subCategory;
+    const matchSub2 = !category || !subCategory || !subCategory2 || p.subCategory2 === subCategory2;
     const matchKarigar = !karigarCode || p.karigarCode === karigarCode;
-    const matchSize = !size || p.size === size;
+    const matchSize = !isBangles || !size || p.size === size;
     const matchStatus = !status || p.status === status;
-    return matchSearch && matchCat && matchSub && matchKarigar && matchSize && matchStatus;
+    return matchSearch && matchCat && matchSub && matchSub2 && matchKarigar && matchSize && matchStatus;
   });
 
   const weightBounds = weightExtent(preWeight.map(displayWeight));
@@ -201,9 +243,16 @@ export default function ManufacturerCatalogPage() {
   const karigarOptions = Array.from(
     new Set((products ?? []).map((p) => p.karigarCode).filter((k): k is string => !!k)),
   ).sort();
-  const sizeOptions = Array.from(
-    new Set((products ?? []).map((p) => p.size).filter((s): s is string => !!s)),
-  ).sort();
+  const sizeOptions = useMemo<string[]>(() => {
+    if (!isBangles) return [];
+    return Array.from(
+      new Set(
+        (products ?? [])
+          .filter((p) => (p.category ?? '').trim().toLowerCase() === 'bangles' && Boolean(p.size))
+          .map((p) => p.size as string),
+      ),
+    ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [products, isBangles]);
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5">
@@ -300,19 +349,42 @@ export default function ManufacturerCatalogPage() {
         <select
           className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
           value={category}
-          onChange={(e) => { setCategory(e.target.value); setSubCategory(''); }}
+          onChange={(e) => {
+            const nextCategory = e.target.value;
+            setCategory(nextCategory);
+            setSubCategory('');
+            setSubCategory2('');
+            if (nextCategory.trim().toLowerCase() !== 'bangles') {
+              setSize('');
+            }
+          }}
         >
           <option value="">All categories</option>
           {taxonomy.categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        {taxonomy.subCategories1For(category).length > 0 && (
+        {category && subCategoryOptions.length > 0 && (
           <select
             className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
             value={subCategory}
-            onChange={(e) => setSubCategory(e.target.value)}
+            onChange={(e) => {
+              setSubCategory(e.target.value);
+              setSubCategory2('');
+            }}
+            aria-label="Filter by subcategory"
           >
-            <option value="">All sub-categories</option>
-            {taxonomy.subCategories1For(category).map((s) => <option key={s} value={s}>{s}</option>)}
+            <option value="">All subcategories</option>
+            {subCategoryOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        )}
+        {category && subCategory && subCategory2Options.length > 0 && (
+          <select
+            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+            value={subCategory2}
+            onChange={(e) => setSubCategory2(e.target.value)}
+            aria-label="Filter by subcategory 2"
+          >
+            <option value="">All subcategories 2</option>
+            {subCategory2Options.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         )}
         {karigarOptions.length > 0 && (
@@ -325,7 +397,7 @@ export default function ManufacturerCatalogPage() {
             {karigarOptions.map((k) => <option key={k} value={k}>{k}</option>)}
           </select>
         )}
-        {sizeOptions.length > 0 && (
+        {isBangles && sizeOptions.length > 0 && (
           <select
             className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
             value={size}
@@ -355,8 +427,8 @@ export default function ManufacturerCatalogPage() {
           <option value="DRAFT">Inactive</option>
           <option value="ARCHIVED">Archived</option>
         </select>
-        {(category || subCategory || search || karigarCode || size || status || weightRange) && (
-          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setKarigarCode(''); setSize(''); setStatus(''); setWeightRange(null); setSort(''); setSelected(new Set()); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+        {(category || subCategory || subCategory2 || search || karigarCode || (isBangles && size) || status || weightRange) && (
+          <button type="button" onClick={() => { setSearch(''); setCategory(''); setSubCategory(''); setSubCategory2(''); setKarigarCode(''); setSize(''); setStatus(''); setWeightRange(null); setSort(''); setSelected(new Set()); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
         )}
       </div>
 

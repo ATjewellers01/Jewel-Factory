@@ -8,6 +8,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { COMPANY_ADDRESS, COMPANY_NAME, SUPPORT_EMAIL, SUPPORT_EMAIL_HREF, SUPPORT_PHONE, SUPPORT_PHONE_HREF } from '@/lib/support';
+import { InstallMenuItem } from '@/components/pwa/InstallMenuItem';
 
 export type PortalNavItem = {
   label: string;
@@ -72,6 +73,9 @@ export function PortalShell({
           </div>
 
           <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label={`${portalLabel} navigation`}>
+            <div className="mb-4">
+              <InstallMenuItem variant="portal" onAfterClick={() => setOpen(false)} />
+            </div>
             {grouped ? sections.map((section) => (
               <div key={section} className="mb-5 last:mb-0">
                 <p className="mb-1.5 px-3 text-[9px] font-bold uppercase tracking-[0.16em] text-[#aaa096]">{section}</p>

@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 
 import { useKioskStore } from './StoreContext';
 import { useGuestCart } from '@/hooks/use-guest-cart';
+import { InstallMenuItem } from '@/components/pwa/InstallMenuItem';
 
 export function KioskHeader() {
   const store = useKioskStore();
@@ -82,6 +83,7 @@ export function KioskHeader() {
         <>
           <div className="fixed inset-0 top-[calc(1.5rem+3.5rem)] z-40 bg-black/40 md:hidden" onClick={() => setMenuOpen(false)} />
           <nav className="absolute left-0 right-0 z-50 border-b bg-[#fbf8f1] shadow-lg md:hidden">
+            <InstallMenuItem variant="kiosk" onAfterClick={() => setMenuOpen(false)} />
             {navLinks.map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}

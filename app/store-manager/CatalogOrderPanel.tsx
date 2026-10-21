@@ -145,14 +145,38 @@ export function CatalogOrderPanel({
     })();
   }, [showPopularity]);
 
+  const isBangles = category.trim().toLowerCase() === 'bangles';
+
+  useEffect(() => {
+    if (!isBangles && size) {
+      setSize('');
+    }
+  }, [isBangles, size]);
+
+  useEffect(() => {
+    if (!category) {
+      if (subCategory) setSubCategory('');
+      if (subCategory2) setSubCategory2('');
+    }
+  }, [category, subCategory, subCategory2]);
+
+  useEffect(() => {
+    if (!subCategory && subCategory2) {
+      setSubCategory2('');
+    }
+  }, [subCategory, subCategory2]);
+
   const availableCategories = useMemo(
     () => [...new Set((data ?? []).map((product) => product.category).filter((value): value is string => Boolean(value)))].sort(),
     [data],
   );
 
-  const availableSizes = useMemo(
-    () => [...new Set((data ?? []).map((product) => product.size).filter((value): value is string => Boolean(value)))].sort(),
-    [data],
+  const availableSizes = useMemo<string[]>(
+    () => {
+      if (!isBangles) return [];
+      return [...new Set((data ?? []).filter((product) => (product.category ?? '').trim().toLowerCase() === 'bangles' && Boolean(product.size)).map((product) => product.size as string))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    },
+    [data, isBangles],
   );
 
   // Bands come from the set matching every OTHER filter, so the ranges on offer
@@ -162,11 +186,11 @@ export function CatalogOrderPanel({
       (!search || p.designNumber.toLowerCase().includes(search.toLowerCase())) &&
       matchesDescriptionQuery(p, descQuery) &&
       (!category || p.category === category) &&
-      (!subCategory || p.subCategory === subCategory) &&
-      (!subCategory2 || p.subCategory2 === subCategory2) &&
-      (!size || p.size === size),
+      (!category || !subCategory || p.subCategory === subCategory) &&
+      (!category || !subCategory || !subCategory2 || p.subCategory2 === subCategory2) &&
+      (!isBangles || !size || p.size === size),
     ),
-    [category, data, descQuery, search, size, subCategory, subCategory2],
+    [category, data, descQuery, isBangles, search, size, subCategory, subCategory2],
   );
 
   const weightBounds = useMemo(
@@ -674,6 +698,7 @@ function CatalogFilters({
   const [subCategories2Open, setSubCategories2Open] = useState(true);
   const [sizesOpen, setSizesOpen] = useState(true);
   const [weightsOpen, setWeightsOpen] = useState(true);
+  const isBangles = category.trim().toLowerCase() === 'bangles';
   const subCategories = subCategoriesFor(category);
   const subCategories2 = subCategories2For(category, subCategory);
 
@@ -681,13 +706,13 @@ function CatalogFilters({
     <div className="space-y-1">
       <div className="flex items-center justify-between border-b border-black/10 pb-3">
         <span className="text-sm font-semibold">Filters</span>
-        {(category || subCategory || subCategory2 || size || weightRange) ? <button onClick={() => { setCategory(''); setSubCategory(''); setSubCategory2(''); setSize(''); setWeightRange(null); }} className="text-xs font-medium text-[#b68a3e] hover:underline">Clear all</button> : null}
+        {(category || subCategory || subCategory2 || (isBangles && size) || weightRange) ? <button onClick={() => { setCategory(''); setSubCategory(''); setSubCategory2(''); setSize(''); setWeightRange(null); }} className="text-xs font-medium text-[#b68a3e] hover:underline">Clear all</button> : null}
       </div>
       <button onClick={() => setCategoriesOpen((value) => !value)} className="flex w-full items-center justify-between py-3 text-sm font-semibold">Category <ChevronDown className={`h-4 w-4 text-[#8d8174] transition-transform ${categoriesOpen ? 'rotate-180' : ''}`} /></button>
       {categoriesOpen ? (
         <div className="space-y-1 pb-4">
-          <button onClick={() => { setCategory(''); setSubCategory(''); setSubCategory2(''); }} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${!category ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>All categories</button>
-          {categories.map((value) => <button key={value} onClick={() => { setCategory(value); setSubCategory(''); setSubCategory2(''); }} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${category === value ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>{value}</button>)}
+          <button onClick={() => { setCategory(''); setSubCategory(''); setSubCategory2(''); setSize(''); }} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${!category ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>All categories</button>
+          {categories.map((value) => <button key={value} onClick={() => { setCategory(value); setSubCategory(''); setSubCategory2(''); if (value.trim().toLowerCase() !== 'bangles') setSize(''); }} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${category === value ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>{value}</button>)}
         </div>
       ) : null}
       {subCategories.length > 0 ? (
@@ -702,7 +727,7 @@ function CatalogFilters({
           {subCategories2Open ? <div className="space-y-1 pb-4"><button onClick={() => setSubCategory2('')} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${!subCategory2 ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>All</button>{subCategories2.map((value) => <button key={value} onClick={() => setSubCategory2(value)} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${subCategory2 === value ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>{value}</button>)}</div> : null}
         </div>
       ) : null}
-      {sizes.length > 0 ? (
+      {isBangles && sizes.length > 0 ? (
         <div className="border-t border-black/10">
           <button onClick={() => setSizesOpen((value) => !value)} className="flex w-full items-center justify-between py-3 text-sm font-semibold">Size <ChevronDown className={`h-4 w-4 text-[#8d8174] transition-transform ${sizesOpen ? 'rotate-180' : ''}`} /></button>
           {sizesOpen ? <div className="space-y-1 pb-4"><button onClick={() => setSize('')} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${!size ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>All sizes</button>{sizes.map((value) => <button key={value} onClick={() => setSize(value)} className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${size === value ? 'bg-[#efe6d6] font-medium text-[#8f6a27]' : 'text-[#746b62] hover:bg-black/[0.03]'}`}>{value}</button>)}</div> : null}

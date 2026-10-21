@@ -123,6 +123,49 @@ function CatalogBrowse() {
     })();
   }, []);
 
+  const isBangles = category.trim().toLowerCase() === 'bangles';
+
+  useEffect(() => {
+    if (!isBangles && size) {
+      setSize('');
+    }
+  }, [isBangles, size]);
+
+  useEffect(() => {
+    if (!category) {
+      if (subCategory) setSubCategory('');
+      if (subCategory2) setSubCategory2('');
+    }
+  }, [category, subCategory, subCategory2]);
+
+  useEffect(() => {
+    if (!subCategory && subCategory2) {
+      setSubCategory2('');
+    }
+  }, [subCategory, subCategory2]);
+
+  const subCategoryOptions = useMemo<string[]>(() => {
+    if (!category) return [];
+    const taxSubs = taxonomy.subCategories1For(category);
+    const withStock = subCategories1WithStock(catalogCounts, category, taxSubs);
+    if (withStock.length > 0) return withStock;
+    const fromData = (data ?? [])
+      .filter((p) => p.category === category && Boolean(p.subCategory))
+      .map((p) => p.subCategory as string);
+    return Array.from(new Set([...taxSubs, ...fromData])).sort();
+  }, [catalogCounts, category, data, taxonomy]);
+
+  const subCategory2Options = useMemo<string[]>(() => {
+    if (!category || !subCategory) return [];
+    const taxSubs2 = taxonomy.subCategories2For(category, subCategory);
+    const withStock2 = subCategories2WithStock(catalogCounts, category, subCategory, taxSubs2);
+    if (withStock2.length > 0) return withStock2;
+    const fromData2 = (data ?? [])
+      .filter((p) => p.category === category && p.subCategory === subCategory && Boolean(p.subCategory2))
+      .map((p) => p.subCategory2 as string);
+    return Array.from(new Set([...taxSubs2, ...fromData2])).sort();
+  }, [catalogCounts, category, data, subCategory, taxonomy]);
+
   // Everything except the weight band, so the bands below describe the set the
   // retailer is actually looking at (Bangles run 10-100 g, pendants 1-8 g — one
   // fixed range would leave most options empty).
@@ -130,9 +173,9 @@ function CatalogBrowse() {
     const matchSearch = !search || p.designNumber.toLowerCase().includes(search.toLowerCase());
     const matchDesc = matchesDescriptionQuery(p, descQuery);
     const matchCat = !category || p.category === category;
-    const matchSub = !subCategory || p.subCategory === subCategory;
-    const matchSub2 = !subCategory2 || p.subCategory2 === subCategory2;
-    const matchSize = !size || p.size === size;
+    const matchSub = !category || !subCategory || p.subCategory === subCategory;
+    const matchSub2 = !category || !subCategory || !subCategory2 || p.subCategory2 === subCategory2;
+    const matchSize = !isBangles || !size || p.size === size;
     return matchSearch && matchDesc && matchCat && matchSub && matchSub2 && matchSize;
   });
 
@@ -171,9 +214,16 @@ function CatalogBrowse() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [favorites.toggle]);
 
-  const sizeOptions = Array.from(
-    new Set((data ?? []).map((p) => p.size).filter((s): s is string => !!s)),
-  ).sort();
+  const sizeOptions = useMemo<string[]>(() => {
+    if (!isBangles) return [];
+    return Array.from(
+      new Set(
+        (data ?? [])
+          .filter((p) => (p.category ?? '').trim().toLowerCase() === 'bangles' && Boolean(p.size))
+          .map((p) => p.size as string),
+      ),
+    ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [data, isBangles]);
 
   async function placeOrder() {
     setPlacing(true);
@@ -227,29 +277,48 @@ function CatalogBrowse() {
         <>
           <div className="flex flex-wrap gap-2">
             <Input placeholder="Search designs…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-            <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={category} onChange={(e) => { setCategory(e.target.value); setSubCategory(''); setSubCategory2(''); }}>
+            <select
+              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+              value={category}
+              onChange={(e) => {
+                const nextCategory = e.target.value;
+                setCategory(nextCategory);
+                setSubCategory('');
+                setSubCategory2('');
+                if (nextCategory.trim().toLowerCase() !== 'bangles') {
+                  setSize('');
+                }
+              }}
+            >
               <option value="">All categories</option>
               {taxonomy.categories.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
-            {(() => {
-              const subs1 = subCategories1WithStock(catalogCounts, category, taxonomy.subCategories1For(category));
-              return subs1.length > 0 && (
-                <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={subCategory} onChange={(e) => { setSubCategory(e.target.value); setSubCategory2(''); }}>
-                  <option value="">All sub-categories</option>
-                  {subs1.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              );
-            })()}
-            {(() => {
-              const subs2 = subCategories2WithStock(catalogCounts, category, subCategory, taxonomy.subCategories2For(category, subCategory));
-              return subs2.length > 0 && (
-                <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={subCategory2} onChange={(e) => setSubCategory2(e.target.value)} aria-label="Filter by sub-category 2">
-                  <option value="">All {subCategory ? 'types' : 'sub-categories 2'}</option>
-                  {subs2.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              );
-            })()}
-            {sizeOptions.length > 0 && (
+            {category && subCategoryOptions.length > 0 && (
+              <select
+                className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+                value={subCategory}
+                onChange={(e) => {
+                  setSubCategory(e.target.value);
+                  setSubCategory2('');
+                }}
+                aria-label="Filter by subcategory"
+              >
+                <option value="">All subcategories</option>
+                {subCategoryOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            )}
+            {category && subCategory && subCategory2Options.length > 0 && (
+              <select
+                className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
+                value={subCategory2}
+                onChange={(e) => setSubCategory2(e.target.value)}
+                aria-label="Filter by subcategory 2"
+              >
+                <option value="">All subcategories 2</option>
+                {subCategory2Options.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            )}
+            {isBangles && sizeOptions.length > 0 && (
               <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={size} onChange={(e) => setSize(e.target.value)} aria-label="Filter by size">
                 <option value="">All sizes</option>
                 {sizeOptions.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -258,7 +327,7 @@ function CatalogBrowse() {
             <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={sort} onChange={(e) => setSort(e.target.value as SortOption)} aria-label="Sort by">
               {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            {(category || subCategory || subCategory2 || search || descQuery || size || sort || weightRange) && (
+            {(category || subCategory || subCategory2 || search || descQuery || (isBangles && size) || sort || weightRange) && (
               <button type="button" onClick={() => { setSearch(''); setDescQuery(''); setCategory(''); setSubCategory(''); setSubCategory2(''); setSize(''); setWeightRange(null); setSort(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
             )}
             {/* Items per row — 1 or 2 on phones, 2–4 from tablet up. Each set is
