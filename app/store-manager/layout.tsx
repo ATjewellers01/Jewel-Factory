@@ -30,6 +30,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { InstallAppMenuItem } from '@/components/pwa/InstallAppMenuItem';
 import { useApi, apiPost } from '@/hooks/use-api';
 import { useDocumentIdentity } from '@/hooks/use-document-identity';
 import { useStoreManagerKioskCart } from '@/hooks/use-store-manager-cart';
@@ -339,6 +340,11 @@ function Shell({ children }: { children: ReactNode }) {
                 <div className="my-4 border-t border-black/10" />
                 <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#9a8f83]">Store operations</p>
                 <Link href="/store-manager/restock" className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-[#544b43] hover:bg-black/5"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#eee7da] text-[#a77d31]"><Package className="h-4 w-4" /></span> Restock inventory</Link>
+                <InstallAppMenuItem
+                  onSelect={() => setMobileOpen(false)}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#544b43] hover:bg-black/5"
+                  iconWrapClassName="flex h-8 w-8 items-center justify-center rounded-full bg-[#eee7da] text-[#a77d31]"
+                />
               </nav>
               <div className="mt-auto border-t border-black/10 bg-white/45 p-4">
                 <div className="mb-3 flex items-center gap-3 px-2">

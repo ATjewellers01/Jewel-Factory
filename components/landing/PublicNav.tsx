@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { Wordmark } from '@/components/landing/Wordmark';
+import { InstallAppMenuItem } from '@/components/pwa/InstallAppMenuItem';
 
 const LoginModal = dynamic(
   () => import('@/components/landing/LoginModal').then((module) => module.LoginModal),
@@ -105,6 +106,11 @@ export function PublicNav({ catalogHref = '/#showcase' }: { catalogHref?: string
             )}
             <Link href="/about" onClick={() => setMenuOpen(false)} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold ${aboutActive ? 'bg-[#211c17] text-[#fffaf0]' : 'text-[#544b43] hover:bg-black/5'}`}><span className={`flex h-8 w-8 items-center justify-center rounded-full ${aboutActive ? 'bg-white/10 text-[#efd489]' : 'bg-[#eee7da] text-[#a77d31]'}`}><Info className="h-4 w-4" /></span> About</Link>
             <button onClick={() => { setMenuOpen(false); setShowLogin(true); }} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#544b43] hover:bg-black/5"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#eee7da] text-[#a77d31]"><LogIn className="h-4 w-4" /></span> Login</button>
+            <InstallAppMenuItem
+              onSelect={() => setMenuOpen(false)}
+              className="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#544b43] hover:bg-black/5"
+              iconWrapClassName="flex h-8 w-8 items-center justify-center rounded-full bg-[#eee7da] text-[#a77d31]"
+            />
           </nav>
           <div className="border-t border-black/10 bg-white/45 p-4">
             <p className="mb-3 flex items-center gap-2 px-2 text-xs text-[#80756a]"><Sparkles className="h-3.5 w-3.5 text-[#b68a3e]" /> Built for independent retailers</p>
