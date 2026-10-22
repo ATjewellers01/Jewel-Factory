@@ -1,19 +1,20 @@
 'use client';
 
-import { Plus, Share, SquarePlus, X } from 'lucide-react';
+import { Download, EllipsisVertical, MonitorDown, Plus, Share, SquarePlus, X } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useId } from 'react';
 
 import { usePwaInstall } from '@/hooks/use-pwa-install';
-import { closeIosInstallSheet } from '@/lib/pwa';
+import { closeInstallSheet } from '@/lib/pwa';
 
 /**
  * Mounted once in the root layout. Registers the service worker (production
- * only, so `pnpm dev` never gets a stale worker) and hosts the iPhone/iPad
- * "Add to Home Screen" instructions, which outlive the menu that opened them.
+ * only, so `pnpm dev` never gets a stale worker) and hosts the manual
+ * install instructions (iPhone/iPad, Android, desktop), which outlive the
+ * menu that opened them.
  */
 export function PwaRoot() {
-  const { iosSheetOpen } = usePwaInstall();
+  const { installSheetOpen, isIos, isAndroid } = usePwaInstall();
 
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) return;
@@ -22,10 +23,36 @@ export function PwaRoot() {
     });
   }, []);
 
-  return iosSheetOpen ? <IosInstallSheet onClose={closeIosInstallSheet} /> : null;
+  if (!installSheetOpen) return null;
+  const platform = isIos ? 'ios' : isAndroid ? 'android' : 'desktop';
+  return <InstallSheet platform={platform} onClose={closeInstallSheet} />;
 }
 
-function IosInstallSheet({ onClose }: { onClose: () => void }) {
+const STEPS = {
+  ios: [
+    { icon: Share, text: <>Tap the <b>Share</b> button in the browser toolbar.</> },
+    { icon: SquarePlus, text: <>Scroll down and tap <b>Add to Home Screen</b>.</> },
+    { icon: Plus, text: <>Tap <b>Add</b> in the top-right corner.</> },
+  ],
+  android: [
+    { icon: EllipsisVertical, text: <>Tap the <b>⋮ menu</b> at the top-right of the browser.</> },
+    { icon: Download, text: <>Tap <b>Install app</b> or <b>Add to Home screen</b>.</> },
+    { icon: Plus, text: <>Tap <b>Install</b> to confirm.</> },
+  ],
+  desktop: [
+    { icon: MonitorDown, text: <>Click the <b>install icon</b> at the right end of the address bar.</> },
+    { icon: EllipsisVertical, text: <>Or open the browser <b>⋮ menu</b> and choose <b>Install Jewel Factory</b>.</> },
+    { icon: Plus, text: <>Click <b>Install</b> to confirm.</> },
+  ],
+};
+
+const NOTES = {
+  ios: 'In Chrome on iPhone, the Share button is in the address bar. The installed app keeps its own sign-in, so you\'ll log in once inside it.',
+  android: 'Use Chrome for the best result. If it\'s already installed, open Jewel Factory from your Home Screen.',
+  desktop: 'Works in Chrome and Edge. If it\'s already installed, open Jewel Factory from your apps.',
+};
+
+function InstallSheet({ platform, onClose }: { platform: keyof typeof STEPS; onClose: () => void }) {
   const titleId = useId();
 
   useEffect(() => {
@@ -41,11 +68,7 @@ function IosInstallSheet({ onClose }: { onClose: () => void }) {
     };
   }, [onClose]);
 
-  const steps = [
-    { icon: Share, text: <>Tap the <b>Share</b> button in the browser toolbar.</> },
-    { icon: SquarePlus, text: <>Scroll down and tap <b>Add to Home Screen</b>.</> },
-    { icon: Plus, text: <>Tap <b>Add</b> in the top-right corner.</> },
-  ];
+  const steps = STEPS[platform];
 
   return (
     <div
@@ -64,7 +87,7 @@ function IosInstallSheet({ onClose }: { onClose: () => void }) {
             <Image src="/icons/icon-192.png" alt="" width={48} height={48} className="h-12 w-12 rounded-xl" />
             <div>
               <h2 id={titleId} className="text-base font-semibold text-[#211c17]">Install Jewel Factory</h2>
-              <p className="text-xs text-[#80756a]">Add it to your Home Screen to open it like an app.</p>
+              <p className="text-xs text-[#80756a]">Open it like an app, straight from your Home Screen.</p>
             </div>
           </div>
           <button onClick={onClose} className="rounded-full p-2 text-[#544b43] hover:bg-black/5" aria-label="Close"><X className="h-5 w-5" /></button>
@@ -80,9 +103,7 @@ function IosInstallSheet({ onClose }: { onClose: () => void }) {
           ))}
         </ol>
 
-        <p className="mt-4 text-xs leading-relaxed text-[#80756a]">
-          In Chrome on iPhone, the Share button is in the address bar. The installed app keeps its own sign-in, so you&apos;ll log in once inside it.
-        </p>
+        <p className="mt-4 text-xs leading-relaxed text-[#80756a]">{NOTES[platform]}</p>
 
         <button onClick={onClose} className="mt-5 w-full rounded-full bg-[#211c17] py-3 text-sm font-semibold text-[#fffaf0]">Got it</button>
       </div>
