@@ -3,12 +3,12 @@
 import { Download } from 'lucide-react';
 
 import { usePwaInstall } from '@/hooks/use-pwa-install';
-import { openIosInstallSheet, promptInstall } from '@/lib/pwa';
+import { openInstallSheet, promptInstall } from '@/lib/pwa';
 
 /**
  * "Install App" row for a navigation menu. Renders nothing when the app is
- * already installed or the browser can't install it. Each menu passes its own
- * row styling so the item matches its neighbours.
+ * already running installed. Each menu passes its own row styling so the item
+ * matches its neighbours.
  */
 export function InstallAppMenuItem({
   className,
@@ -29,7 +29,7 @@ export function InstallAppMenuItem({
   const handleClick = () => {
     onSelect?.();
     if (canPrompt) void promptInstall();
-    else openIosInstallSheet();
+    else openInstallSheet();
   };
 
   const icon = <Download className={iconClassName} />;
