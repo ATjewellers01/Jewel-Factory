@@ -1,6 +1,6 @@
 'use client';
 
-import { Loader2, Gem, Heart, ShoppingCart, Minus, Plus, Trash2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Loader2, Gem, Heart, ShoppingCart, Minus, Plus, Trash2, Sparkles, CheckCircle2, TrendingUp, X } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -81,6 +81,14 @@ function CatalogBrowse() {
   const [size, setSize] = useState('');
   const [weightRange, setWeightRange] = useState<[number, number] | null>(null);
   const [sort, setSort] = useState<SortOption>('');
+  // ?topSellers=1 comes from /store/home's "Best Sellers" collection card —
+  // narrows to this retailer's most-ordered designs (last 30 days), best first.
+  const [topSellersOnly, setTopSellersOnly] = useState(params.get('topSellers') === '1');
+  const topSellers = useApi<Array<{ manufacturerProductId: string }>>(topSellersOnly ? '/api/analytics/store/top-sellers' : '');
+  const topRank = useMemo(
+    () => new Map((topSellers.data ?? []).map((t, i) => [t.manufacturerProductId, i])),
+    [topSellers.data],
+  );
   // ?open=cart|favorites lets the layout's header buttons (visible on every
   // /store/* page, not just this one) jump straight here with the right panel open.
   const [showCart, setShowCart] = useState(params.get('open') === 'cart');
@@ -133,16 +141,16 @@ function CatalogBrowse() {
     const matchSub = !subCategory || p.subCategory === subCategory;
     const matchSub2 = !subCategory2 || p.subCategory2 === subCategory2;
     const matchSize = !size || p.size === size;
-    return matchDesc && matchCat && matchSub && matchSub2 && matchSize;
+    const matchTop = !topSellersOnly || topRank.has(p.id);
+    return matchDesc && matchCat && matchSub && matchSub2 && matchSize && matchTop;
   });
 
   const weightBounds = weightExtent(preWeight.map((p) => p.weightGrams));
-  const filtered = sortProducts(
-    preWeight.filter((p) => matchWeightRange(p.weightGrams, weightRange)),
-    sort,
-    (p) => p.designNumber,
-    (p) => p.weightGrams,
-  );
+  const weightMatched = preWeight.filter((p) => matchWeightRange(p.weightGrams, weightRange));
+  // Best Sellers keep their sales rank unless the retailer picks a sort.
+  const filtered = topSellersOnly && !sort
+    ? [...weightMatched].sort((a, b) => topRank.get(a.id)! - topRank.get(b.id)!)
+    : sortProducts(weightMatched, sort, (p) => p.designNumber, (p) => p.weightGrams);
 
   // O(1) per-card cart lookup instead of cart.items.find() inside the grid's
   // map — with hundreds of designs on screen, re-deriving that with a linear
@@ -259,8 +267,13 @@ function CatalogBrowse() {
             <select className="h-9 rounded-md border border-input bg-transparent px-3 text-sm" value={sort} onChange={(e) => setSort(e.target.value as SortOption)} aria-label="Sort by">
               {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
-            {(category || subCategory || subCategory2 || descQuery || size || sort || weightRange) && (
-              <button type="button" onClick={() => { setDescQuery(''); setCategory(''); setSubCategory(''); setSubCategory2(''); setSize(''); setWeightRange(null); setSort(''); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+            {topSellersOnly && (
+              <button type="button" onClick={() => setTopSellersOnly(false)} aria-label="Show all designs, not just best sellers" className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#c9a84c] bg-[#faf5e9] px-3 text-sm font-medium text-[#37302a]">
+                <TrendingUp className="h-3.5 w-3.5 text-[#9a7229]" /> Best Sellers · 30 days <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {(category || subCategory || subCategory2 || descQuery || size || sort || weightRange || topSellersOnly) && (
+              <button type="button" onClick={() => { setDescQuery(''); setCategory(''); setSubCategory(''); setSubCategory2(''); setSize(''); setWeightRange(null); setSort(''); setTopSellersOnly(false); }} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
             )}
             {/* Items per row — 1 or 2 on phones, 2–4 from tablet up. Each set is
                 only rendered at the size it applies to, so the choice is unambiguous. */}
@@ -281,7 +294,7 @@ function CatalogBrowse() {
       )}
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-      {loading && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
+      {(loading || (topSellersOnly && topSellers.loading)) && <div className="flex items-center gap-2 py-12 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
 
       {showFavorites && (
         <div className="rounded-xl border bg-card p-4 space-y-3">

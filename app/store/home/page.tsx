@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, ArrowUpRight, Heart, Loader2, ShoppingCart, Sparkles, X } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Heart, Loader2, ShoppingCart, Sparkles, TrendingUp, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -16,6 +16,8 @@ type Product = {
   id: string; designNumber: string; category: string | null; subCategory: string | null;
   weightGrams: string | null; images: Img[];
 };
+
+type TopSeller = { manufacturerProductId: string; category: string; units: number };
 
 const primaryImage = (p: Product) => (p.images.find((i) => i.isPrimary) ?? p.images[0])?.secureUrl ?? null;
 
@@ -73,6 +75,8 @@ function interleaveByCategory(products: Product[]): Product[] {
 export default function StoreHomePage() {
   const { data, error, loading } = useApi<Product[]>('/api/store/catalog', '/store/login');
   const taxonomy = useTaxonomy('/api/store/taxonomy');
+  // Best-effort: a failed/empty response just hides the Best Sellers card.
+  const { data: topSellers } = useApi<TopSeller[]>('/api/analytics/store/top-sellers');
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const router = useRouter();
   // StoreLayout's header already shows Favorites/Cart, but its labels get
@@ -116,6 +120,18 @@ export default function StoreHomePage() {
     return { byCategory, bySub };
   }, [products]);
 
+  // Best sellers per category, limited to designs the catalogue actually
+  // returned (and so still browsable) — the count shown must match what the
+  // Best Sellers catalogue view will list.
+  const topCountByCategory = useMemo(() => {
+    const live = new Set(products.map((p) => p.id));
+    const map: Record<string, number> = {};
+    for (const t of topSellers ?? []) {
+      if (live.has(t.manufacturerProductId)) map[t.category] = (map[t.category] ?? 0) + 1;
+    }
+    return map;
+  }, [topSellers, products]);
+
   // Only categories with actual stock — the taxonomy has 14 entries and most
   // retailers only carry a handful, so showing every category padded the grid
   // with empty gold-gradient placeholders that had nothing behind them.
@@ -124,14 +140,15 @@ export default function StoreHomePage() {
     [taxonomy.categories, coverByCategory, counts.byCategory],
   );
 
-  function openCatalog(category: string, subCategory?: string) {
+  function openCatalog(category: string, subCategory?: string, topSellersOnly = false) {
     const qs = new URLSearchParams({ category });
     if (subCategory) qs.set('subCategory', subCategory);
+    if (topSellersOnly) qs.set('topSellers', '1');
     router.push(`/store/manufacturer-catalog?${qs.toString()}`);
   }
 
   function handleCategoryClick(category: string) {
-    if (taxonomy.subCategories1For(category).length > 0) setOpenCategory(category);
+    if (taxonomy.subCategories1For(category).length > 0 || (topCountByCategory[category] ?? 0) > 0) setOpenCategory(category);
     else openCatalog(category);
   }
 
@@ -200,8 +217,10 @@ export default function StoreHomePage() {
           cover={coverByCategory[openCategory]}
           total={counts.byCategory[openCategory] ?? 0}
           countBySub={counts.bySub}
+          topSellerCount={topCountByCategory[openCategory] ?? 0}
           subCategoriesFor={taxonomy.subCategories1For}
           onPick={(sub) => openCatalog(openCategory, sub)}
+          onPickTopSellers={() => openCatalog(openCategory, undefined, true)}
           onViewAll={() => openCatalog(openCategory)}
           onClose={() => setOpenCategory(null)}
         />
@@ -382,14 +401,16 @@ function CategoryMosaic({
 
 /** Slide-over listing a category's sub-categories. */
 function SubCategoryPanel({
-  category, cover, total, countBySub, subCategoriesFor, onPick, onViewAll, onClose,
+  category, cover, total, countBySub, topSellerCount, subCategoriesFor, onPick, onPickTopSellers, onViewAll, onClose,
 }: {
   category: string;
   cover?: string;
   total: number;
   countBySub: Record<string, number>;
+  topSellerCount: number;
   subCategoriesFor: (category: string) => string[];
   onPick: (sub: string) => void;
+  onPickTopSellers: () => void;
   onViewAll: () => void;
   onClose: () => void;
 }) {
@@ -429,6 +450,26 @@ function SubCategoryPanel({
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
           <div className="grid grid-cols-2 gap-2.5">
+            {/* Computed from this retailer's own orders (last 30 days), not a
+                taxonomy entry — hidden until some design has sold enough. */}
+            {topSellerCount > 0 && (
+              <button
+                type="button"
+                onClick={onPickTopSellers}
+                className="group col-span-2 flex min-h-[62px] items-center justify-between gap-2 rounded-xl border border-[#c9a84c] bg-[#faf5e9] px-3 py-2.5 text-left text-sm font-semibold text-[#37302a] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(31,24,15,0.1)] active:scale-[0.96]"
+              >
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <TrendingUp className="h-4 w-4 shrink-0 text-[#9a7229]" />
+                  <span className="min-w-0">
+                    <span className="block leading-snug">Best Sellers · last 30 days</span>
+                    <span className="mt-0.5 block text-[11px] font-normal tabular-nums text-[#8a7f72]">
+                      {topSellerCount} {topSellerCount === 1 ? 'design' : 'designs'}
+                    </span>
+                  </span>
+                </span>
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#b39244]" />
+              </button>
+            )}
             {subs.map((sub) => {
               const n = countBySub[`${category}|${sub}`] ?? 0;
               return (
