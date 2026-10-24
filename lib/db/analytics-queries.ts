@@ -427,3 +427,79 @@ export async function getManufacturerTopProducts(
 
   return results.map((r) => ({ ...r, name: r.name ?? 'Unknown', total_units: Number(r.total_units) || 0 }));
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// RETAILER: Best sellers per category (home-page "Best Sellers" collection)
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface TopSellerItem {
+  manufacturerProductId: string;
+  category: string;
+  units: number;
+}
+
+/**
+ * Top-N most-ordered ACTIVE designs per category, from THIS retailer's own
+ * orders only (all its branches + orders it placed itself) — never other
+ * retailers', so no buying data leaks between purchase managers.
+ *
+ * Counts a kiosk order once forwarded to the manufacturer, and a Catalogue/
+ * Restock order once approved (pending_manager_approval = false); cancelled
+ * orders and individually cancelled line items are excluded. Deliberately a
+ * different (earlier) cut-off than the star ratings above, which only count
+ * a B2B order once COMPLETED — a 30-day best-seller list would otherwise stay
+ * empty for orders still in production.
+ */
+export async function getRetailerTopSellers(
+  storeId: string,
+  { days = 30, minUnits = 2, limit = 10 }: { days?: number; minUnits?: number; limit?: number } = {},
+): Promise<TopSellerItem[]> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const rows = await prisma.$queryRaw<{ product_id: string; category: string; units: number | bigint }[]>`
+    WITH combined AS (
+      SELECT koi.manufacturer_product_id AS product_id, koi.quantity AS quantity
+      FROM kiosk_order_items koi
+      JOIN kiosk_orders ko ON koi.order_id = ko.id
+      WHERE ko.store_id = ${storeId}
+        AND ko.forwarded_to_manufacturer = true
+        AND ko.status <> 'CANCELLED'
+        AND koi.status <> 'CANCELLED'
+        AND koi.manufacturer_product_id IS NOT NULL
+        AND ko.created_at >= ${since}
+
+      UNION ALL
+
+      SELECT boi.manufacturer_product_id AS product_id, boi.quantity AS quantity
+      FROM b2b_order_items boi
+      JOIN b2b_orders bo ON boi.order_id = bo.id
+      WHERE bo.store_id = ${storeId}
+        AND bo.pending_manager_approval = false
+        AND bo.status <> 'CANCELLED'
+        AND boi.status <> 'CANCELLED'
+        AND bo.created_at >= ${since}
+    ),
+    ranked AS (
+      SELECT
+        mp.id AS product_id,
+        mp.category,
+        SUM(c.quantity) AS units,
+        ROW_NUMBER() OVER (PARTITION BY mp.category ORDER BY SUM(c.quantity) DESC, mp.design_number) AS rn
+      FROM combined c
+      JOIN manufacturer_products mp ON mp.id = c.product_id
+      WHERE mp.status = 'ACTIVE' AND mp.category IS NOT NULL
+      GROUP BY mp.id, mp.category, mp.design_number
+      HAVING SUM(c.quantity) >= ${minUnits}
+    )
+    SELECT product_id, category, units FROM ranked
+    WHERE rn <= ${limit}
+    ORDER BY category, rn
+  `;
+
+  // SUM() comes back as BigInt, which c.json() can't serialize.
+  return rows.map((r) => ({
+    manufacturerProductId: r.product_id,
+    category: r.category,
+    units: Number(r.units),
+  }));
+}

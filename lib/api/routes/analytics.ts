@@ -16,6 +16,7 @@ import {
   getStoreManagerProductSales,
   getRetailerProductSales,
   getRetailerBranchSales,
+  getRetailerTopSellers,
   getManufacturerRetailerSales,
   getManufacturerCategoryWeightBreakdown,
   getManufacturerTopProducts,
@@ -121,6 +122,26 @@ analyticsRouter.get(
     } catch (error) {
       console.error('[analytics] store/branches error:', error);
       return c.json({ error: 'Failed to fetch branch data' }, 500);
+    }
+  }
+);
+
+/**
+ * GET /api/analytics/store/top-sellers
+ * Top 10 most-ordered designs per category (last 30 days, this retailer's own
+ * orders only) — feeds the home page's "Best Sellers" collection card.
+ */
+analyticsRouter.get(
+  '/store/top-sellers',
+  storeGuard,
+  async (c) => {
+    try {
+      const storeId = c.get('storeId') as string;
+      const data = await getRetailerTopSellers(storeId);
+      return c.json({ data });
+    } catch (error) {
+      console.error('[analytics] store/top-sellers error:', error);
+      return c.json({ error: 'Failed to fetch top sellers' }, 500);
     }
   }
 );
