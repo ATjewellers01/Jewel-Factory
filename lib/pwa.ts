@@ -20,13 +20,15 @@ export type PwaInstallState = {
   isStandalone: boolean;
   /** iPhone/iPad — no prompt API, install is manual via Share. */
   isIos: boolean;
+  /** Chrome on iPhone/iPad — Share sits in the top address bar, not the bottom toolbar. */
+  isIosChrome: boolean;
   /** Android phone/tablet — used to pick the right manual-install steps. */
   isAndroid: boolean;
   /** Manual "how to install" steps, shown when no prompt is available. */
   installSheetOpen: boolean;
 };
 
-const SERVER_STATE: PwaInstallState = { canPrompt: false, isStandalone: true, isIos: false, isAndroid: false, installSheetOpen: false };
+const SERVER_STATE: PwaInstallState = { canPrompt: false, isStandalone: true, isIos: false, isIosChrome: false, isAndroid: false, installSheetOpen: false };
 
 let deferredPrompt: InstallPromptEvent | null = null;
 let state: PwaInstallState = SERVER_STATE;
@@ -48,6 +50,10 @@ function detectIos() {
   return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
+function detectIosChrome() {
+  return detectIos() && /CriOS/.test(navigator.userAgent);
+}
+
 function detectAndroid() {
   return /Android/i.test(navigator.userAgent);
 }
@@ -57,6 +63,7 @@ if (typeof window !== 'undefined') {
     canPrompt: false,
     isStandalone: detectStandalone(),
     isIos: detectIos(),
+    isIosChrome: detectIosChrome(),
     isAndroid: detectAndroid(),
     installSheetOpen: false,
   };

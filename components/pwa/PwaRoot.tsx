@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, EllipsisVertical, MonitorDown, Plus, Share, SquarePlus, X } from 'lucide-react';
+import { ArrowUp, ChevronDown, Download, EllipsisVertical, MonitorDown, Plus, Share, SquarePlus, X } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useId } from 'react';
 
@@ -14,7 +14,7 @@ import { closeInstallSheet } from '@/lib/pwa';
  * menu that opened them.
  */
 export function PwaRoot() {
-  const { installSheetOpen, isIos, isAndroid } = usePwaInstall();
+  const { installSheetOpen, isIos, isIosChrome, isAndroid } = usePwaInstall();
 
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production' || !('serviceWorker' in navigator)) return;
@@ -24,13 +24,22 @@ export function PwaRoot() {
   }, []);
 
   if (!installSheetOpen) return null;
-  const platform = isIos ? 'ios' : isAndroid ? 'android' : 'desktop';
+  const platform = isIosChrome ? 'iosChrome' : isIos ? 'ios' : isAndroid ? 'android' : 'desktop';
   return <InstallSheet platform={platform} onClose={closeInstallSheet} />;
 }
 
+// iOS share sheets show only a few actions at first; "Add to Home Screen"
+// sits under "View More", which users miss without being told.
 const STEPS = {
+  iosChrome: [
+    { icon: Share, text: <>Tap the <b>Share</b> icon at the top-right of the address bar.</> },
+    { icon: ChevronDown, text: <>Tap <b>View More</b> at the bottom-right of the share menu.</> },
+    { icon: SquarePlus, text: <>Scroll down and tap <b>Add to Home Screen</b>.</> },
+    { icon: Plus, text: <>Tap <b>Add</b> in the top-right corner.</> },
+  ],
   ios: [
-    { icon: Share, text: <>Tap the <b>Share</b> button in the browser toolbar.</> },
+    { icon: Share, text: <>Tap the <b>Share</b> button (on newer iPhones it&apos;s inside the <b>⋯</b> menu).</> },
+    { icon: ChevronDown, text: <>If you don&apos;t see the option, tap <b>View More</b>.</> },
     { icon: SquarePlus, text: <>Scroll down and tap <b>Add to Home Screen</b>.</> },
     { icon: Plus, text: <>Tap <b>Add</b> in the top-right corner.</> },
   ],
@@ -47,6 +56,7 @@ const STEPS = {
 };
 
 const NOTES = {
+  iosChrome: 'The installed app keeps its own sign-in, so you\'ll log in once inside it.',
   ios: 'In Chrome on iPhone, the Share button is in the address bar. The installed app keeps its own sign-in, so you\'ll log in once inside it.',
   android: 'Use Chrome for the best result. If it\'s already installed, open Jewel Factory from your Home Screen.',
   desktop: 'Works in Chrome and Edge. If it\'s already installed, open Jewel Factory from your apps.',
@@ -69,17 +79,26 @@ function InstallSheet({ platform, onClose }: { platform: keyof typeof STEPS; onC
   }, [onClose]);
 
   const steps = STEPS[platform];
+  // Chrome on iPhone keeps Share in the top address bar, so the sheet drops
+  // from the top with an arrow pointing at it instead of rising from below.
+  const atTop = platform === 'iosChrome';
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/55 backdrop-blur-[2px] sm:items-center sm:p-4"
+      className={`fixed inset-0 z-[100] flex justify-center bg-black/55 backdrop-blur-[2px] ${atTop ? 'items-start' : 'items-end sm:items-center sm:p-4'}`}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby={titleId}
     >
+      {atTop ? (
+        <span aria-hidden className="pointer-events-none absolute right-5 top-1 flex flex-col items-center text-[#efd489]">
+          <ArrowUp className="h-7 w-7 animate-bounce" />
+          <span className="text-[11px] font-semibold">Share</span>
+        </span>
+      ) : null}
       <div
-        className="w-full max-w-md rounded-t-3xl bg-[#fbf8f1] p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl sm:rounded-3xl"
+        className={`w-full max-w-md bg-[#fbf8f1] p-6 shadow-2xl ${atTop ? 'mx-3 mt-14 rounded-3xl' : 'rounded-t-3xl pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:rounded-3xl'}`}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
