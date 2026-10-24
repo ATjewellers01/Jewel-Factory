@@ -3,7 +3,7 @@
 import { ArrowLeftRight, ChevronLeft, ChevronRight, Gem, Maximize2, RotateCcw, Sparkles, X, ZoomIn, ZoomOut } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { formatWeight } from '@/lib/format';
@@ -130,7 +130,7 @@ export function StoreManagerProductDetailModal({
                 two-column panel per design with a mandatory snap. */}
             <div
               ref={scrollRef}
-              className="h-full snap-y snap-proximity overflow-y-auto overscroll-contain scrollbar-auto [scrollbar-color:#c9a84c_#ece5d8] sm:snap-mandatory [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#c9a84c] [&::-webkit-scrollbar-track]:bg-[#ece5d8]"
+              className="h-full snap-y snap-proximity overflow-y-auto [container-type:size] overscroll-contain scrollbar-auto [scrollbar-color:#c9a84c_#ece5d8] sm:snap-mandatory [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#c9a84c] [&::-webkit-scrollbar-track]:bg-[#ece5d8]"
             >
               <div ref={(el) => { if (el) blockRefs.current.set(product.id, el); }} data-design-id={product.id} className="flex min-h-full snap-start flex-col sm:h-full sm:snap-always">
                 <ProductBlock product={product} primaryAction={primaryAction} tryOnBack={tryOnBack} onZoom={setZoom} />
@@ -254,10 +254,16 @@ function ProductBlock({
   return (
     <article className="flex flex-1 flex-col bg-[#fdfcf9] sm:grid sm:h-full sm:min-h-0 sm:grid-cols-2 md:grid-cols-[1.15fr_0.85fr]">
       <div className="flex shrink-0 flex-col bg-[#ede5d8] sm:h-full sm:min-h-0 sm:border-r sm:border-[#d8c8aa]/55 sm:p-3.5 lg:p-4">
-        {/* Mobile: edge-to-edge photo, as tall as the screen width (capped at 65%
-            of the screen height) — a square catalogue photo fills the full width.
-            object-contain everywhere, so the design is never cropped. */}
-        <div className="flex h-[min(100vw,65dvh)] items-center justify-center sm:h-auto sm:min-h-0 sm:flex-1">
+        {/* Mobile: the photo fills the visible screen (the scroll box's height,
+            via cqh) minus the sticky Add/Try On footer, the photo thumbnails and
+            the category line + "Design JF-xxxx" title, so the full design and its
+            name show first and the specs sit below, one scroll away. Older browsers without container units fall
+            back to a screen-width square. object-contain everywhere, so the
+            design is never cropped. */}
+        <div
+          className="flex h-[min(100vw,65dvh)] items-center justify-center supports-[height:1cqh]:h-[max(16rem,calc(100cqh-var(--jf-photo-reserve)))] sm:h-auto sm:min-h-0 sm:flex-1 sm:supports-[height:1cqh]:h-auto"
+          style={{ '--jf-photo-reserve': `${5 + (product.hasTryon ? 7.5 : 4.125) + (product.images.length > 1 ? 3.75 : 0)}rem` } as CSSProperties}
+        >
           <div className="relative h-full w-full overflow-hidden sm:aspect-square sm:w-auto sm:max-w-full sm:rounded-[1.1rem]">
             {selectedImage ? (
               <button type="button" onClick={openZoom} aria-label="Open zoom view" className="group absolute inset-0 cursor-zoom-in">
