@@ -266,6 +266,22 @@ export default function StoreLayout({ children }: { children: ReactNode }) {
         </div>
       ) : null}
 
+      {/* Floating "Customised Order" shortcut — site-wide chat-widget-style
+          button (always visible, bottom-right). The same destination was
+          already reachable from the Dashboard drawer (DRAWER_NAV above), but
+          users weren't finding it there; this gives it its own always-on
+          entry point instead of being buried one extra click deep. Hidden on
+          the form's own page, since floating over the thing it opens is
+          pointless there. */}
+      {!isActive('/store/custom-designs') && (
+        <Link
+          href="/store/custom-designs/new"
+          className="metal-sheen fixed bottom-5 right-4 z-40 flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-3 text-xs font-semibold text-[#17120b] shadow-[0_10px_30px_rgba(31,24,15,0.35)] transition-transform hover:-translate-y-0.5 sm:bottom-6 sm:right-6 sm:px-5 sm:py-3.5 sm:text-sm"
+        >
+          <PencilLine className="h-4 w-4 shrink-0" />
+          Customised Order
+        </Link>
+      )}
     </div>
   );
 }

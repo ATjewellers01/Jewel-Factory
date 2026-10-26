@@ -166,6 +166,39 @@ export default function StoreCustomDesignNewPage() {
           {/* Order number (orderRef, the shop's own reference) is hidden from
               this form per client request — still captured as undefined, the
               field simply isn't shown/collected here anymore. */}
+
+          {/* Reference images moved to the very top (2026-10-26) — the
+              photo is the first thing a retailer has in hand when placing a
+              bespoke order, and it was previously buried near the bottom
+              after every spec field. */}
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <label className="text-xs font-medium text-muted-foreground">Reference images<Required /></label>
+              <span className="text-[11px] text-muted-foreground">{images.length}/{MAX_IMAGES}</span>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {images.map((url) => (
+                <div key={url} className="relative h-28 w-28">
+                  <Image src={url} alt="reference" fill className="rounded-xl border object-cover" />
+                  <button type="button" onClick={() => removeImage(url)} className="absolute -right-2 -top-2 rounded-full bg-black/70 p-1 text-white hover:bg-black" aria-label="Remove">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              {images.length < MAX_IMAGES && (
+                <>
+                  <button type="button" onClick={() => fileInput.current?.click()} disabled={uploading}
+                    className="flex h-28 w-28 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-black/15 text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary disabled:opacity-60">
+                    {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Upload className="h-6 w-6" />}
+                    <span className="text-xs">{uploading ? 'Uploading…' : 'Add photo'}</span>
+                  </button>
+                  <input ref={fileInput} type="file" accept="image/*" multiple hidden onChange={(e) => e.target.files && handleUpload(e.target.files)} />
+                </>
+              )}
+            </div>
+            <FieldError errors={toFieldErrors(fieldError(submitErr, 'referenceImageUrl') ?? fieldError(submitErr, 'referenceImageUrls'))} />
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="text-xs font-medium text-muted-foreground">Delivery date<Required /></label>
@@ -286,34 +319,6 @@ export default function StoreCustomDesignNewPage() {
               <Input className="mt-1 h-10" placeholder="e.g. 8 mm" value={form.broadness} onChange={(e) => set('broadness', e.target.value)} />
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'broadness'))} />
             </div>
-          </div>
-
-          <div>
-            <div className="mb-1.5 flex items-center justify-between">
-              <label className="text-xs font-medium text-muted-foreground">Reference images<Required /></label>
-              <span className="text-[11px] text-muted-foreground">{images.length}/{MAX_IMAGES}</span>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {images.map((url) => (
-                <div key={url} className="relative h-28 w-28">
-                  <Image src={url} alt="reference" fill className="rounded-xl border object-cover" />
-                  <button type="button" onClick={() => removeImage(url)} className="absolute -right-2 -top-2 rounded-full bg-black/70 p-1 text-white hover:bg-black" aria-label="Remove">
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-              {images.length < MAX_IMAGES && (
-                <>
-                  <button type="button" onClick={() => fileInput.current?.click()} disabled={uploading}
-                    className="flex h-28 w-28 flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-black/15 text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary disabled:opacity-60">
-                    {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Upload className="h-6 w-6" />}
-                    <span className="text-xs">{uploading ? 'Uploading…' : 'Add photo'}</span>
-                  </button>
-                  <input ref={fileInput} type="file" accept="image/*" multiple hidden onChange={(e) => e.target.files && handleUpload(e.target.files)} />
-                </>
-              )}
-            </div>
-            <FieldError errors={toFieldErrors(fieldError(submitErr, 'referenceImageUrl') ?? fieldError(submitErr, 'referenceImageUrls'))} />
           </div>
 
           <div>
