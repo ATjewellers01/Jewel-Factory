@@ -19,7 +19,7 @@ import { useB2bCart } from '@/hooks/use-b2b-cart';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useTaxonomy } from '@/hooks/use-taxonomy';
 import { buildCatalogCounts, subCategories1WithStock, subCategories2WithStock } from '@/lib/catalog-counts';
-import { PAST_DELIVERY_DATE_MESSAGE, isPastDeliveryDate, localTodayIso } from '@/lib/delivery-date';
+import { clientDeliveryDateError, localTodayIso, maxDeliveryDateIso } from '@/lib/delivery-date';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { categoryHierarchy, formatWeight, grossNetWeightSummary } from '@/lib/format';
 import { matchesDescriptionQuery, rankSimilar } from '@/lib/product-similarity';
@@ -191,7 +191,7 @@ function CatalogBrowse() {
   }, [category]);
 
   async function placeOrder() {
-    if (deliveryDate && isPastDeliveryDate(deliveryDate, localTodayIso())) return;
+    if (clientDeliveryDateError(deliveryDate)) return;
     setPlacing(true);
     setSubmitErr(null);
     try {
@@ -467,18 +467,16 @@ function CatalogBrowse() {
                   type="date"
                   value={deliveryDate}
                   min={localTodayIso()}
+                  max={maxDeliveryDateIso()}
                   onChange={(e) => setDeliveryDate(e.target.value)}
                   className="mt-1 w-auto max-w-[180px] appearance-none"
                 />
-                <FieldError errors={toFieldErrors(
-                  (deliveryDate && isPastDeliveryDate(deliveryDate, localTodayIso()) ? PAST_DELIVERY_DATE_MESSAGE : undefined)
-                  ?? fieldError(submitErr, 'deliveryDate'),
-                )} />
+                <FieldError errors={toFieldErrors(clientDeliveryDateError(deliveryDate) ?? fieldError(submitErr, 'deliveryDate'))} />
               </div>
               <textarea placeholder="Remark (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm min-h-[60px]" />
               <FieldError errors={toFieldErrors(fieldError(submitErr, 'notes'))} />
               <p className="text-xs text-muted-foreground">Ships to your fixed store address.</p>
-              <Button onClick={placeOrder} disabled={placing} className="metal-sheen text-[#17120b] font-semibold w-full">
+              <Button onClick={placeOrder} disabled={placing || clientDeliveryDateError(deliveryDate) !== null} className="metal-sheen text-[#17120b] font-semibold w-full">
                 {placing ? <Loader2 className="h-4 w-4 animate-spin" /> : `Place order (${cart.count} item(s))`}
               </Button>
             </>

@@ -227,3 +227,20 @@
     animation: none;
   }
 }
+
+/* Photo similar-search "searching" overlay — a gold scan line sweeping over
+   the uploaded photo (components/search/PhotoSearchOverlay.tsx). */
+@keyframes jf-scan {
+  0%   { top: 0%; opacity: 0; }
+  15%  { opacity: 1; }
+  50%  { top: calc(100% - 3px); opacity: 1; }
+  85%  { opacity: 1; }
+  100% { top: 0%; opacity: 0; }
+}
+.jf-scan-line {
+  top: 0;
+  animation: jf-scan 1.7s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .jf-scan-line { animation: none; opacity: 0; }
+}
