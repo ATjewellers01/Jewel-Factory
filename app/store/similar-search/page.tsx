@@ -1,12 +1,13 @@
 'use client';
 
-import { Camera, ImageIcon, Lightbulb, Loader2, Sparkles } from 'lucide-react';
+import { Camera, ImageIcon, Lightbulb, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRef, useState } from 'react';
 
 import { KioskProductCard } from '@/components/kiosk/KioskProductCard';
 import { StoreManagerProductDetailModal } from '@/components/kiosk/StoreManagerProductDetailModal';
 import { CartQtyControl } from '@/components/orders/CartQtyControl';
+import { PhotoSearchOverlay } from '@/components/search/PhotoSearchOverlay';
 import { Button } from '@/components/ui/button';
 import { useB2bCart } from '@/hooks/use-b2b-cart';
 
@@ -81,36 +82,41 @@ export default function RetailerSimilarSearchPage() {
           onDrop={(e) => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) void onFile(f); }}
           className={`group flex flex-col items-center justify-center rounded-3xl border-2 border-dashed px-5 py-10 text-center transition-colors sm:px-6 sm:py-12 ${dragOver ? 'border-[#c9a84c] bg-[#c9a84c]/5' : 'border-[#c9a84c]/40 bg-[#fffdf8]'}`}
         >
-          {preview ? (
-            <div className="relative h-28 w-28 overflow-hidden rounded-2xl border shadow-sm">
-              {/* eslint-disable-next-line @next/next/no-img-element -- data: URI (FileReader.readAsDataURL), next/image doesn't optimize data URIs */}
-              <img src={preview} alt="query" className="h-full w-full object-cover" />
-            </div>
+          {loading ? (
+            <PhotoSearchOverlay preview={preview} />
           ) : (
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-transform group-hover:scale-105">
-              <Camera className="h-7 w-7" />
-            </span>
+            <>
+              {preview ? (
+                <div className="relative h-28 w-28 overflow-hidden rounded-2xl border shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- data: URI (FileReader.readAsDataURL), next/image doesn't optimize data URIs */}
+                  <img src={preview} alt="query" className="h-full w-full object-cover" />
+                </div>
+              ) : (
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-transform group-hover:scale-105">
+                  <Camera className="h-7 w-7" />
+                </span>
+              )}
+              <p className="mt-4 text-sm font-medium text-foreground">{preview ? 'Search another photo' : 'Take a photo or choose one from your device'}</p>
+              <p className="mt-1 text-xs text-muted-foreground">For the best match, use a clear photo of the jewellery on a plain background.</p>
+              <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#eadfca] bg-[#fbf6ea] px-3 py-1.5 text-xs font-semibold text-[#8a6a24]">
+                <Lightbulb className="h-3.5 w-3.5 flex-shrink-0 text-[#c9a84c]" />
+                Tip: One design. Plain background. Clear photo.
+              </span>
+              <div className="mt-5 flex w-full max-w-md flex-col gap-3 sm:flex-row sm:justify-center">
+                <Button type="button" disabled={loading} className="metal-sheen min-h-11 flex-1 rounded-full px-6 font-semibold text-[#17120b]" onClick={() => cameraInput.current?.click()}>
+                  <Camera className="mr-1.5 h-4 w-4" /> Take photo
+                </Button>
+                <Button type="button" disabled={loading} variant="outline" className="min-h-11 flex-1 rounded-full border-[#c9a84c]/50 bg-white px-6 font-semibold text-foreground hover:bg-[#c9a84c]/5" onClick={() => libraryInput.current?.click()}>
+                  <ImageIcon className="mr-1.5 h-4 w-4" /> Choose photo
+                </Button>
+              </div>
+            </>
           )}
-          <p className="mt-4 text-sm font-medium text-foreground">{preview ? 'Search another photo' : 'Take a photo or choose one from your device'}</p>
-          <p className="mt-1 text-xs text-muted-foreground">For the best match, use a clear photo of the jewellery on a plain background.</p>
-          <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#eadfca] bg-[#fbf6ea] px-3 py-1.5 text-xs font-semibold text-[#8a6a24]">
-            <Lightbulb className="h-3.5 w-3.5 flex-shrink-0 text-[#c9a84c]" />
-            Tip: One design. Plain background. Clear photo.
-          </span>
-          <div className="mt-5 flex w-full max-w-md flex-col gap-3 sm:flex-row sm:justify-center">
-            <Button type="button" disabled={loading} className="metal-sheen min-h-11 flex-1 rounded-full px-6 font-semibold text-[#17120b]" onClick={() => cameraInput.current?.click()}>
-              <Camera className="mr-1.5 h-4 w-4" /> Take photo
-            </Button>
-            <Button type="button" disabled={loading} variant="outline" className="min-h-11 flex-1 rounded-full border-[#c9a84c]/50 bg-white px-6 font-semibold text-foreground hover:bg-[#c9a84c]/5" onClick={() => libraryInput.current?.click()}>
-              <ImageIcon className="mr-1.5 h-4 w-4" /> Choose photo
-            </Button>
-          </div>
           <input ref={cameraInput} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { const file = e.target.files?.[0]; e.currentTarget.value = ''; if (file) void onFile(file); }} />
           <input ref={libraryInput} type="file" accept="image/*" hidden onChange={(e) => { const file = e.target.files?.[0]; e.currentTarget.value = ''; if (file) void onFile(file); }} />
         </div>
       </div>
 
-      {loading && <div className="mt-8 flex items-center justify-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Searching…</div>}
       {error && <div className="mx-auto mt-6 max-w-2xl rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</div>}
 
       {results && results.length === 0 && !loading && (
