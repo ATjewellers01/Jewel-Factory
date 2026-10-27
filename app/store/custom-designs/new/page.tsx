@@ -11,7 +11,7 @@ import { Optional, Required } from '@/components/ui/field-mark';
 import { Input } from '@/components/ui/input';
 import { apiPost } from '@/hooks/use-api';
 import { useTaxonomy } from '@/hooks/use-taxonomy';
-import { PAST_DELIVERY_DATE_MESSAGE, isPastDeliveryDate, localTodayIso } from '@/lib/delivery-date';
+import { clientDeliveryDateError, localTodayIso, maxDeliveryDateIso } from '@/lib/delivery-date';
 import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { formatWeight3, isWeightInput } from '@/lib/weight-input';
 
@@ -89,7 +89,8 @@ export default function StoreCustomDesignNewPage() {
     setError(null);
     setSubmitErr(null);
 
-    if (form.deliveryDate && isPastDeliveryDate(form.deliveryDate, localTodayIso())) { setError(PAST_DELIVERY_DATE_MESSAGE); return; }
+    const dateErr = clientDeliveryDateError(form.deliveryDate);
+    if (dateErr) { setError(dateErr); return; }
     if (!form.purity) { setError('Please choose the melting / purity.'); return; }
     if (images.length === 0) { setError('Please add at least one reference image.'); return; }
 
@@ -169,11 +170,8 @@ export default function StoreCustomDesignNewPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="text-xs font-medium text-muted-foreground">Delivery date<Required /></label>
-              <Input required type="date" min={localTodayIso()} className="mt-1 h-10 appearance-none" value={form.deliveryDate} onChange={(e) => set('deliveryDate', e.target.value)} />
-              <FieldError errors={toFieldErrors(
-                (form.deliveryDate && isPastDeliveryDate(form.deliveryDate, localTodayIso()) ? PAST_DELIVERY_DATE_MESSAGE : undefined)
-                ?? fieldError(submitErr, 'deliveryDate'),
-              )} />
+              <Input required type="date" min={localTodayIso()} max={maxDeliveryDateIso()} className="mt-1 h-10 appearance-none" value={form.deliveryDate} onChange={(e) => set('deliveryDate', e.target.value)} />
+              <FieldError errors={toFieldErrors(clientDeliveryDateError(form.deliveryDate) ?? fieldError(submitErr, 'deliveryDate'))} />
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -323,7 +321,7 @@ export default function StoreCustomDesignNewPage() {
           </div>
 
           {error && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-          <Button type="submit" disabled={loading} className="metal-sheen h-11 w-full rounded-full text-sm font-semibold text-[#17120b]">
+          <Button type="submit" disabled={loading || clientDeliveryDateError(form.deliveryDate) !== null} className="metal-sheen h-11 w-full rounded-full text-sm font-semibold text-[#17120b]">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="mr-1.5 h-4 w-4" /> Place order</>}
           </Button>
         </form>

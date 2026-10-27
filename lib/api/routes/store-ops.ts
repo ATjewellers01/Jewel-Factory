@@ -16,7 +16,7 @@ import {
 } from '@/lib/db/custom-design';
 import { listOrderMessages, addOrderMessage } from '@/lib/db/messages';
 import { signUpload, storeFolder } from '@/lib/storage';
-import { PAST_DELIVERY_DATE_MESSAGE, indiaTodayIso, isPastDeliveryDate } from '@/lib/delivery-date';
+import { FAR_DELIVERY_DATE_MESSAGE, PAST_DELIVERY_DATE_MESSAGE, deliveryDateError, indiaMaxDeliveryDateIso, indiaTodayIso, isPastDeliveryDate } from '@/lib/delivery-date';
 import { notifyOrderApprovedWhatsApp } from '@/lib/order-whatsapp';
 import { roundWeight3 } from '@/lib/weight-input';
 import { sendData, sendError } from '../envelope';
@@ -88,8 +88,9 @@ storeOpsRoutes.get('/kiosk-orders/:id', async (c) => {
 });
 storeOpsRoutes.post('/kiosk-orders/:id/approve', async (c) => {
   const deliveryDate = await optionalDeliveryDate(c);
-  if (deliveryDate && isPastDeliveryDate(deliveryDate.toISOString(), indiaTodayIso())) {
-    return sendError(c, 'bad_request', PAST_DELIVERY_DATE_MESSAGE, 400, { deliveryDate: PAST_DELIVERY_DATE_MESSAGE });
+  const deliveryErr = deliveryDate ? deliveryDateError(deliveryDate.toISOString().slice(0, 10), indiaTodayIso(), indiaMaxDeliveryDateIso()) : null;
+  if (deliveryErr) {
+    return sendError(c, 'bad_request', deliveryErr, 400, { deliveryDate: deliveryErr });
   }
   const ok = await approveKioskOrder(c.get('storeId'), c.req.param('id'), approverIdOrNull(c), deliveryDate);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
@@ -122,8 +123,9 @@ storeOpsRoutes.get('/b2b-orders/:id', async (c) => {
 });
 storeOpsRoutes.post('/b2b-orders/:id/approve', async (c) => {
   const deliveryDate = await optionalDeliveryDate(c);
-  if (deliveryDate && isPastDeliveryDate(deliveryDate.toISOString(), indiaTodayIso())) {
-    return sendError(c, 'bad_request', PAST_DELIVERY_DATE_MESSAGE, 400, { deliveryDate: PAST_DELIVERY_DATE_MESSAGE });
+  const deliveryErr = deliveryDate ? deliveryDateError(deliveryDate.toISOString().slice(0, 10), indiaTodayIso(), indiaMaxDeliveryDateIso()) : null;
+  if (deliveryErr) {
+    return sendError(c, 'bad_request', deliveryErr, 400, { deliveryDate: deliveryErr });
   }
   const ok = await approveB2bOrder(c.get('storeId'), c.req.param('id'), approverIdOrNull(c), deliveryDate);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
@@ -164,6 +166,7 @@ const StoreCustomBody = z.object({
     emptyToUndefined,
     z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a valid date')
       .refine((v) => !isPastDeliveryDate(v, indiaTodayIso()), PAST_DELIVERY_DATE_MESSAGE)
+      .refine((v) => v <= indiaMaxDeliveryDateIso(), FAR_DELIVERY_DATE_MESSAGE)
       .optional(),
   ),
   quantity: optionalText(30),
