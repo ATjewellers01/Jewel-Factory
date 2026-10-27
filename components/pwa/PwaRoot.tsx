@@ -1,11 +1,11 @@
 'use client';
 
-import { ArrowUp, ChevronDown, Download, EllipsisVertical, MonitorDown, Plus, Share, SquarePlus, X } from 'lucide-react';
+import { ArrowUp, Download, EllipsisVertical, MonitorDown, Plus, Share, SquarePlus, X } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useId } from 'react';
 
 import { usePwaInstall } from '@/hooks/use-pwa-install';
-import { closeInstallSheet } from '@/lib/pwa';
+import { closeInstallSheet, promptInstall } from '@/lib/pwa';
 
 /**
  * Mounted once in the root layout. Registers the service worker (production
@@ -33,15 +33,14 @@ export function PwaRoot() {
 const STEPS = {
   iosChrome: [
     { icon: Share, text: <>Tap the <b>Share</b> icon at the top-right of the address bar.</> },
-    { icon: ChevronDown, text: <>Tap <b>View More</b> at the bottom-right of the share menu.</> },
-    { icon: SquarePlus, text: <>Scroll down and tap <b>Add to Home Screen</b>.</> },
-    { icon: Plus, text: <>Tap <b>Add</b> in the top-right corner.</> },
+    { icon: Share, text: <>Tap <b>Share</b> at the top-right of the address bar.</> },
+    { icon: SquarePlus, text: <>Tap <b>Add to Home Screen</b> (under <b>View More</b> if hidden).</> },
+    { icon: Plus, text: <>Tap <b>Add</b>.</> },
   ],
   ios: [
-    { icon: Share, text: <>Tap the <b>Share</b> button (on newer iPhones it&apos;s inside the <b>⋯</b> menu).</> },
-    { icon: ChevronDown, text: <>If you don&apos;t see the option, tap <b>View More</b>.</> },
-    { icon: SquarePlus, text: <>Scroll down and tap <b>Add to Home Screen</b>.</> },
-    { icon: Plus, text: <>Tap <b>Add</b> in the top-right corner.</> },
+    { icon: Share, text: <>Tap the <b>Share</b> button in the toolbar.</> },
+    { icon: SquarePlus, text: <>Tap <b>Add to Home Screen</b> (under <b>View More</b> if hidden).</> },
+    { icon: Plus, text: <>Tap <b>Add</b>.</> },
   ],
   android: [
     { icon: EllipsisVertical, text: <>Tap the <b>⋮ menu</b> at the top-right of the browser.</> },
@@ -78,10 +77,16 @@ function InstallSheet({ platform, onClose }: { platform: keyof typeof STEPS; onC
     };
   }, [onClose]);
 
+  // If Chrome's own install prompt becomes available while this sheet is open
+  // (beforeinstallprompt can fire a moment after the user first tapped), offer
+  // a real one-tap Install button instead of the manual steps — the steps
+  // below are only a fallback for when Chrome gives us no prompt (iPhone
+  // always, Android sometimes).
+  const { canPrompt } = usePwaInstall();
   const steps = STEPS[platform];
   // Chrome on iPhone keeps Share in the top address bar, so the sheet drops
   // from the top with an arrow pointing at it instead of rising from below.
-  const atTop = platform === 'iosChrome';
+  const atTop = platform === 'iosChrome' && !canPrompt;
 
   return (
     <div
@@ -112,19 +117,39 @@ function InstallSheet({ platform, onClose }: { platform: keyof typeof STEPS; onC
           <button onClick={onClose} className="rounded-full p-2 text-[#544b43] hover:bg-black/5" aria-label="Close"><X className="h-5 w-5" /></button>
         </div>
 
-        <ol className="mt-5 space-y-3">
-          {steps.map(({ icon: Icon, text }, index) => (
-            <li key={index} className="flex items-center gap-3 rounded-2xl border border-black/5 bg-white px-4 py-3 text-sm text-[#544b43]">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#211c17] text-[11px] font-bold text-[#efd489]">{index + 1}</span>
-              <span className="flex-1">{text}</span>
-              <Icon className="h-5 w-5 shrink-0 text-[#2f7cf6]" />
-            </li>
-          ))}
-        </ol>
-
-        <p className="mt-4 text-xs leading-relaxed text-[#80756a]">{NOTES[platform]}</p>
-
-        <button onClick={onClose} className="mt-5 w-full rounded-full bg-[#211c17] py-3 text-sm font-semibold text-[#fffaf0]">Got it</button>
+        {canPrompt ? (
+          <>
+            <p className="mt-5 text-sm leading-relaxed text-[#544b43]">Tap below to install Jewel Factory on your device.</p>
+            <button
+              onClick={() => { void promptInstall().finally(onClose); }}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-[#211c17] py-3.5 text-sm font-semibold text-[#fffaf0]"
+            >
+              <Download className="h-4 w-4" /> Install now
+            </button>
+            <button onClick={onClose} className="mt-2 w-full rounded-full py-2.5 text-sm font-semibold text-[#80756a]">Not now</button>
+          </>
+        ) : (
+          <>
+            {/* These are things to do in the browser's OWN menu — not buttons
+                on this sheet. Styled as a plain checklist so nobody taps a row
+                expecting it to act (a real confusion we saw). */}
+            <p className="mt-5 mb-3 text-xs font-semibold uppercase tracking-wide text-[#9a8f83]">Do this in your browser:</p>
+            <ol className="space-y-2.5">
+              {steps.map(({ icon: Icon, text }, index) => (
+                <li key={index} className="flex items-start gap-3 text-sm text-[#544b43]">
+                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#211c17] text-[11px] font-bold text-[#efd489]">{index + 1}</span>
+                  <span className="flex-1 leading-snug">{text}</span>
+                  <Icon className="mt-0.5 h-5 w-5 shrink-0 text-[#b68a3e]" />
+                </li>
+              ))}
+            </ol>
+            <p className="mt-4 text-xs leading-relaxed text-[#80756a]">{NOTES[platform]}</p>
+            <p className="mt-2 rounded-xl bg-[#f3ece0] px-3 py-2 text-xs text-[#6f6459]">
+              Already installed? Nothing will happen here — just open <b>Jewel Factory</b> from your Home Screen.
+            </p>
+            <button onClick={onClose} className="mt-4 w-full rounded-full bg-[#211c17] py-3 text-sm font-semibold text-[#fffaf0]">Got it</button>
+          </>
+        )}
       </div>
     </div>
   );
