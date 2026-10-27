@@ -22,6 +22,7 @@ import {
   placeKioskOrder, placeB2bOrder,
   getKioskOrdersByBranch, getB2bOrdersByBranch, markKioskCompleted, markB2bCompleted,
 } from '@/lib/db/orders';
+import { notifyOrderPlacedWhatsApp } from '@/lib/order-whatsapp';
 import { listOrderMessages, addOrderMessage } from '@/lib/db/messages';
 import { formatStoreAddress } from '@/lib/db/stores';
 import { listFavorites, addFavorite, removeFavorite } from '@/lib/db/favorites';
@@ -316,6 +317,7 @@ branchManagerRoutes.post('/kiosk-orders', branchManagerGuard, jsonValidator(Kios
       };
     }),
   });
+  void notifyOrderPlacedWhatsApp('KIOSK', order.id);
   return sendData(c, order, 201);
 });
 
@@ -408,6 +410,7 @@ branchManagerRoutes.post('/restock-orders', branchManagerGuard, jsonValidator(Re
       };
     }),
   });
+  void notifyOrderPlacedWhatsApp('B2B', order.id);
   return sendData(c, order, 201);
 });
 

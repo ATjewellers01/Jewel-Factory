@@ -17,6 +17,7 @@ import {
 import { listOrderMessages, addOrderMessage } from '@/lib/db/messages';
 import { signUpload, storeFolder } from '@/lib/storage';
 import { PAST_DELIVERY_DATE_MESSAGE, indiaTodayIso, isPastDeliveryDate } from '@/lib/delivery-date';
+import { notifyOrderApprovedWhatsApp } from '@/lib/order-whatsapp';
 import { roundWeight3 } from '@/lib/weight-input';
 import { sendData, sendError } from '../envelope';
 import { managerGuard, approverIdOrNull, type AppEnv } from '../guards';
@@ -92,6 +93,7 @@ storeOpsRoutes.post('/kiosk-orders/:id/approve', async (c) => {
   }
   const ok = await approveKioskOrder(c.get('storeId'), c.req.param('id'), approverIdOrNull(c), deliveryDate);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
+  void notifyOrderApprovedWhatsApp('KIOSK', c.req.param('id'));
   return sendData(c, { ok: true });
 });
 storeOpsRoutes.post('/kiosk-orders/:id/reject', async (c) => {
@@ -125,6 +127,7 @@ storeOpsRoutes.post('/b2b-orders/:id/approve', async (c) => {
   }
   const ok = await approveB2bOrder(c.get('storeId'), c.req.param('id'), approverIdOrNull(c), deliveryDate);
   if (!ok) return sendError(c, 'not_found', 'Order not found', 404);
+  void notifyOrderApprovedWhatsApp('B2B', c.req.param('id'));
   return sendData(c, { ok: true });
 });
 storeOpsRoutes.post('/b2b-orders/:id/reject', async (c) => {
