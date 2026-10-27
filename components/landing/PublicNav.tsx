@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { Wordmark } from '@/components/landing/Wordmark';
-import { InstallAppMenuItem } from '@/components/pwa/InstallAppMenuItem';
+import { InstallAppButton } from '@/components/pwa/InstallAppButton';
 
 const LoginModal = dynamic(
   () => import('@/components/landing/LoginModal').then((module) => module.LoginModal),
@@ -69,6 +69,10 @@ export function PublicNav({ catalogHref = '/#showcase' }: { catalogHref?: string
             </nav>
 
             <div className="flex items-center gap-1.5">
+              {/* Top-right so a first-time, logged-out visitor sees it without
+                  opening any menu — mobile and desktop. Hides itself once the
+                  app is installed; this whole navbar is gone after login. */}
+              <InstallAppButton />
               <button onClick={() => setShowLogin(true)} className="hidden rounded-full px-3 py-2 text-xs font-semibold text-[#62584f] transition-colors hover:bg-black/5 sm:block">Login</button>
               <Link href="/store/register" className="metal-sheen hidden items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-semibold text-[#17120b] shadow-sm transition-transform hover:scale-[1.02] sm:flex">New User? Sign Up <ArrowRight className="h-3.5 w-3.5" /></Link>
               <button className="rounded-full border border-black/10 bg-white/60 p-2.5 text-foreground hover:border-[#c9a84c]/50 hover:bg-white md:hidden" onClick={() => setMenuOpen(true)} aria-label="Open menu"><Menu className="h-5 w-5" /></button>
@@ -106,11 +110,8 @@ export function PublicNav({ catalogHref = '/#showcase' }: { catalogHref?: string
             )}
             <Link href="/about" onClick={() => setMenuOpen(false)} className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold ${aboutActive ? 'bg-[#211c17] text-[#fffaf0]' : 'text-[#544b43] hover:bg-black/5'}`}><span className={`flex h-8 w-8 items-center justify-center rounded-full ${aboutActive ? 'bg-white/10 text-[#efd489]' : 'bg-[#eee7da] text-[#a77d31]'}`}><Info className="h-4 w-4" /></span> About</Link>
             <button onClick={() => { setMenuOpen(false); setShowLogin(true); }} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#544b43] hover:bg-black/5"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#eee7da] text-[#a77d31]"><LogIn className="h-4 w-4" /></span> Login</button>
-            <InstallAppMenuItem
-              onSelect={() => setMenuOpen(false)}
-              className="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold text-[#544b43] hover:bg-black/5"
-              iconWrapClassName="flex h-8 w-8 items-center justify-center rounded-full bg-[#eee7da] text-[#a77d31]"
-            />
+            {/* Install App lives in the navbar top-right now (InstallAppButton),
+                visible without opening this menu — not duplicated here. */}
           </nav>
           <div className="border-t border-black/10 bg-white/45 p-4">
             <p className="mb-3 flex items-center gap-2 px-2 text-xs text-[#80756a]"><Sparkles className="h-3.5 w-3.5 text-[#b68a3e]" /> Built for independent retailers</p>

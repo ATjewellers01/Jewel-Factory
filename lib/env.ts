@@ -44,6 +44,25 @@ const ServerEnvSchema = z.object({
   O2D_INTEGRATION_BASE_URL: z.string().optional(),
   O2D_INTEGRATION_SECRET: z.string().optional(),
 
+  // WhatsApp Cloud API (lib/whatsapp.ts). Optional: if the token or phone
+  // number ID is unset, no WhatsApp message is sent and email works as before.
+  // The sending number is whichever WHATSAPP_PHONE_NUMBER_ID points at.
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().optional(),
+  WHATSAPP_API_VERSION: z.string().default('v21.0'),
+  WHATSAPP_TEMPLATE_ORDER_APPROVED: z.string().default('jf_order_approved_2'),
+  WHATSAPP_TEMPLATE_ORDER_PLACED: z.string().default('jf_order_placed'),
+  WHATSAPP_TEMPLATE_LANGUAGE: z.string().default('en_US'),
+  // Attach the order PDF to the order-placed message. Needs a Document-header
+  // template; leave false until WHATSAPP_TEMPLATE_ORDER_PLACED points at one,
+  // or Meta rejects the send (text-only until then).
+  WHATSAPP_ORDER_PDF: z.coerce.boolean().default(false),
+  // Outside production every message goes ONLY to this number (the local DB
+  // holds real retailers' numbers); unset there = nothing is sent at all.
+  // Ignored in production.
+  WHATSAPP_TEST_RECIPIENT: z.string().optional(),
+
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().optional(),
   SMTP_USER: z.string().optional(),

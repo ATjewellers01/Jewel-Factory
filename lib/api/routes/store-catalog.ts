@@ -10,6 +10,7 @@ import { formatStoreAddress } from '@/lib/db/stores';
 import { listFavorites, addFavorite, removeFavorite } from '@/lib/db/favorites';
 import { listCart, addToCart, setCartQuantity, setCartItemPurity, setCartItemSize, clearCart, getCartNote, setCartNote } from '@/lib/db/cart';
 import { PAST_DELIVERY_DATE_MESSAGE, indiaTodayIso, isPastDeliveryDate } from '@/lib/delivery-date';
+import { notifyOrderPlacedWhatsApp } from '@/lib/order-whatsapp';
 import { sendData, sendError } from '../envelope';
 import { storeGuard, type AppEnv } from '../guards';
 
@@ -181,5 +182,8 @@ storeCatalogRoutes.post('/orders', storeGuard, jsonValidator(OrderBody), async (
       };
     }),
   });
+  // Pre-approved, so it's already with the manufacturer — confirm on WhatsApp
+  // with the order PDF (fire-and-forget, never delays or fails the order).
+  void notifyOrderPlacedWhatsApp('B2B', order.id);
   return sendData(c, order, 201);
 });

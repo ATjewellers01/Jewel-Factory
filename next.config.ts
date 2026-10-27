@@ -5,6 +5,9 @@ export default function nextConfig(phase: string): NextConfig {
   return {
     reactStrictMode: true,
     distDir: phase === PHASE_DEVELOPMENT_SERVER ? '.next-dev' : '.next',
+    // Server-side order PDFs (lib/order-whatsapp.ts): load jspdf's Node build
+    // natively instead of letting webpack bundle its browser build.
+    serverExternalPackages: ['jspdf'],
     ...(process.env.DOCKER_BUILD === '1' ? { output: 'standalone' as const } : {}),
     api: {
       bodyParser: {
