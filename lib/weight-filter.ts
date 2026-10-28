@@ -21,6 +21,20 @@ export const WEIGHT_SORT_OPTIONS: Array<{ value: WeightSort; label: string }> = 
   { value: 'weight-desc', label: 'Weight: heavy to light' },
 ];
 
+/**
+ * The weight to sort/filter a catalogue product by: its gross weight, falling
+ * back to the legacy single `weightGrams` for old rows that predate the
+ * gross/net split (2026-08-17). Most newer designs store gross/net and leave
+ * `weightGrams` null, so sorting/filtering on `weightGrams` alone silently
+ * dropped them — this is what every catalogue weight sort/slider must use.
+ */
+export function sortWeight(p: {
+  grossWeightGrams?: string | number | null;
+  weightGrams?: string | number | null;
+}): string | number | null | undefined {
+  return p.grossWeightGrams ?? p.weightGrams;
+}
+
 /** Parse a Decimal-string / number weight to a positive number, else null. */
 export function weightValue(weight: string | number | null | undefined): number | null {
   if (weight === null || weight === undefined || weight === '') return null;

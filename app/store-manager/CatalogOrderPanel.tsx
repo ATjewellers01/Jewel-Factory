@@ -21,7 +21,7 @@ import { buildCatalogCounts, subCategories1WithStock, subCategories2WithStock } 
 import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { categoryHierarchy, formatWeight, grossNetWeightSummary } from '@/lib/format';
 import { matchesDescriptionQuery, rankSimilar } from '@/lib/product-similarity';
-import { SORT_OPTIONS, weightExtent, matchWeightRange, sortByWeight, type SortOption } from '@/lib/weight-filter';
+import { SORT_OPTIONS, weightExtent, matchWeightRange, sortByWeight, sortWeight, type SortOption } from '@/lib/weight-filter';
 import { useStoreManager } from './store-manager-context';
 
 type Sort = SortOption | 'popularity';
@@ -175,13 +175,13 @@ export function CatalogOrderPanel({
   );
 
   const weightBounds = useMemo(
-    () => weightExtent(preWeight.map((p) => p.weightGrams)),
+    () => weightExtent(preWeight.map(sortWeight)),
     [preWeight],
   );
 
   const filtered = useMemo(() => {
-    const items = preWeight.filter((p) => matchWeightRange(p.weightGrams, weightRange));
-    if (sort === 'weight-asc' || sort === 'weight-desc') return sortByWeight(items, sort, (p) => p.weightGrams);
+    const items = preWeight.filter((p) => matchWeightRange(sortWeight(p), weightRange));
+    if (sort === 'weight-asc' || sort === 'weight-desc') return sortByWeight(items, sort, sortWeight);
     if (sort === 'newest') return [...items].sort((a, b) => b.designNumber.localeCompare(a.designNumber));
     if (sort === 'oldest') return [...items].sort((a, b) => a.designNumber.localeCompare(b.designNumber));
     if (sort === 'popularity') {

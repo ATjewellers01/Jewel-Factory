@@ -23,7 +23,7 @@ import { clientDeliveryDateError, localTodayIso, maxDeliveryDateIso } from '@/li
 import { fieldError, toFieldErrors } from '@/lib/field-error';
 import { categoryHierarchy, formatWeight, grossNetWeightSummary } from '@/lib/format';
 import { matchesDescriptionQuery, rankSimilar } from '@/lib/product-similarity';
-import { SORT_OPTIONS, weightExtent, matchWeightRange, sortProducts, type SortOption } from '@/lib/weight-filter';
+import { SORT_OPTIONS, weightExtent, matchWeightRange, sortProducts, sortWeight, type SortOption } from '@/lib/weight-filter';
 
 type Img = { secureUrl: string; isPrimary: boolean };
 type Product = {
@@ -145,12 +145,12 @@ function CatalogBrowse() {
     return matchDesc && matchCat && matchSub && matchSub2 && matchSize && matchTop;
   });
 
-  const weightBounds = weightExtent(preWeight.map((p) => p.weightGrams));
-  const weightMatched = preWeight.filter((p) => matchWeightRange(p.weightGrams, weightRange));
+  const weightBounds = weightExtent(preWeight.map(sortWeight));
+  const weightMatched = preWeight.filter((p) => matchWeightRange(sortWeight(p), weightRange));
   // Best Sellers keep their sales rank unless the retailer picks a sort.
   const filtered = topSellersOnly && !sort
     ? [...weightMatched].sort((a, b) => topRank.get(a.id)! - topRank.get(b.id)!)
-    : sortProducts(weightMatched, sort, (p) => p.designNumber, (p) => p.weightGrams);
+    : sortProducts(weightMatched, sort, (p) => p.designNumber, sortWeight);
 
   // O(1) per-card cart lookup instead of cart.items.find() inside the grid's
   // map — with hundreds of designs on screen, re-deriving that with a linear
