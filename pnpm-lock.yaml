@@ -213,9 +213,6 @@ importers:
       eslint-config-next:
         specifier: 15.5.19
         version: 15.5.19(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3)
-      sharp:
-        specifier: ^0.35.5
-        version: 0.35.5(@types/node@22.20.1)
       tailwindcss:
         specifier: ^4.1.14
         version: 4.3.2
