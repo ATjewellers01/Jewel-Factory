@@ -515,14 +515,24 @@ function ImageZoomViewer({
         <button type="button" onClick={onClose} aria-label="Close zoom view" className={iconButton}><X className="h-5 w-5" /></button>
       </div>
 
-      <div className={`relative min-h-0 flex-1 px-2 sm:px-16 ${portrait ? 'flex items-center justify-center' : ''}`}>
+      <div
+        // Mobile: an exact dvh-based height (viewport minus the header bar and
+        // footer controls below), not a vw-based guess — a vw guess drifts
+        // wildly across real phone aspect ratios (short/wide vs tall/narrow)
+        // and often ends up near-square on shorter screens. The reserve below
+        // mirrors this component's own header (pt + h-11 button + pb-2) and
+        // footer (pt-3 + h-11 button row + gap-2 + hint text line + pb)
+        // markup, including safe-area insets. sm: reverts to filling the
+        // available flex space, matching ProductBlock's desktop behaviour.
+        className={`relative min-h-0 px-2 sm:px-16 ${portrait ? 'flex h-[max(14rem,calc(100dvh-var(--jf-zoom-reserve)))] items-center justify-center sm:h-auto sm:flex-1' : 'flex-1'}`}
+        style={portrait ? { '--jf-zoom-reserve': 'calc(max(0.75rem,env(safe-area-inset-top)) + max(1rem,env(safe-area-inset-bottom)) + 9.5rem)' } as CSSProperties : undefined}
+      >
         <div
           ref={stageRef}
-          // Same box-sizing formula as ProductBlock's own pre-tap gallery photo
-          // (h-[min(133vw,65dvh)] on mobile, sm:aspect-[3/4] on desktop) — not
-          // an independently-derived aspect-ratio, so the zoomed view is the
-          // exact same shape/size as what the user already saw before tapping.
-          className={`relative touch-none select-none overflow-hidden ${portrait ? 'h-[min(133vw,65dvh)] w-full sm:h-full sm:w-auto sm:max-w-full sm:aspect-[3/4]' : 'h-full w-full'} ${zoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
+          // Same box-sizing pattern as ProductBlock's own pre-tap gallery photo:
+          // h-full/w-full by default, with width alone becoming aspect-driven
+          // on desktop — the OUTER wrapper above supplies the actual height.
+          className={`relative touch-none select-none overflow-hidden ${portrait ? 'h-full w-full sm:w-auto sm:max-w-full sm:aspect-[3/4]' : 'h-full w-full'} ${zoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
           onClick={(event) => event.stopPropagation()}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
