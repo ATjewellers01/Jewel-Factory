@@ -48,10 +48,15 @@ export type CataloguePdfImagesPerPage = (typeof CATALOGUE_PDF_IMAGES_PER_PAGE_OP
 
 // Grid shape per selectable "images per page" count — chosen to look like a
 // natural photo grid (square-ish) rather than one long thin row/column.
+// Card height is derived purely from card WIDTH (cardW - 4, see below), so a
+// shape needs enough rows*cardH + gaps to still fit inside the A4 page — a
+// 2x3 shape for "6" overflowed the page height (cardH~112mm * 3 rows = far
+// past 297mm) and silently clipped the bottom row. 3x2 only needs 2 rows of
+// that same card height, so it fits comfortably.
 const GRID_BY_IMAGES_PER_PAGE: Record<CataloguePdfImagesPerPage, { cols: number; rows: number }> = {
   1: { cols: 1, rows: 1 },
   4: { cols: 2, rows: 2 },
-  6: { cols: 2, rows: 3 },
+  6: { cols: 3, rows: 2 },
   9: { cols: 3, rows: 3 },
 };
 
