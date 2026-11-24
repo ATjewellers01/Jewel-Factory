@@ -224,6 +224,10 @@ function ProductBlock({
   // instead of a single Weight — detect via the data itself rather than
   // duplicating ProductForm's Set-options list here.
   const studded = Boolean(product.grossWeightGrams || product.netWeightGrams);
+  // Set designs (Long/Choker/etc.) are wide, horizontally-spread pieces — a
+  // square zoom box crops their left/right edges. Keep the card's own
+  // rectangular (3:4) framing in the zoom view for this category only.
+  const isSet = product.category === 'Set';
   const formattedWeight = formatWeight(product.weightGrams);
   const formattedGross = formatWeight(product.grossWeightGrams ?? null);
   const formattedNet = formatWeight(product.netWeightGrams ?? null);
@@ -261,10 +265,11 @@ function ProductBlock({
             back to a screen-width square. object-contain everywhere, so the
             design is never cropped. */}
         <div
-          className="flex h-[min(100vw,65dvh)] items-center justify-center supports-[height:1cqh]:h-[max(16rem,calc(100cqh-var(--jf-photo-reserve)))] sm:h-auto sm:min-h-0 sm:flex-1 sm:supports-[height:1cqh]:h-auto"
+          className={`flex items-center justify-center supports-[height:1cqh]:h-[max(16rem,calc(100cqh-var(--jf-photo-reserve)))] sm:h-auto sm:min-h-0 sm:flex-1 sm:supports-[height:1cqh]:h-auto ${isSet ? 'h-[min(133vw,65dvh)]' : 'h-[min(100vw,65dvh)]'}`}
           style={{ '--jf-photo-reserve': `${5 + (product.hasTryon ? 7.5 : 4.125) + (product.images.length > 1 ? 3.75 : 0)}rem` } as CSSProperties}
         >
-          <div className="relative h-full w-full overflow-hidden sm:aspect-square sm:w-auto sm:max-w-full sm:rounded-[1.1rem]">
+          <div className={`relative h-full w-full overflow-hidden sm:w-auto sm:max-w-full sm:rounded-[1.1rem] ${isSet ? 'sm:aspect-[3/4]' : 'sm:aspect-square'}`}>
+
             {selectedImage ? (
               <button type="button" onClick={openZoom} aria-label="Open zoom view" className="group absolute inset-0 cursor-zoom-in">
                 <Image src={selectedImage.secureUrl} alt={product.designNumber} fill sizes="(min-width: 640px) 560px, 100vw" className="object-contain transition duration-500 group-hover:scale-[1.015]" />

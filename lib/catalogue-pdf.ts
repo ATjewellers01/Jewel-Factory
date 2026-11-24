@@ -43,24 +43,34 @@ function imageFormat(dataUrl: string): string {
   return ext === 'JPG' ? 'JPEG' : ext;
 }
 
+export const CATALOGUE_PDF_IMAGES_PER_PAGE_OPTIONS = [1, 4, 6, 9] as const;
+export type CataloguePdfImagesPerPage = (typeof CATALOGUE_PDF_IMAGES_PER_PAGE_OPTIONS)[number];
+
+// Grid shape per selectable "images per page" count — chosen to look like a
+// natural photo grid (square-ish) rather than one long thin row/column.
+const GRID_BY_IMAGES_PER_PAGE: Record<CataloguePdfImagesPerPage, { cols: number; rows: number }> = {
+  1: { cols: 1, rows: 1 },
+  4: { cols: 2, rows: 2 },
+  6: { cols: 2, rows: 3 },
+  9: { cols: 3, rows: 3 },
+};
+
 export async function downloadCataloguePdf(
   products: CataloguePdfProduct[],
   onProgress?: (done: number, total: number) => void,
+  imagesPerPage: CataloguePdfImagesPerPage = 9,
 ): Promise<void> {
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
 
   const pageW = 210;
-  const pageH = 297;
   const marginX = 10;
   const marginTop = 20;
-  const marginBottom = 12;
   const gap = 6;
-  const cols = 3;
+  const { cols, rows } = GRID_BY_IMAGES_PER_PAGE[imagesPerPage] ?? GRID_BY_IMAGES_PER_PAGE[9];
   const cardW = (pageW - marginX * 2 - gap * (cols - 1)) / cols;
   const imgSize = cardW - 4;
   const cardH = imgSize + 24;
-  const rows = Math.max(1, Math.floor((pageH - marginTop - marginBottom) / (cardH + gap)));
   const perPage = cols * rows;
 
   function drawHeader() {

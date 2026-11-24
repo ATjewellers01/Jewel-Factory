@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { WeightRangeSlider } from '@/components/orders/WeightRangeSlider';
 import { useTaxonomy } from '@/hooks/use-taxonomy';
-import { downloadCataloguePdf } from '@/lib/catalogue-pdf';
+import { CATALOGUE_PDF_IMAGES_PER_PAGE_OPTIONS, downloadCataloguePdf, type CataloguePdfImagesPerPage } from '@/lib/catalogue-pdf';
 import { SORT_OPTIONS, weightExtent, matchWeightRange, sortProducts, type SortOption } from '@/lib/weight-filter';
 import { formatWeight } from '@/lib/format';
 import { formatWeight3, isWeightInput } from '@/lib/weight-input';
@@ -102,6 +102,7 @@ export default function ManufacturerCatalogPage() {
   const [pdfSelecting, setPdfSelecting] = useState(false);
   const [pdfSelected, setPdfSelected] = useState<Set<string>>(new Set());
   const [pdfTopN, setPdfTopN] = useState('10');
+  const [pdfImagesPerPage, setPdfImagesPerPage] = useState<CataloguePdfImagesPerPage>(9);
 
   // Bulk Edit — independent of the Inactive-only bulk-activate selection and
   // the PDF-export selection above; available on any status filter, picks
@@ -271,6 +272,7 @@ export default function ManufacturerCatalogPage() {
           imageUrl: (p.images.find((i) => i.isPrimary) ?? p.images[0])?.secureUrl ?? null,
         })),
         (done, total) => setPdfProgress({ done, total }),
+        pdfImagesPerPage,
       );
     } catch {
       setError('Could not generate the PDF. Please try again.');
@@ -357,6 +359,20 @@ export default function ManufacturerCatalogPage() {
                     className="h-7 w-16 px-2 text-center"
                   />
                   <span>items</span>
+                </div>
+                <div className="my-1 border-t" />
+                <div className="px-2 py-1 text-xs font-medium text-muted-foreground">Images per page</div>
+                <div className="flex gap-1 px-2 pb-1">
+                  {CATALOGUE_PDF_IMAGES_PER_PAGE_OPTIONS.map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className={`flex-1 rounded border px-2 py-1 text-center ${pdfImagesPerPage === n ? 'border-primary bg-primary/10 font-medium text-primary' : 'border-input hover:bg-muted'}`}
+                      onClick={() => setPdfImagesPerPage(n)}
+                    >
+                      {n}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
