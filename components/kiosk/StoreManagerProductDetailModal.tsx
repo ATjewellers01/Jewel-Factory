@@ -27,7 +27,7 @@ export type StoreManagerProduct = {
   images: { secureUrl: string; isPrimary: boolean }[];
 };
 
-type ZoomState = { images: string[]; index: number };
+type ZoomState = { images: string[]; index: number; portrait?: boolean };
 
 export function StoreManagerProductDetailModal({
   product,
@@ -196,6 +196,7 @@ export function StoreManagerProductDetailModal({
         <ImageZoomViewer
           images={zoom.images}
           index={zoom.index}
+          portrait={zoom.portrait}
           onIndexChange={(index) => setZoom({ ...zoom, index })}
           onClose={() => setZoom(null)}
         />
@@ -253,7 +254,7 @@ function ProductBlock({
     { label: 'Type', value: product.subCategory2 },
   ].filter((row): row is { label: string; value: string } => Boolean(row.value && row.value.trim()));
 
-  const openZoom = () => onZoom({ images: product.images.map((image) => image.secureUrl), index: Math.max(0, product.images.indexOf(selectedImage!)) });
+  const openZoom = () => onZoom({ images: product.images.map((image) => image.secureUrl), index: Math.max(0, product.images.indexOf(selectedImage!)), portrait: isSet });
 
   return (
     <article className="flex flex-1 flex-col bg-[#fdfcf9] sm:grid sm:h-full sm:min-h-0 sm:grid-cols-2 md:grid-cols-[1.15fr_0.85fr]">
@@ -356,11 +357,18 @@ const DOUBLE_TAP_SCALE = 2.5;
 function ImageZoomViewer({
   images,
   index,
+  portrait,
   onIndexChange,
   onClose,
 }: {
   images: string[];
   index: number;
+  // Set designs (wide, horizontally-spread pieces) get a 3:4 portrait stage
+  // here too — matching ProductBlock's own zoom box — instead of whatever
+  // leftover space remains between the header/footer bars, which is often
+  // closer to square and made the (uncropped, object-contain) photo look
+  // squat compared to the card/gallery's rectangular framing.
+  portrait?: boolean;
   onIndexChange: (index: number) => void;
   onClose: () => void;
 }) {
@@ -507,10 +515,11 @@ function ImageZoomViewer({
         <button type="button" onClick={onClose} aria-label="Close zoom view" className={iconButton}><X className="h-5 w-5" /></button>
       </div>
 
-      <div className="relative min-h-0 flex-1 px-2 sm:px-16">
+      <div className={`relative min-h-0 flex-1 px-2 sm:px-16 ${portrait ? 'flex items-center justify-center' : ''}`}>
         <div
           ref={stageRef}
-          className={`relative h-full w-full touch-none select-none overflow-hidden ${zoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
+          className={`relative h-full touch-none select-none overflow-hidden ${portrait ? 'w-auto max-w-full' : 'w-full'} ${zoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
+          style={portrait ? { aspectRatio: '3 / 4' } : undefined}
           onClick={(event) => event.stopPropagation()}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
