@@ -27,7 +27,7 @@ export type StoreManagerProduct = {
   images: { secureUrl: string; isPrimary: boolean }[];
 };
 
-type ZoomState = { images: string[]; index: number; portrait?: boolean };
+type ZoomState = { images: string[]; index: number; portrait?: boolean; boxSize?: { width: number; height: number } };
 
 export function StoreManagerProductDetailModal({
   product,
@@ -197,6 +197,7 @@ export function StoreManagerProductDetailModal({
           images={zoom.images}
           index={zoom.index}
           portrait={zoom.portrait}
+          boxSize={zoom.boxSize}
           onIndexChange={(index) => setZoom({ ...zoom, index })}
           onClose={() => setZoom(null)}
         />
@@ -220,6 +221,9 @@ function ProductBlock({
 }) {
   const [imageIndex, setImageIndex] = useState(0);
   const selectedImage = product.images[imageIndex] ?? product.images[0];
+  // Measured (not recomputed/guessed) so the zoom viewer can render at the
+  // exact same on-screen size as this photo box, pixel for pixel.
+  const photoBoxRef = useRef<HTMLDivElement>(null);
   // Studded (non-Set categories) and every Set-specific Sub-category 2 value
   // (Antique/Handmade/Casting/Turkish/Temple Set) both store Gross/Net Weight
   // instead of a single Weight — detect via the data itself rather than
@@ -254,7 +258,15 @@ function ProductBlock({
     { label: 'Type', value: product.subCategory2 },
   ].filter((row): row is { label: string; value: string } => Boolean(row.value && row.value.trim()));
 
-  const openZoom = () => onZoom({ images: product.images.map((image) => image.secureUrl), index: Math.max(0, product.images.indexOf(selectedImage!)), portrait: isSet });
+  const openZoom = () => {
+    const rect = photoBoxRef.current?.getBoundingClientRect();
+    onZoom({
+      images: product.images.map((image) => image.secureUrl),
+      index: Math.max(0, product.images.indexOf(selectedImage!)),
+      portrait: isSet,
+      boxSize: isSet && rect ? { width: rect.width, height: rect.height } : undefined,
+    });
+  };
 
   return (
     <article className="flex flex-1 flex-col bg-[#fdfcf9] sm:grid sm:h-full sm:min-h-0 sm:grid-cols-2 md:grid-cols-[1.15fr_0.85fr]">
@@ -269,7 +281,7 @@ function ProductBlock({
           className={`flex items-center justify-center supports-[height:1cqh]:h-[max(16rem,calc(100cqh-var(--jf-photo-reserve)))] sm:h-auto sm:min-h-0 sm:flex-1 sm:supports-[height:1cqh]:h-auto ${isSet ? 'h-[min(133vw,65dvh)]' : 'h-[min(100vw,65dvh)]'}`}
           style={{ '--jf-photo-reserve': `${5 + (product.hasTryon ? 7.5 : 4.125) + (product.images.length > 1 ? 3.75 : 0)}rem` } as CSSProperties}
         >
-          <div className={`relative h-full w-full overflow-hidden sm:w-auto sm:max-w-full sm:rounded-[1.1rem] ${isSet ? 'sm:aspect-[3/4]' : 'sm:aspect-square'}`}>
+          <div ref={photoBoxRef} className={`relative h-full w-full overflow-hidden sm:w-auto sm:max-w-full sm:rounded-[1.1rem] ${isSet ? 'sm:aspect-[3/4]' : 'sm:aspect-square'}`}>
 
             {selectedImage ? (
               <button type="button" onClick={openZoom} aria-label="Open zoom view" className="group absolute inset-0 cursor-zoom-in">
@@ -358,17 +370,20 @@ function ImageZoomViewer({
   images,
   index,
   portrait,
+  boxSize,
   onIndexChange,
   onClose,
 }: {
   images: string[];
   index: number;
-  // Set designs (wide, horizontally-spread pieces) get a 3:4 portrait stage
-  // here too — matching ProductBlock's own zoom box — instead of whatever
-  // leftover space remains between the header/footer bars, which is often
-  // closer to square and made the (uncropped, object-contain) photo look
-  // squat compared to the card/gallery's rectangular framing.
+  // Set designs (wide, horizontally-spread pieces): kept for the fallback
+  // sizing below, used only if boxSize wasn't measurable.
   portrait?: boolean;
+  // The photo box's own measured on-screen size (ProductBlock's photoBoxRef,
+  // getBoundingClientRect() at the moment "Tap to zoom" was pressed) — used
+  // as-is so the zoomed view is pixel-identical to what was already visible,
+  // never bigger/smaller/reshaped by an independent formula.
+  boxSize?: { width: number; height: number };
   onIndexChange: (index: number) => void;
   onClose: () => void;
 }) {
@@ -516,23 +531,21 @@ function ImageZoomViewer({
       </div>
 
       <div
-        // Mobile: an exact dvh-based height (viewport minus the header bar and
-        // footer controls below), not a vw-based guess — a vw guess drifts
-        // wildly across real phone aspect ratios (short/wide vs tall/narrow)
-        // and often ends up near-square on shorter screens. The reserve below
-        // mirrors this component's own header (pt + h-11 button + pb-2) and
-        // footer (pt-3 + h-11 button row + gap-2 + hint text line + pb)
-        // markup, including safe-area insets. sm: reverts to filling the
-        // available flex space, matching ProductBlock's desktop behaviour.
-        className={`relative min-h-0 px-2 sm:px-16 ${portrait ? 'flex h-[max(14rem,calc(100dvh-var(--jf-zoom-reserve)))] items-center justify-center sm:h-auto sm:flex-1' : 'flex-1'}`}
-        style={portrait ? { '--jf-zoom-reserve': 'calc(max(0.75rem,env(safe-area-inset-top)) + max(1rem,env(safe-area-inset-bottom)) + 9.5rem)' } as CSSProperties : undefined}
+        // boxSize (the common, measured case): just center whatever exact
+        // pixel box we measured — no formula, so it can't drift from it.
+        // Fallback (boxSize unavailable): the old dvh-based approximation,
+        // kept only so a Set design still looks reasonable if the ref
+        // somehow wasn't mounted when "Tap to zoom" was pressed.
+        className={`relative min-h-0 px-2 sm:px-16 ${boxSize ? 'flex-1 flex items-center justify-center' : portrait ? 'flex h-[max(14rem,calc(100dvh-var(--jf-zoom-reserve)))] items-center justify-center sm:h-auto sm:flex-1' : 'flex-1'}`}
+        style={!boxSize && portrait ? { '--jf-zoom-reserve': 'calc(max(0.75rem,env(safe-area-inset-top)) + max(1rem,env(safe-area-inset-bottom)) + 9.5rem)' } as CSSProperties : undefined}
       >
         <div
           ref={stageRef}
           // Same box-sizing pattern as ProductBlock's own pre-tap gallery photo:
           // h-full/w-full by default, with width alone becoming aspect-driven
           // on desktop — the OUTER wrapper above supplies the actual height.
-          className={`relative touch-none select-none overflow-hidden ${portrait ? 'h-full w-full sm:w-auto sm:max-w-full sm:aspect-[3/4]' : 'h-full w-full'} ${zoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
+          className={`relative touch-none select-none overflow-hidden ${boxSize ? '' : portrait ? 'h-full w-full sm:w-auto sm:max-w-full sm:aspect-[3/4]' : 'h-full w-full'} ${zoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
+          style={boxSize ? { width: boxSize.width, height: boxSize.height, maxWidth: '100%', maxHeight: '100%' } : undefined}
           onClick={(event) => event.stopPropagation()}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
