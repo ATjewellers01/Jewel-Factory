@@ -233,6 +233,12 @@ function ProductBlock({
   // square zoom box crops their left/right edges. Keep the card's own
   // rectangular (3:4) framing in the zoom view for this category only.
   const isSet = product.category === 'Set';
+  // Long Set necklaces run especially long top-to-bottom — the measured
+  // gallery box (same size as before tapping) still looked a bit short for
+  // them specifically, so the zoomed view gets extra height for this one
+  // sub-category only. Capped by max-height:100% in ImageZoomViewer, so it
+  // never overflows the screen even where there isn't this much room.
+  const isLongSet = isSet && product.subCategory === 'Long Set';
   const formattedWeight = formatWeight(product.weightGrams);
   const formattedGross = formatWeight(product.grossWeightGrams ?? null);
   const formattedNet = formatWeight(product.netWeightGrams ?? null);
@@ -264,7 +270,7 @@ function ProductBlock({
       images: product.images.map((image) => image.secureUrl),
       index: Math.max(0, product.images.indexOf(selectedImage!)),
       portrait: isSet,
-      boxSize: isSet && rect ? { width: rect.width, height: rect.height } : undefined,
+      boxSize: isSet && rect ? { width: rect.width, height: rect.height * (isLongSet ? 1.2 : 1) } : undefined,
     });
   };
 
