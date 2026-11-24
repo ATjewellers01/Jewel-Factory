@@ -518,8 +518,11 @@ function ImageZoomViewer({
       <div className={`relative min-h-0 flex-1 px-2 sm:px-16 ${portrait ? 'flex items-center justify-center' : ''}`}>
         <div
           ref={stageRef}
-          className={`relative h-full touch-none select-none overflow-hidden ${portrait ? 'w-auto max-w-full' : 'w-full'} ${zoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
-          style={portrait ? { aspectRatio: '3 / 4' } : undefined}
+          // Same box-sizing formula as ProductBlock's own pre-tap gallery photo
+          // (h-[min(133vw,65dvh)] on mobile, sm:aspect-[3/4] on desktop) — not
+          // an independently-derived aspect-ratio, so the zoomed view is the
+          // exact same shape/size as what the user already saw before tapping.
+          className={`relative touch-none select-none overflow-hidden ${portrait ? 'h-[min(133vw,65dvh)] w-full sm:h-full sm:w-auto sm:max-w-full sm:aspect-[3/4]' : 'h-full w-full'} ${zoomed ? 'cursor-grab active:cursor-grabbing' : 'cursor-zoom-in'}`}
           onClick={(event) => event.stopPropagation()}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
